@@ -435,7 +435,10 @@ app.use('*', async (c, next) => {
   }
   if (c.req.method !== 'GET' || !wantsHtml || ['/choose-handle', '/pending-post'].includes(c.req.path)) return next()
   const url = new URL(c.req.url)
-  const returnTo = safeLocalPath(url.pathname + url.search)
+  const postPage = /^\/post\/[1-9]\d*$/.test(url.pathname)
+  const targetPostId = /^[1-9]\d*$/.test(url.searchParams.get('to') || '') ? url.searchParams.get('to') : null
+  const returnTo = safeLocalPath(url.pathname + url.search
+    + (postPage && targetPostId ? `#post-${targetPostId}` : ''))
   if (user && shouldShowMoodPicker(user)) return page(<MoodPicker user={user} returnTo={returnTo} />)
   if (user && shouldShowTagPicker(user)) {
     const tags = await databaseService().call('account.popularTags', { limit: 12 })

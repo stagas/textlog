@@ -41,7 +41,8 @@ import {
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle,
-  postAnchorId, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge, ThreadReplies } from './components/post'
+  postAnchorId, postedPostPath, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge,
+  ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
 import React from 'react'
@@ -1537,6 +1538,24 @@ test('hot post 1174 keeps omitted branches on one baseline when no direct reply 
   expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2564"/)
   expect(html).toMatch(/class="reply-node omitted-parent-reply">[\s\S]*?id="post-2557"/)
   expect(html).not.toContain('projected-reply-deeper')
+})
+
+test('deep projected feed replies open at fixed visible-depth chunk boundaries', () => {
+  const user = { id: 9, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-08-20 08:00:00' }
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00',
+    deleted_at: null, handle: 'root', reply_count: 1 }
+  let parent: any = root
+  for (let id = 2; id <= 9; id++) parent = { id, user_id: id, parent_id: parent.id, body: `Reply ${id}`,
+    created_at: `2026-08-20 0${id}:00:00`, deleted_at: null, handle: `reply${id}`, reply_count: 1, parent }
+  const deep = { id: 10, user_id: 10, parent_id: root.id, body: 'Projected deep reply',
+    created_at: '2026-08-20 10:00:00', deleted_at: null, handle: 'deep', reply_count: 0,
+    parent, feed_ancestor_gap: true }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user, returnPath: '/hot', expandedRootId: root.id, posts: [root, deep],
+  }))
+
+  expect(html).toContain('class="post-hit-area" href="/post/6?from=%2Fhot%23post-10#post-10"')
 })
 
 test('expanded hot post 2737 does not double-indent parallel omitted branches', () => {
@@ -4359,12 +4378,22 @@ test('thread replies use their own permanent anchor as the next return path', ()
     .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7')
 })
 
+test('a posted note opens its permanent page at its stable anchor', () => {
+  expect(postedPostPath(42, '/hot?cursor=abc#post-7'))
+    .toBe('/post/42?from=%2Fhot%3Fcursor%3Dabc%26expand%3D42%23post-42&to=42#post-42')
+})
+
 test('a posted reply returns to its originating thread and preserves that thread back path', () => {
   const thread = '/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7'
-  expect(postedReplyPath(7, 9, thread))
-    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2&to=9&back=9#post-9')
+  expect(postedReplyPath(2, 9, thread))
+    .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%26expand%3D2%23post-9&to=9&back=9#post-9')
   expect(postedReplyPath(7, 9, '/latest#post-7'))
-    .toBe('/post/7?from=%2Flatest%23post-7&to=9&back=9#post-9')
+    .toBe('/post/7?from=%2Flatest%3Fexpand%3D7%23post-9&to=9&back=9#post-9')
+  expect(postedReplyPath(8, 9, '/latest#post-7', 2))
+    .toBe('/post/8?from=%2Flatest%3Fexpand%3D2%23post-9&to=9&back=9#post-9')
+  expect(postedReplyPath(8, 9, '/post/2?from=%2Flatest%23post-2#post-7', 2))
+    .toBe('/post/8?from=%2Flatest%3Fexpand%3D2%23post-9&to=9&back=9#post-9')
+  expect(postedReplyPath(8, 9, '/post/2', 2)).toBe('/post/8?to=9&back=9#post-9')
 })
 
 test('A quoted post gets its own higher-priority hit area in tappable feeds', () => {

@@ -291,12 +291,25 @@ test('an anonymous feed note is published after signup chooses a handle', async 
 
   const published = await request('/pending-post', { cookie: cookies, acceptHtml: true, ip })
   expect(published.status).toBe(303)
-  expect(published.headers.get('location')).toBe('/hot')
   expect(published.headers.get('set-cookie')).toContain('pending_post=')
   expect(published.headers.get('set-cookie')).toContain('Max-Age=0')
   const root = database.query('SELECT id,body FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?) ORDER BY id DESC')
     .get('pending_writer') as { id: number; body: string }
+  const publishedPath = `/post/${root.id}?from=${encodeURIComponent(`/hot?expand=${root.id}#post-${root.id}`)}`
+    + `&to=${root.id}#post-${root.id}`
+  expect(published.headers.get('location')).toBe(publishedPath)
   expect(root.body).toBe(body)
+  const guardedPost = await request(published.headers.get('location')!, { cookie: cookies, acceptHtml: true, ip })
+  const guardedPostHtml = await guardedPost.text()
+  expect(guardedPostHtml).toContain('action="/pick-mood"')
+  expect(guardedPostHtml).toContain(
+    `name="returnTo" value="${publishedPath.replaceAll('&', '&amp;')}"`,
+  )
+  const continuedToPost = await request('/pick-mood/dismiss', {
+    method: 'POST', cookie: cookies, ip,
+    form: { returnTo: publishedPath },
+  })
+  expect(continuedToPost.headers.get('location')).toBe(publishedPath)
 
   const replyBody = 'A reply carried through signup'
   const replyIp = '203.0.113.85'
@@ -1382,7 +1395,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(createPost.status).toBe(303)
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
-  expect(createPost.headers.get('location')).toBe('/all')
+  expect(createPost.headers.get('location')).toBe(
+    `/post/${post.id}?from=${encodeURIComponent(`/all?expand=${post.id}#post-${post.id}`)}`
+      + `&to=${post.id}#post-${post.id}`,
+  )
 
   const unpublishable = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',
@@ -1419,10 +1435,17 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const publishedReplyDraft = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
-    form: { body: 'Published reply draft', draft_id: replyDraft.public_id },
+    form: { body: 'Published reply draft', draft_id: replyDraft.public_id,
+      from: `/all#post-${post.id}`, reply_page_id: String(post.id) },
   })
   expect(publishedReplyDraft.status).toBe(303)
   expect(database.query('SELECT 1 FROM drafts WHERE id=?').get(replyDraft.id)).toBeNull()
+  const publishedReply = database.query('SELECT id FROM posts WHERE parent_id=? ORDER BY id DESC LIMIT 1')
+    .get(post.id) as { id: number }
+  expect(publishedReplyDraft.headers.get('location')).toBe(
+    `/post/${post.id}?from=${encodeURIComponent(`/all?expand=${post.id}#post-${publishedReply.id}`)}`
+      + `&to=${publishedReply.id}&back=${publishedReply.id}#post-${publishedReply.id}`,
+  )
 
   const routeOversizedPost = await request('/post', {
     method: 'POST',
@@ -1879,17 +1902,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + await (await request('/my-feed?page=2', { cookie: aliceCookie })).text()
   expect(hashtagForYou).toContain('Bot note discovered through')
   expect(sharedReplyResponse.headers.get('location')).toBe(
-    `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&to=${sharedReply.id}&back=${sharedReply.id}`
+    `/post/${post.id}?from=${encodeURIComponent(
+      `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
+    )}&to=${sharedReply.id}&back=${sharedReply.id}`
       + `#post-${sharedReply.id}`,
   )
   const sharedReplyPage = await request(sharedReplyResponse.headers.get('location')!, { cookie: bobCookie })
   const sharedReplyHtml = await sharedReplyPage.text()
   expect(sharedReplyHtml).toContain(
-    'class="quiet post-back-link" href="/latest?cursor=abc#post-1">back</a>',
+    `class="quiet post-back-link" href="/latest?cursor=abc&amp;expand=${post.id}#post-${sharedReply.id}">back</a>`,
   )
   const threadProfileHref = `/u/bob?from=${
     encodeURIComponent(
-      `/post/${post.id}?from=%2Flatest%3Fcursor%3Dabc%23post-1&to=${sharedReply.id}&back=${sharedReply.id}`,
+      `/post/${post.id}?from=${encodeURIComponent(
+        `/latest?cursor=abc&expand=${post.id}#post-${sharedReply.id}`,
+      )}&to=${sharedReply.id}&back=${sharedReply.id}`,
     )
   }`.replaceAll('&', '&amp;')
   expect(sharedReplyHtml).toContain(`class="account-menu-handle" href="${threadProfileHref}">@bob</a>`)

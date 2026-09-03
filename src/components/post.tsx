@@ -431,16 +431,40 @@ export function replyAnchorReturnPath(threadRootId: number, replyId: number, ret
   return `/post/${threadRootId}${returnQuery}#post-${replyId}`
 }
 
-export function postedReplyPath(parentId: number, replyId: number, returnPath?: string) {
+export function postedPostPath(postId: number, returnPath: string) {
+  const target = new URL(returnPath, 'http://textlog.local')
+  target.searchParams.set('expand', String(postId))
+  target.hash = `post-${postId}`
+  const backPath = target.pathname + target.search + target.hash
+  return `/post/${postId}?from=${encodeURIComponent(backPath)}&to=${postId}#post-${postId}`
+}
+
+export function postedReplyPath(pageId: number, replyId: number, returnPath?: string, expandedRootId = pageId) {
+  let feedReturnPath = returnPath
   if (returnPath) {
     const target = new URL(returnPath, 'http://textlog.local')
     if (/^\/post\/[1-9]\d*$/.test(target.pathname)) {
-      target.searchParams.set('to', String(replyId))
-      target.searchParams.set('back', String(replyId))
-      return `${target.pathname}${target.search}#post-${replyId}`
+      feedReturnPath = target.searchParams.get('from') || undefined
+      if (Number(target.pathname.slice('/post/'.length)) === pageId) {
+        if (feedReturnPath) {
+          const feedTarget = new URL(feedReturnPath, 'http://textlog.local')
+          feedTarget.searchParams.set('expand', String(expandedRootId))
+          feedTarget.hash = `post-${replyId}`
+          target.searchParams.set('from', feedTarget.pathname + feedTarget.search + feedTarget.hash)
+        }
+        target.searchParams.set('to', String(replyId))
+        target.searchParams.set('back', String(replyId))
+        return `${target.pathname}${target.search}#post-${replyId}`
+      }
     }
   }
-  const target = new URL(replyAnchorReturnPath(parentId, replyId, returnPath), 'http://textlog.local')
+  const expandedReturnPath = feedReturnPath && (() => {
+    const target = new URL(feedReturnPath, 'http://textlog.local')
+    target.searchParams.set('expand', String(expandedRootId))
+    target.hash = `post-${replyId}`
+    return target.pathname + target.search + target.hash
+  })()
+  const target = new URL(replyAnchorReturnPath(pageId, replyId, expandedReturnPath), 'http://textlog.local')
   target.searchParams.set('to', String(replyId))
   target.searchParams.set('back', String(replyId))
   return `${target.pathname}${target.search}#post-${replyId}`
@@ -1263,7 +1287,24 @@ export function ThreadReplies(
     descendantCounts.set(id, count)
     return count
   }
+  const visibleReplyPageId = (reply: PostView) => {
+    const replyDepth = canonicalDepth(reply.id)
+    if (replyDepth <= MAX_VISIBLE_REPLY_DEPTH) return parentId
+    const levelsToPage = (replyDepth - 1) % MAX_VISIBLE_REPLY_DEPTH + 1
+    let pagePost: PostView | ParentPost = reply
+    for (let depth = 0; depth < levelsToPage; depth++) {
+      const parent: PostView | ParentPost | null | undefined = pagePost.parent_id
+        ? pagePost.parent?.id !== pagePost.parent_id
+          ? pagePost.parent
+          : byId.get(pagePost.parent_id) || pagePost.parent
+        : undefined
+      if (!parent || parent.id === parentId) return parentId
+      pagePost = parent
+    }
+    return pagePost.id
+  }
   const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
+    const replyPageId = visibleReplyPageId(reply)
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
     const postReturnPath = reply.id === suppressReplyActionId && activeReplyReturnPath
       ? `${activeReplyReturnPath}#post-${reply.id}`
@@ -1305,7 +1346,7 @@ export function ThreadReplies(
         <FeedPost p={reply} user={user} showParent={false}
           returnPath={postReturnPath}
           tappableHref={anchorReplyNavigation
-            ? replyAnchorReturnPath(parentId, reply.id, postReturnPath)
+            ? replyAnchorReturnPath(replyPageId, reply.id, postReturnPath)
             : undefined}
           backHref={reply.id === backPostId ? backHref : undefined}
           collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
@@ -1313,13 +1354,13 @@ export function ThreadReplies(
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
           replyHref={user
             ? replyOnPage
-              ? `/post/${parentId}?reply=1&to=${reply.id}${returnPath
+              ? `/post/${replyPageId}?reply=1&to=${reply.id}${returnPath
                 ? '&from=' + encodeURIComponent(replyReturnPath
                   ? `${replyReturnPath}#post-${reply.id}`
                   : returnPath)
                 : ''}#post-${reply.id}`
               : undefined
-            : `/post/${parentId}?reply=1&to=${reply.id}&from=${encodeURIComponent(postReturnPath)}#post-${reply.id}`}
+            : `/post/${replyPageId}?reply=1&to=${reply.id}&from=${encodeURIComponent(postReturnPath)}#post-${reply.id}`}
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
           hideTopMeta={hideTopMeta} />
         {afterReply?.(reply, canonicalDepth(reply.id))}

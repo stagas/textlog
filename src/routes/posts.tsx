@@ -8,7 +8,8 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { conversationTopPath, postAnchorId, postedReplyPath } from '../components/post'
+import { conversationTopPath, MAX_VISIBLE_REPLY_DEPTH, postAnchorId, postedPostPath,
+  postedReplyPath } from '../components/post'
 import { executePostCode } from '../code-execution'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
@@ -42,6 +43,26 @@ import { currentUser } from '../utils'
 
 function notifyPost() {
   wakePostPushWorker()
+}
+
+async function replyDestination(replyPageId: number, replyId: number, viewerId: number) {
+  const [replies, detail] = await Promise.all([
+    databaseService().call('posts.threadReplies', { parentId: replyPageId, viewerId }),
+    databaseService().call('posts.detail', { id: replyPageId, viewerId }),
+  ])
+  const expandedRootId = detail.status === 'ready' ? detail.conversationRootId || replyPageId : replyPageId
+  const reply = replies.find(item => item.id === replyId) as (typeof replies[number] & { depth?: number }) | undefined
+  if (!reply || (reply.depth || 0) <= MAX_VISIBLE_REPLY_DEPTH) return { pageId: replyPageId, expandedRootId }
+  const levelsToPage = ((reply.depth || 0) - 1) % MAX_VISIBLE_REPLY_DEPTH + 1
+  const byId = new Map(replies.map(item => [item.id, item]))
+  let pagePost = reply
+  for (let depth = 0; depth < levelsToPage; depth++) {
+    if (!pagePost.parent_id || pagePost.parent_id === replyPageId) return { pageId: replyPageId, expandedRootId }
+    const parent = byId.get(pagePost.parent_id)
+    if (!parent) return { pageId: pagePost.parent_id, expandedRootId }
+    pagePost = parent as typeof reply
+  }
+  return { pageId: pagePost.id, expandedRootId }
 }
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'
@@ -173,9 +194,13 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) publishPost(result.id)
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
-      const destination = pending.parentId
-        ? postedReplyPath(pending.replyPageId || pending.parentId, result.id, pending.returnPath || undefined)
-        : pending.returnPath
+      const replyPageId = pending.replyPageId || pending.parentId
+      let destination = postedPostPath(result.id, pending.returnPath)
+      if (pending.parentId) {
+        const replyTarget = await replyDestination(replyPageId!, result.id, user.id)
+        destination = postedReplyPath(replyTarget.pageId, result.id, pending.returnPath || undefined,
+          replyTarget.expandedRootId)
+      }
       return redirect(destination, clearPendingPostCookie())
     }
     catch (error) {
@@ -471,7 +496,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return redirect(returnPath)
+      return redirect(postedPostPath(result.id, returnPath))
     }
     catch (error) {
       logError('POST /post', error)
@@ -775,7 +800,8 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return redirect(postedReplyPath(replyPageId, result.id, returnPath))
+      const replyTarget = await replyDestination(replyPageId, result.id, user.id)
+      return redirect(postedReplyPath(replyTarget.pageId, result.id, returnPath, replyTarget.expandedRootId))
     }
     catch (error) {
       logError(`POST /post/${parentId}/reply`, error)
