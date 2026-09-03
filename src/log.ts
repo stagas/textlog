@@ -21,6 +21,23 @@ function paint(value: string, color: Color) {
   return colorsEnabled() ? `${ansi[color]}${value}${ansi.reset}` : value
 }
 
+const ipColors = [
+  33, 39, 44, 45, 48, 49, 69, 75, 81, 84, 87, 111,
+  117, 141, 147, 171, 177, 207, 213, 214, 219, 220,
+]
+
+export function ipColor(pseudonym: string) {
+  if (pseudonym === '-') return null
+  let hash = 0
+  for (const character of pseudonym) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
+  return ipColors[hash % ipColors.length]
+}
+
+function paintIp(pseudonym: string) {
+  const color = ipColor(pseudonym)
+  return colorsEnabled() && color !== null ? `\x1b[38;5;${color}m${pseudonym}${ansi.reset}` : pseudonym
+}
+
 function statusColor(status: number): Color {
   if (status >= 500) return 'red'
   if (status >= 400) return 'yellow'
@@ -92,13 +109,14 @@ export function logHttp(method: string, path: string, status: number, durationMs
   userAgent = '-', feedCache?: string | null)
 {
   const action = semanticAction(method, path)
+  const pseudonym = logIpPseudonym(ip)
   const timing = durationMs < 1000 ? `${durationMs.toFixed(0)}ms` : `${(durationMs / 1000).toFixed(2)}s`
   const parts = [
     paint('http', 'dim'),
     paint(method.padEnd(6), 'blue'),
     paint(String(status), statusColor(status)),
     paint(timing.padStart(7), durationMs >= 1000 ? 'yellow' : 'dim'),
-    paint(logIpPseudonym(ip), 'dim'),
+    paintIp(pseudonym),
     paint(username ? `@${username}` : '-', 'dim'),
     path,
   ]

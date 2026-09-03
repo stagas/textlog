@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { ipPseudonym, logIpPseudonym } from './ip-privacy'
-import { clientIp, logHttp, redactHttpPath, semanticAction, shouldLogHttp } from './log'
+import { clientIp, ipColor, logHttp, redactHttpPath, semanticAction, shouldLogHttp } from './log'
 
 describe('semanticAction', () => {
   test('names user actions without including identifiers', () => {
@@ -14,6 +14,12 @@ describe('semanticAction', () => {
     expect(semanticAction('GET', '/post/42/edit')).toBeUndefined()
     expect(semanticAction('POST', '/something-new')).toBe('http.mutate')
   })
+})
+
+test('IP pseudonyms receive stable distinguishing colors', () => {
+  expect(ipColor('a1234')).toBe(ipColor('a1234'))
+  expect(ipColor('a1234')).not.toBe(ipColor('b5678'))
+  expect(ipColor('-')).toBeNull()
 })
 
 test.serial('HTTP logs include the username, query parameters, and a safe bounded user agent', () => {
