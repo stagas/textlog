@@ -23,7 +23,7 @@ test('notes per user stats exclude users with two or fewer notes', () => {
   database.close()
 })
 
-test('post and note stats include all accounts', () => {
+test('post and reply totals include deleted posts from all accounts', () => {
   const database = new Database(':memory:')
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -37,15 +37,16 @@ test('post and note stats include all accounts', () => {
     (5,2,'bot 2',4,datetime('now')),
     (6,2,'bot 3',NULL,datetime('now')),
     (7,2,'bot yesterday',NULL,datetime('now','start of day','-1 second'));`)
+  database.run(`UPDATE posts SET deleted_at=datetime('now') WHERE id IN (2,3)`)
 
   const stats = dashboardStats(database)
 
-  expect(stats.activePosts).toBe(7)
+  expect(stats.posts).toBe(7)
   expect(stats.replies).toBe(2)
-  expect(stats.notesPerUser).toBe(3.5)
-  expect(stats.averageNotesPerUser).toBe(3.5)
-  expect(stats.posts24h).toBe(7)
-  expect(stats.posts7d).toBe(7)
+  expect(stats.notesPerUser).toBe(4)
+  expect(stats.averageNotesPerUser).toBe(4)
+  expect(stats.posts24h).toBe(5)
+  expect(stats.posts7d).toBe(5)
   expect(stats.postsYesterday).toBe(1)
   database.close()
 })

@@ -7,8 +7,7 @@ export function dashboardStats(database: Database): DashboardStats {
   const stats = database.query(`SELECT
     (SELECT count(*) FROM users WHERE deleted_at IS NULL) users,
     (SELECT count(*) FROM users WHERE deleted_at IS NULL AND suspended_at IS NOT NULL) suspendedUsers,
-    (SELECT count(*) FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.deleted_at IS NULL) activePosts,
+    (SELECT count(*) FROM posts) posts,
     (SELECT coalesce(avg(note_count),0) FROM (
       SELECT count(p.id) note_count,row_number() OVER (ORDER BY count(p.id)) position,count(*) OVER () total
       FROM users u LEFT JOIN posts p ON p.user_id=u.id AND p.deleted_at IS NULL
@@ -19,8 +18,7 @@ export function dashboardStats(database: Database): DashboardStats {
       FROM users u LEFT JOIN posts p ON p.user_id=u.id AND p.deleted_at IS NULL
       WHERE u.deleted_at IS NULL GROUP BY u.id HAVING count(p.id)>2
     )) averageNotesPerUser,
-    (SELECT count(*) FROM posts p JOIN users u ON u.id=p.user_id
-      WHERE p.deleted_at IS NULL AND p.parent_id IS NOT NULL) replies,
+    (SELECT count(*) FROM posts WHERE parent_id IS NOT NULL) replies,
     (SELECT count(*) FROM reports WHERE status='open') openReports,
     (SELECT count(DISTINCT activity.user_id) FROM (
       SELECT user_id,created_at FROM posts

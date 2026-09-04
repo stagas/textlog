@@ -1740,7 +1740,7 @@ test('admin metrics use locale-aware number formatting', () => {
       usersOnline: 12,
       anonymousOnline: 34,
       suspendedUsers: 0,
-      activePosts: 2469134,
+      posts: 2469134,
       notesPerUser: 2,
       averageNotesPerUser: 2.5,
       replies: 0,

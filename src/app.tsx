@@ -482,12 +482,6 @@ app.post('/pick-tags', async c => {
   const popularTags = await databaseService().call('account.popularTags', { limit: 12 })
   const allowed = new Set(popularTags.map(tag => tag.tag))
   const tags = [...new Set(fields.getAll('tags').map(String))].filter(tag => allowed.has(tag))
-  if (!tags.length && popularTags.length) {
-    return page(
-      <TagPicker user={user} tags={popularTags} returnTo={returnTo} error="Choose at least one tag to continue." />,
-      400,
-    )
-  }
   await databaseService().call('account.completeTagPrompt', { userId: user.id, tags })
   scheduleRelationshipFeedInvalidation()
   return c.redirect(returnTo, 303)
@@ -508,13 +502,6 @@ app.post('/pick-people', async c => {
   const popularPeople = await databaseService().call('account.popularPeople', { userId: user.id, limit: 30 })
   const allowed = new Set(popularPeople.map(person => person.id))
   const people = [...new Set(fields.getAll('people').map(Number))].filter(id => allowed.has(id))
-  if (!people.length && popularPeople.length) {
-    return page(
-      <PeoplePicker user={user} people={popularPeople} returnTo={returnTo}
-        error="Choose at least one person to continue." />,
-      400,
-    )
-  }
   const result = await databaseService().call('account.completePeoplePrompt', { userId: user.id, people })
   scheduleRelationshipFeedInvalidation()
   for (const followed of result.followed) {
