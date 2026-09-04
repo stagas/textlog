@@ -3,21 +3,36 @@ import { isAdminEmail } from './admin'
 import { markLatestPostsRead } from './latest-state'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-const descendsFromViewer = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  WHERE ancestry.post_id=p.id AND ancestry.ancestor_user_id=$viewer)`
+const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors WHERE user_id=$viewer)`
 
-const descendsFromFollowedUser = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN follows ON follows.following_id=ancestry.ancestor_user_id
-  WHERE ancestry.post_id=p.id AND follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
+const descendsFromFollowedUser = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors JOIN follows ON follows.following_id=ancestors.user_id
+  WHERE follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
 
-const descendsFromFollowedTag = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN post_hashtags ph ON ph.post_id=ancestry.ancestor_id
+const descendsFromFollowedTag = `EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+  SELECT ancestor.id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
+  UNION ALL
+  SELECT ancestor.id,ancestor.parent_id FROM posts ancestor
+    JOIN ancestors child ON ancestor.id=child.parent_id
+) SELECT 1 FROM ancestors JOIN post_hashtags ph ON ph.post_id=ancestors.id
   JOIN hashtag_follows hf ON hf.tag=ph.tag
-  WHERE ancestry.post_id=p.id AND hf.user_id=$viewer AND p.created_at>=hf.created_at)`
+  WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at)`
 
-const hasVisibleDescendantFromAnotherUser = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN posts d ON d.id=ancestry.post_id WHERE ancestry.ancestor_id=p.id
-  AND d.user_id!=$viewer AND d.deleted_at IS NULL
+const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(id,user_id,parent_id,deleted_at) AS (
+  SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child WHERE child.parent_id=p.id
+  UNION ALL
+  SELECT child.id,child.user_id,child.parent_id,child.deleted_at FROM posts child
+    JOIN descendants parent ON child.parent_id=parent.id
+) SELECT 1 FROM descendants d WHERE d.user_id!=$viewer AND d.deleted_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer))
   AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag

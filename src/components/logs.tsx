@@ -7,7 +7,7 @@ export function LogsPage({ user }: { user: User }) {
       <section className="logs-page">
         <pre id="logs-output" aria-live="off" aria-label="Server logs" />
       </section>
-      <script src="/logs.js?v=4" defer />
+      <script src="/logs.js?v=6" defer />
     </Layout>
   )
 }

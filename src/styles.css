@@ -8529,6 +8529,13 @@ body:has(.logs-page) main {
   min-width: 100%;
   white-space: pre;
 }
+.log-path {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 0.15em;
+}
+.log-path:hover { text-decoration-color: currentColor; }
 
 @media (max-width: 30rem) {
   :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
