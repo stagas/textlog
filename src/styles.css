@@ -6920,12 +6920,38 @@ form.report-panel {
 
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 1px;
+  gap: var(--space-6);
   padding: 0 var(--gutter) var(--space-6);
 }
 
-.admin-stats article {
+.admin-stat-group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-stat-group h2 {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-size-11);
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 180px));
+  gap: 1px;
+  justify-content: start;
+}
+
+@media (min-width: 901px) {
+  .admin-stat-grid {
+    grid-template-columns: repeat(5, minmax(130px, 180px));
+  }
+}
+
+.admin-stat-grid article {
   display: grid;
   gap: var(--space-1);
   padding: var(--space-4);
@@ -6933,12 +6959,13 @@ form.report-panel {
   border: 1px solid var(--soft);
 }
 
-.admin-stats strong {
-  font-size: calc(var(--font-size-32) * .9);
+.admin-stat-grid strong {
+  font-size: calc(var(--font-size-32) * .82);
   font-weight: 500;
+  letter-spacing: -.04em;
 }
 
-.admin-stats span,
+.admin-stat-grid span,
 .admin-report-meta,
 .admin-report-targets,
 .admin-actions-log time,
