@@ -4,7 +4,7 @@ import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
 
-test('latest serves the prior artifact after additions but not after strict mutations', async () => {
+for (const kind of ['latest', 'new'] as const) test(`${kind} serves the prior artifact after additions but not after strict mutations`, async () => {
   const database = new Database(':memory:', { strict: true })
   database.run('PRAGMA foreign_keys=ON')
   runMigrations(database)
@@ -14,13 +14,13 @@ test('latest serves the prior artifact after additions but not after strict muta
 
   try {
     const initial = await executeDatabaseDomain(database, 'cache.materializedFeedGet', {
-      kind: 'latest',
+      kind,
       viewerId: -1,
       variant,
     })
     expect(initial).toMatchObject({ html: null, stale: false })
     await executeDatabaseDomain(database, 'cache.materializedFeedPut', {
-      kind: 'latest',
+      kind,
       viewerId: -1,
       variant,
       generation: initial.generation,
@@ -29,7 +29,7 @@ test('latest serves the prior artifact after additions but not after strict muta
 
     database.run('INSERT INTO posts(id,user_id,body) VALUES(2,1,\'second\')')
     const additive = await executeDatabaseDomain(database, 'cache.materializedFeedGet', {
-      kind: 'latest',
+      kind,
       viewerId: -1,
       variant,
     })
@@ -39,7 +39,7 @@ test('latest serves the prior artifact after additions but not after strict muta
 
     database.run('UPDATE posts SET body=\'edited\' WHERE id=1')
     expect(await executeDatabaseDomain(database, 'cache.materializedFeedGet', {
-      kind: 'latest',
+      kind,
       viewerId: -1,
       variant,
     })).toMatchObject({ html: null, stale: false })

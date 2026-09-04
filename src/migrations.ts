@@ -3182,6 +3182,62 @@ export const migrations: Migration[] = [
       )`)
     },
   },
+  {
+    version: 190,
+    name: 'post_ancestor_projection',
+    up(database) {
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
+      const postColumns = columns(database, 'posts')
+      if (!postColumns.includes('parent_id') || !postColumns.includes('user_id')) return
+      database.run(`CREATE TABLE IF NOT EXISTS post_ancestors (
+          post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          ancestor_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+          ancestor_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          depth INTEGER NOT NULL,
+          PRIMARY KEY(post_id,ancestor_id)
+        );
+        CREATE INDEX IF NOT EXISTS post_ancestors_user
+          ON post_ancestors(post_id,ancestor_user_id,ancestor_id);
+        CREATE INDEX IF NOT EXISTS post_ancestors_descendants
+          ON post_ancestors(ancestor_id,post_id);
+        DELETE FROM post_ancestors;
+        WITH RECURSIVE ancestry(post_id,ancestor_id,ancestor_user_id,depth) AS (
+          SELECT child.id,parent.id,parent.user_id,1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+          UNION ALL
+          SELECT ancestry.post_id,parent.id,parent.user_id,ancestry.depth+1 FROM ancestry
+          JOIN posts current ON current.id=ancestry.ancestor_id
+          JOIN posts parent ON parent.id=current.parent_id
+        ) INSERT INTO post_ancestors(post_id,ancestor_id,ancestor_user_id,depth)
+          SELECT post_id,ancestor_id,ancestor_user_id,depth FROM ancestry;
+
+        CREATE TRIGGER IF NOT EXISTS post_ancestors_posts_insert AFTER INSERT ON posts
+        WHEN NEW.parent_id IS NOT NULL BEGIN
+          INSERT INTO post_ancestors(post_id,ancestor_id,ancestor_user_id,depth)
+            SELECT NEW.id,parent.id,parent.user_id,1 FROM posts parent WHERE parent.id=NEW.parent_id;
+          INSERT INTO post_ancestors(post_id,ancestor_id,ancestor_user_id,depth)
+            SELECT NEW.id,ancestor_id,ancestor_user_id,depth+1 FROM post_ancestors WHERE post_id=NEW.parent_id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS post_ancestors_posts_rethread AFTER UPDATE OF parent_id ON posts BEGIN
+          DELETE FROM post_ancestors WHERE post_id IN (
+            WITH RECURSIVE descendants(id) AS (
+              SELECT NEW.id UNION ALL SELECT child.id FROM posts child JOIN descendants ON child.parent_id=descendants.id
+            ) SELECT id FROM descendants
+          );
+          INSERT INTO post_ancestors(post_id,ancestor_id,ancestor_user_id,depth)
+          WITH RECURSIVE descendants(id,parent_id) AS (
+            SELECT NEW.id,NEW.parent_id
+            UNION ALL SELECT child.id,child.parent_id FROM posts child JOIN descendants ON child.parent_id=descendants.id
+          ), ancestry(post_id,ancestor_id,ancestor_user_id,depth) AS (
+            SELECT child.id,parent.id,parent.user_id,1 FROM descendants child
+              JOIN posts parent ON parent.id=child.parent_id
+            UNION ALL
+            SELECT ancestry.post_id,parent.id,parent.user_id,ancestry.depth+1 FROM ancestry
+              JOIN posts current ON current.id=ancestry.ancestor_id
+              JOIN posts parent ON parent.id=current.parent_id
+          ) SELECT post_id,ancestor_id,ancestor_user_id,depth FROM ancestry;
+        END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

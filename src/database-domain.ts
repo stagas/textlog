@@ -264,7 +264,7 @@ function materializedFeedGeneration(database: Database, kind: string, viewerId: 
     } | null
     return state?.refreshed_at ? Date.parse(state.refreshed_at) : 0
   }
-  if (kind === 'latest' && database.query(`SELECT 1 FROM sqlite_master
+  if ((kind === 'latest' || kind === 'new') && database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='feed_publication_state'`).get()) {
     return (database.query('SELECT additive_generation FROM feed_publication_state WHERE id=1').get() as {
       additive_generation: number
@@ -276,7 +276,7 @@ function materializedFeedGeneration(database: Database, kind: string, viewerId: 
 }
 
 function materializedStrictGeneration(database: Database, kind: string) {
-  if (kind !== 'latest' || !database.query(`SELECT 1 FROM sqlite_master
+  if (!['latest', 'new'].includes(kind) || !database.query(`SELECT 1 FROM sqlite_master
     WHERE type='table' AND name='feed_publication_state'`).get()) return 0
   return (database.query('SELECT strict_generation FROM feed_publication_state WHERE id=1').get() as {
     strict_generation: number
@@ -3374,7 +3374,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         generation: number
       } | null
       let stale = false
-      if (!cached && kind === 'latest') {
+      if (!cached && (kind === 'latest' || kind === 'new')) {
         cached = cacheDb.query(`SELECT html,generation FROM materialized_feed_pages_v2
           WHERE kind=? AND viewer_id=? AND variant=? AND strict_generation=?
           ORDER BY generation DESC LIMIT 1`).get(kind, viewerId, variant, strictGeneration) as {

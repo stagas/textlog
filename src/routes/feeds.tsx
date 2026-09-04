@@ -41,6 +41,9 @@ import { previewLocation } from './posts'
 
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return false
+  // Keep the selected banner stable for this account state. Random selection fragmented the materialized feed cache:
+  // the same viewer could populate several otherwise identical multi-hundred-kilobyte pages.
+  const choose = <T,>(choices: T[]) => choices[user.id % choices.length]
   const userAgent = notificationUserAgent(request)
   const state = await databaseService().call('feeds.bannerState', { userId: user.id, userAgent })
   const { inviteHandled, notificationsEnabled, improvementDismissed, appearanceHandled, bioMissing, bioHandled,
@@ -49,26 +52,32 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
   if (!userAgent) {
     const choices = ['notifications', 'appearance', ...(inviteHandled ? [] : ['invite']),
       ...(bioPending ? ['bio'] : [])]
-    return choices[Math.floor(Math.random() * choices.length)] as 'notifications' | 'appearance' | 'invite' | 'bio'
+    return choose(choices) as 'notifications' | 'appearance' | 'invite' | 'bio'
   }
   if (notificationsEnabled && !improvementDismissed) return 'notification-update'
   const notificationsHandled = notificationBannerDismissed(request, user.id) || state.notificationsHandled
   if (notificationsHandled && appearanceHandled && (!inviteHandled || bioPending)) {
     const choices = [...(inviteHandled ? [] : ['invite']), ...(bioPending ? ['bio'] : [])]
-    return choices[Math.floor(Math.random() * choices.length)] as 'invite' | 'bio'
+    return choose(choices) as 'invite' | 'bio'
   }
   if (notificationsHandled && appearanceHandled) {
     return instance.links.donate && !donationDismissed ? 'donate' : false
   }
   if (notificationsHandled) return 'appearance'
   if (appearanceHandled) return 'notifications'
-  if (!inviteHandled && Math.random() < 1 / 3) return 'invite'
-  return Math.random() < 0.5 ? 'notifications' : 'appearance'
+  if (!inviteHandled && user.id % 3 === 0) return 'invite'
+  return user.id % 2 === 0 ? 'notifications' : 'appearance'
 }
 
-function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>) {
+function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>,
+  banner: Awaited<ReturnType<typeof showNotificationBanner>> = false)
+{
   const feedPresentationVersion = 1
-  return base * 100 + feedPresentationVersion * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
+  const bannerVersion = banner
+    ? ['notifications', 'appearance', 'invite', 'bio', 'notification-update', 'donate'].indexOf(banner) + 1
+    : 0
+  return (base * 100 + feedPresentationVersion * 2 + (user?.show_moderated_content === 1 ? 1 : 0)) * 10
+    + bannerVersion
 }
 
 function personalizedFeedAfterVisibleReads(data: PersonalizedFeedData, toMe: boolean): PersonalizedFeedData {
@@ -303,9 +312,10 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeError && !write.writePreview && !notificationBanner
+    const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false, viewerCacheVersion(12, user), false,
+      ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
+        viewerCacheVersion(12, user, notificationBanner), false,
         renderForCache, async () => {
         await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
           toMe: false })
@@ -344,10 +354,10 @@ export function registerFeedsRoutes(app: Hono) {
         )
       }
       : undefined
-    const response = !write.writeError && !write.writePreview && !notificationBanner
+    const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(latestFeedCacheVersion, user), false, renderForCache, user
+        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache, user
         ? async () => {
           await data()
         }
@@ -398,10 +408,10 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const response = !write.writeError && !write.writePreview && (!user || !notificationBanner)
+    const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
-        viewerCacheVersion(newFeedCacheVersion, user))
+        viewerCacheVersion(newFeedCacheVersion, user, notificationBanner))
       : await render()
     return rememberFeed(response, 'new')
   })
@@ -450,9 +460,10 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeError && !write.writePreview && !notificationBanner
+    const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
-      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false, viewerCacheVersion(0, user), false,
+      ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
+        viewerCacheVersion(0, user, notificationBanner), false,
         renderForCache)
       : await render()
     return rememberFeed(response, 'activity')
@@ -481,11 +492,11 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const response = !write.writeError && !write.writePreview && (!user || !notificationBanner)
+    const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,
-        viewerCacheVersion(hotRankingVersion, user))
+        viewerCacheVersion(hotRankingVersion, user, notificationBanner))
       : await render()
     const remembered = rememberFeed(response, 'hot')
     return remembered
