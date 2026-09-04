@@ -71,6 +71,24 @@ function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>) 
   return base * 100 + feedPresentationVersion * 2 + (user?.show_moderated_content === 1 ? 1 : 0)
 }
 
+function personalizedFeedAfterVisibleReads(data: PersonalizedFeedData, toMe: boolean): PersonalizedFeedData {
+  const consumed = new Set(data.timeline.filter(row => row.unread).map(row => row.event_key)).size
+  return {
+    ...data,
+    forYouCount: Math.max(0, data.forYouCount - consumed),
+    toMeCount: Math.max(0, data.toMeCount - (toMe ? consumed : 0)),
+    forYouUnread: toMe ? data.forYouUnread : data.forYouCount > consumed,
+    toMeUnread: toMe ? data.toMeCount > consumed : data.toMeUnread,
+    timeline: data.timeline.map(row => ({ ...row, unread: 0 })),
+  }
+}
+
+function latestFeedAfterVisibleReads(feed: PostFeedPage): PostFeedPage {
+  const consumed = new Set(feed.unreadPostIds || []).size
+  const latestCount = Math.max(0, (feed.latestCount || 0) - consumed)
+  return { ...feed, latestCount, latestUnread: latestCount > 0, unreadPostIds: [], directedUnreadPostIds: [] }
+}
+
 const positiveInteger = (value?: string) => {
   if (!value || !/^\d+$/.test(value)) return undefined
   const parsed = Number(value)
@@ -279,14 +297,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     const renderForCache = async () => {
-      const feed = await databaseService().call('feeds.personalizedPage', {
-        user,
-        page: currentPage(c.req.query('page')),
-        pageSize,
-        toMe: false,
-        path: '/my-feed',
-        markRead: false,
-      })
+      const feed = personalizedFeedAfterVisibleReads(await data(), false)
       return page(
         <Feed user={user} data={feed} title="my feed" notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} />,
@@ -326,8 +337,7 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const renderForCache = user
       ? async () => {
-        const feed = await databaseService().call('feeds.latestPage', { viewerId: user.id,
-          page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), markRead: false })
+        const feed = latestFeedAfterVisibleReads(await data())
         return page(
           <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
             expandedRootId={expandedRootId} />,
@@ -434,12 +444,9 @@ export function registerFeedsRoutes(app: Hono) {
       )
     const renderForCache = async () => {
       const feed = await data()
-      const consumed = new Set(feed.timeline.filter(row => row.unread).map(row => row.event_key)).size
       return page(
         <Feed user={user}
-          data={{ ...feed, forYouCount: Math.max(0, feed.forYouCount - consumed),
-            toMeCount: Math.max(0, feed.toMeCount - consumed),
-            timeline: feed.timeline.map(row => ({ ...row, unread: 0 })) }} title="@" path="/@" toMe
+          data={personalizedFeedAfterVisibleReads(feed, true)} title="@" path="/@" toMe
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }

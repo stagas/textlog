@@ -229,33 +229,35 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       row.id !== null
       && ['post', 'reply', 'mention'].includes(row.activity_kind)
     )
-    const byId = new Map(postRows.map(row => [row.id, row]))
     const rootByPost = new Map<number, number>()
     if (postRows.length) {
-      const ancestry = database.query(`WITH RECURSIVE ancestry(origin,id,parent_id) AS (
-          SELECT id,id,parent_id FROM posts WHERE id IN (${postRows.map(() => '?').join(',')})
-          UNION ALL SELECT a.origin,p.id,p.parent_id FROM posts p JOIN ancestry a ON p.id=a.parent_id
-        ) SELECT origin,id root_id FROM ancestry WHERE parent_id IS NULL`).all(
+      const ancestry = database.query(`SELECT post_id origin,conversation_id root_id FROM post_conversations
+        WHERE post_id IN (${postRows.map(() => '?').join(',')})`).all(
         ...postRows.map(row => row.id),
       ) as { origin: number; root_id: number }[]
       for (const row of ancestry) rootByPost.set(row.origin, row.root_id)
     }
     const rootId = (row: PersonalizedTimelineRow) => row.id === null ? null : rootByPost.get(row.id) || row.id
+    const postsByRoot = new Map<number, PersonalizedTimelineRow[]>()
+    for (const row of postRows) {
+      const root = rootId(row)!
+      const conversation = postsByRoot.get(root)
+      if (conversation) conversation.push(row)
+      else postsByRoot.set(root, [row])
+    }
     const emittedThreads = new Set<number | null>()
     const roots = [...new Set(postRows.map(rootId).filter((id): id is number => id !== null))]
     const threadActivity = new Map<number, string>()
     if (roots.length) {
-      const activity = database.query(`WITH RECURSIVE descendants(root_id,id,user_id,created_at) AS (
-          SELECT id,id,user_id,created_at FROM posts WHERE id IN (${roots.map(() => '?').join(',')})
-          UNION ALL
-          SELECT d.root_id,p.id,p.user_id,p.created_at FROM posts p JOIN descendants d ON p.parent_id=d.id
-          WHERE p.deleted_at IS NULL
-        ) SELECT d.root_id,max(d.created_at) created_at FROM descendants d
+      const activity = database.query(`SELECT pc.conversation_id root_id,max(p.created_at) created_at
+        FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
         WHERE (?=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=? AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=?)))
+          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-            WHERE ph.post_id=d.id AND bh.user_id=?)
-        GROUP BY d.root_id`).all(...roots, Number(isAdmin(user)), user.id, user.id, user.id) as {
+            WHERE ph.post_id=p.id AND bh.user_id=?)
+          AND p.deleted_at IS NULL
+          AND pc.conversation_id IN (${roots.map(() => '?').join(',')})
+        GROUP BY pc.conversation_id`).all(Number(isAdmin(user)), user.id, user.id, user.id, ...roots) as {
         root_id: number
         created_at: string
       }[]
@@ -274,8 +276,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       const root = rootId(row)
       if (emittedThreads.has(root)) continue
       emittedThreads.add(root)
-      const conversation = postRows.filter(candidate => rootId(candidate) === root)
-      const replies = conversation.filter(candidate => candidate.parent_id !== null)
+      const conversation = postsByRoot.get(root!) || []
       const projection = projectRecentConversation(conversation)
       const threadRows = projection.keepsRoot && projection.root ? [projection.root] : []
       const previewReplies = projection.replies.map(candidate =>

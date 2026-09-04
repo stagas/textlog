@@ -2969,7 +2969,23 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
               .compare(createHash('sha256').update(`${sampleSeed}:${right}`).digest())
           )
           : ids
-      const snapshot = feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
+      // Anonymous page one has no read-state navigation that needs positions from a complete snapshot. Keep its
+      // cold path proportional to the requested page; deeper pages still use a snapshot for stable pagination.
+      const directAnonymousFirstPage = viewerId < 0 && page === 1 && !sampleSeed
+      const snapshot = directAnonymousFirstPage
+        ? (() => {
+          const filters = `NOT EXISTS (SELECT 1 FROM post_hashtags ph
+              WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            AND ${excludesMetaPosts('h.conversation_id')}`
+          const totalItems = (database.query(`SELECT count(*) count FROM conversation_heads h WHERE ${filters}`)
+            .get() as { count: number }).count
+          const items = (database.query(`SELECT h.conversation_id FROM conversation_heads h
+            WHERE ${filters} ORDER BY h.latest_post_id DESC,h.conversation_id DESC LIMIT ?`)
+            .all(pageSize) as Array<{ conversation_id: number }>).map(row => row.conversation_id)
+          return { snapshotId: 0, items, page: 1, totalItems,
+            totalPages: Math.max(1, Math.ceil(totalItems / pageSize)) }
+        })()
+        : feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
         if (viewerId < 0) {
           return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
@@ -2995,7 +3011,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
         ).all(...parameters) as Array<{ conversation_id: number }>
         return seededOrder(rows.map(row => row.conversation_id))
-      }, pageSize, cacheDb)
+        }, pageSize, cacheDb)
       const conversationIds = snapshot.items
       const rows = conversationIds.length
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
