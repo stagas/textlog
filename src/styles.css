@@ -7427,6 +7427,10 @@ form.report-panel {
   flex: 0 0 auto;
 }
 
+.account-menu .unread-dot {
+  background: currentColor;
+}
+
 .for-you-item .posttop .unread-dot {
   margin-right: calc(1ch - var(--space-4));
 }
