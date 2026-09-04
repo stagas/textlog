@@ -64,6 +64,7 @@ const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
 const publicEmailPreferencePaths = new Set([
+  '/account/email-preferences',
   '/account/recap-emails/unsubscribe',
   '/account/interacted-emails/unsubscribe',
 ])

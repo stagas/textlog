@@ -1036,6 +1036,38 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         FROM users WHERE id=?`).get(userId)
       return (row || null) as DatabaseDomainOutput<K>
     }
+    case 'account.emailPreferences': {
+      const { userId, token } = input as DatabaseDomainInput<'account.emailPreferences'>
+      const tokenHash = token ? createHash('sha256').update(token).digest('hex') : ''
+      const row = userId
+        ? database.query(`SELECT id,recap_emails recap,interaction_emails interactions
+          FROM users WHERE id=? AND deleted_at IS NULL`).get(userId)
+        : token
+        ? database.query(`SELECT u.id,u.recap_emails recap,u.interaction_emails interactions FROM users u
+          WHERE u.deleted_at IS NULL AND u.id IN (
+            SELECT user_id FROM recap_unsubscribe_tokens WHERE token_hash=?
+            UNION SELECT user_id FROM interacted_unsubscribe_tokens WHERE token_hash=?
+          ) LIMIT 1`).get(tokenHash, tokenHash)
+        : null
+      if (!row) return null as DatabaseDomainOutput<K>
+      const result = row as { id: number; recap: number; interactions: number }
+      const preferences = { id: result.id, recap: result.recap !== 0, interactions: result.interactions !== 0 }
+      return preferences as DatabaseDomainOutput<K>
+    }
+    case 'account.setEmailPreferences': {
+      const { userId, token, recap, interactions } = input as DatabaseDomainInput<'account.setEmailPreferences'>
+      const tokenHash = token ? createHash('sha256').update(token).digest('hex') : ''
+      const row = userId ? { id: userId } : token
+        ? database.query(`SELECT u.id FROM users u WHERE u.deleted_at IS NULL AND u.id IN (
+          SELECT user_id FROM recap_unsubscribe_tokens WHERE token_hash=?
+          UNION SELECT user_id FROM interacted_unsubscribe_tokens WHERE token_hash=?
+        ) LIMIT 1`).get(tokenHash, tokenHash) as { id: number } | null
+        : null
+      if (!row) return false as DatabaseDomainOutput<K>
+      database.query(`UPDATE users SET recap_emails=?,interaction_emails=?
+        WHERE email=(SELECT email FROM users WHERE id=?)`).run(recap ? 1 : 0, interactions ? 1 : 0, row.id)
+      return true as DatabaseDomainOutput<K>
+    }
     case 'account.recapStatus': {
       const { userId, token } = input as DatabaseDomainInput<'account.recapStatus'>
       const row = userId

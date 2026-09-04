@@ -510,7 +510,7 @@ test('email unsubscribe links bypass handle selection for unfinished signups', a
     acceptHtml: true,
   })
   expect(recap.status).toBe(200)
-  expect(await recap.text()).toContain('You have been unsubscribed.')
+  expect(await recap.text()).toContain('Your email preferences have been saved.')
 
   const interactedToken = issueInteractedUnsubscribeToken(database, user.id)
   const interacted = await request(
@@ -978,31 +978,47 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const accountFromLatest = await request('/account/edit?from=%2Flatest%3Fpage%3D2', { cookie: aliceCookie })
   const accountFromLatestHtml = await accountFromLatest.text()
   expect(accountFromLatestHtml).toContain('href="/latest?page=2">back</a>')
-  expect(accountFromLatestHtml).toContain('id="recap-emails"')
-  expect(accountFromLatestHtml).toContain('href="/account/recap-emails">manage recap emails</a>')
+  expect(accountFromLatestHtml).toContain('id="email-preferences"')
+  expect(accountFromLatestHtml)
+    .toContain('href="/account/email-preferences?from=%2Flatest%3Fpage%3D2">manage emails</a>')
+  const emailPreferencesWithBack = await request('/account/email-preferences?from=%2Flatest%3Fpage%3D2', {
+    cookie: aliceCookie,
+  })
+  expect(await emailPreferencesWithBack.text())
+    .toContain('name="back" value="/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences"')
+  const savedEmailPreferences = await request('/account/email-preferences', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { recap: '1', interactions: '1', back: '/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences' },
+  })
+  expect(savedEmailPreferences.status).toBe(303)
+  expect(savedEmailPreferences.headers.get('location')).toBe('/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences')
   const recapToken = issueRecapUnsubscribeToken(database, alice.id)
   const unsubscribedRecaps = await request(
     '/account/recap-emails/unsubscribe?token=' + encodeURIComponent(recapToken),
   )
   expect(unsubscribedRecaps.status).toBe(200)
-  expect(await unsubscribedRecaps.text()).toContain('You have been unsubscribed.')
+  const recapPreferenceHtml = await unsubscribedRecaps.text()
+  expect(recapPreferenceHtml).toContain('name="recap" value="1"')
+  expect(recapPreferenceHtml).toContain('name="interactions" checked="" value="1"')
   expect(database.query('SELECT recap_emails FROM users WHERE id=?').get(alice.id)).toEqual({ recap_emails: 0 })
-  const recapSettings = await (await request('/account/recap-emails', { cookie: aliceCookie })).text()
-  expect(recapSettings).toContain('name="subscribed" value="1"')
-  expect(recapSettings).toContain('>subscribe</button>')
-  expect(accountFromLatestHtml).toContain('id="interaction-emails"')
-  expect(accountFromLatestHtml).toContain('href="/account/interacted-emails"')
+  const recapSettings = await (await request('/account/email-preferences', { cookie: aliceCookie })).text()
+  expect(recapSettings).toContain('name="recap" value="1"')
   const interactedToken = issueInteractedUnsubscribeToken(database, alice.id)
   const unsubscribedInteractions = await request(
     '/account/interacted-emails/unsubscribe?token=' + encodeURIComponent(interactedToken),
   )
   expect(unsubscribedInteractions.status).toBe(200)
-  expect(await unsubscribedInteractions.text()).toContain('You have been unsubscribed.')
+  expect(await unsubscribedInteractions.text()).toContain('Your email preferences have been saved.')
   expect(database.query('SELECT interaction_emails FROM users WHERE id=?').get(alice.id))
     .toEqual({ interaction_emails: 0 })
-  const interactedSettings = await (await request('/account/interacted-emails', { cookie: aliceCookie })).text()
-  expect(interactedSettings).toContain('name="subscribed" value="1"')
-  expect(interactedSettings).toContain('>subscribe</button>')
+  const tokenUpdate = await request('/account/email-preferences', {
+    method: 'POST',
+    form: { token: recapToken, interactions: '1' },
+  })
+  expect(tokenUpdate.status).toBe(200)
+  expect(database.query('SELECT recap_emails,interaction_emails FROM users WHERE id=?').get(alice.id))
+    .toEqual({ recap_emails: 0, interaction_emails: 1 })
   const rememberedActivity = await request('/activity', { cookie: aliceCookie })
   expect(rememberedActivity.status).toBe(303)
   expect(rememberedActivity.headers.get('location')).toBe('/@')

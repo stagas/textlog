@@ -235,6 +235,17 @@ export type DatabaseDomainOperations = {
     recapEmails: number
     interactionEmails: number
   } | null }
+  'account.emailPreferences': { input: { userId?: number; token?: string }; output: {
+    id: number
+    recap: boolean
+    interactions: boolean
+  } | null }
+  'account.setEmailPreferences': { input: {
+    userId?: number
+    token?: string
+    recap: boolean
+    interactions: boolean
+  }; output: boolean }
   'account.recapStatus': { input: { userId?: number; token?: string }; output: {
     id: number
     subscribed: boolean

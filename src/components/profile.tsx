@@ -222,19 +222,12 @@ export function Profile(
                   </div>
                   <a className="button" href={`/account/edit/notifications${fromQuery}`}>manage notifications</a>
                 </div>
-                <div className="account-danger-zone" id="recap-emails">
+                <div className="account-danger-zone" id="email-preferences">
                   <div>
-                    <strong>Recap emails</strong>
-                    <span>Receive occasional emails about new features and popular notes.</span>
+                    <strong>Email preferences</strong>
+                    <span>Choose which emails you&apos;ll receive.</span>
                   </div>
-                  <a className="button" href="/account/recap-emails">manage recap emails</a>
-                </div>
-                <div className="account-danger-zone" id="interaction-emails">
-                  <div>
-                    <strong>Interaction emails</strong>
-                    <span>Receive an email when people have replied to your notes.</span>
-                  </div>
-                  <a className="button" href="/account/interacted-emails">manage interaction emails</a>
+                  <a className="button" href={`/account/email-preferences${fromQuery}`}>manage emails</a>
                 </div>
                 <div className="account-danger-zone">
                   <div>

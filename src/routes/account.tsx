@@ -19,6 +19,7 @@ import {
   ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
+  EmailPreferences,
   InteractedEmails,
   InviteFriends,
   NotificationSettings,
@@ -276,17 +277,45 @@ export function registerAccountRoutes(app: Hono) {
   })
 
   app.get('/account/recap-emails', async c => {
+    return redirect('/account/email-preferences')
+  })
+
+  app.get('/account/email-preferences', async c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/recap-emails'))
-    const preference = await databaseService().call('account.recapStatus', { userId: user.id })
-    return page(<RecapEmails user={user} subscribed={preference?.subscribed !== false} />)
+    const value = c.req.query('token') || ''
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    if (!user && !value) return redirect('/enter?next=' + encodeURIComponent('/account/email-preferences'))
+    const preference = await databaseService().call('account.emailPreferences', {
+      userId: user?.id,
+      token: user ? undefined : value,
+    })
+    if (!preference) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
+    return page(<EmailPreferences user={user} recap={preference.recap} interactions={preference.interactions}
+      token={user ? undefined : value} returnPath={returnPath} />)
+  })
+
+  app.post('/account/email-preferences', async c => {
+    const user = currentUser(c.req.raw)
+    const f = await form(c.req.raw)
+    const changed = await databaseService().call('account.setEmailPreferences', {
+      userId: user?.id,
+      token: user ? undefined : f.token,
+      recap: f.recap === '1',
+      interactions: f.interactions === '1',
+    })
+    if (!changed) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
+    if (f.back) return redirect(safeNext(f.back))
+    return page(<EmailPreferences user={user} recap={f.recap === '1'} interactions={f.interactions === '1'}
+      token={user ? undefined : f.token} changed />)
   })
 
   app.get('/account/recap-emails/unsubscribe', async c => {
     const value = c.req.query('token') || ''
     const changed = await databaseService().call('account.setRecapPreference', { token: value, subscribed: false })
-    if (!changed) return page(<RecapEmails subscribed={false} invalid />, 404)
-    return page(<RecapEmails subscribed={false} token={value} changed />)
+    if (!changed) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
+    const preference = await databaseService().call('account.emailPreferences', { token: value })
+    return page(<EmailPreferences recap={false} interactions={preference?.interactions ?? false} token={value}
+      changed />)
   })
 
   app.post('/account/recap-emails/unsubscribe', async c => {
@@ -311,10 +340,7 @@ export function registerAccountRoutes(app: Hono) {
   })
 
   app.get('/account/interacted-emails', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/interacted-emails'))
-    const preference = await databaseService().call('account.interactedStatus', { userId: user.id })
-    return page(<InteractedEmails user={user} subscribed={preference?.subscribed !== false} />)
+    return redirect('/account/email-preferences')
   })
 
   app.get('/account/interacted-emails/unsubscribe', async c => {
@@ -323,8 +349,9 @@ export function registerAccountRoutes(app: Hono) {
       token: value,
       subscribed: false,
     })
-    if (!changed) return page(<InteractedEmails subscribed={false} invalid />, 404)
-    return page(<InteractedEmails subscribed={false} token={value} changed />)
+    if (!changed) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
+    const preference = await databaseService().call('account.emailPreferences', { token: value })
+    return page(<EmailPreferences recap={preference?.recap ?? false} interactions={false} token={value} changed />)
   })
 
   app.post('/account/interacted-emails/unsubscribe', async c => {

@@ -23,11 +23,11 @@ import {
   Contact,
   Drafts,
   EditPost,
+  EmailPreferences,
   EmbedExamples,
   ErrorPage,
   Explore,
   ForgotPassword,
-  InteractedEmails,
   Legal,
   MagicLinkSent,
   NotFound,
@@ -37,7 +37,6 @@ import {
   postTitle,
   Profile,
   PublicThread,
-  RecapEmails,
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle, postAnchorId,
@@ -1999,7 +1998,7 @@ test('account settings pages share one consistent heading', () => {
   }
 })
 
-test('account settings link to a focused recap email preference panel', () => {
+test('account settings link to a single email preference page', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const subscribed = renderToStaticMarkup(React.createElement(Profile, {
     user,
@@ -2008,47 +2007,26 @@ test('account settings link to a focused recap email preference panel', () => {
     following: false,
     editing: true,
   }))
-  const unsubscribed = renderToStaticMarkup(React.createElement(RecapEmails, {
+  const preferences = renderToStaticMarkup(React.createElement(EmailPreferences, {
     user,
-    subscribed: false,
+    recap: false,
+    interactions: true,
+    returnPath: '/latest?page=2',
     changed: true,
   }))
 
-  expect(subscribed).toContain('class="account-danger-zone" id="recap-emails"')
-  expect(subscribed).toContain('href="/account/recap-emails">manage recap emails</a>')
-  expect(unsubscribed).toContain('class="panel-shell recap-emails-shell"')
-  expect(unsubscribed).toContain('class="panel panel-surface panel-medium recap-emails-panel"')
-  expect(unsubscribed).toContain('<h1 class="panel-heading">Recap emails</h1>')
-  expect(unsubscribed).toContain(
-    '<p class="panel-copy">You are currently unsubscribed and will not be receiving recap emails.</p>',
-  )
-  expect(unsubscribed).toContain('class="form-actions-secondary"><a class="secondary-action" href="/account/edit"')
-  expect(unsubscribed).toContain('name="subscribed" value="1"')
-  expect(unsubscribed).toContain('>subscribe</button>')
-  expect(unsubscribed).toContain('You have been unsubscribed.')
-})
-
-test('account settings link to a focused interaction email preference panel', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const profile = renderToStaticMarkup(React.createElement(Profile, {
-    user,
-    profile: { ...user, interaction_emails: 1 },
-    posts: [],
-    following: false,
-    editing: true,
-  }))
-  const preference = renderToStaticMarkup(React.createElement(InteractedEmails, {
-    user,
-    subscribed: false,
-    changed: true,
-  }))
-
-  expect(profile).toContain('id="interaction-emails"')
-  expect(profile).toContain('href="/account/interacted-emails">manage interaction emails</a>')
-  expect(preference).toContain('<h1 class="panel-heading">Interaction emails</h1>')
-  expect(preference).toContain('action="/account/interacted-emails"')
-  expect(preference).toContain('name="subscribed" value="1"')
-  expect(preference).toContain('You have been unsubscribed.')
+  expect(subscribed).toContain('class="account-danger-zone" id="email-preferences"')
+  expect(subscribed).toContain('href="/account/email-preferences">manage emails</a>')
+  expect(subscribed).toContain('Choose which emails you&#x27;ll receive.')
+  expect(preferences).toContain('class="static-page notifications-page"')
+  expect(preferences).toContain('<h1>email preferences</h1>')
+  expect(preferences).toContain('action="/account/email-preferences"')
+  expect(preferences).toContain('Choose which emails you&#x27;ll receive.')
+  expect(preferences).toContain('name="back" value="/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences"')
+  expect(preferences).toContain('name="recap" value="1"')
+  expect(preferences).toContain('name="interactions" checked="" value="1"')
+  expect(preferences).toContain('When people have interacted with you.')
+  expect(preferences).toContain('Your email preferences have been saved.')
 })
 
 test('notification settings are the only account page that loads their client script', () => {
