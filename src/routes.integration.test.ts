@@ -643,8 +643,23 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   expect(inviteHtml).toContain('class="secondary-action cancel-action"')
   expect(inviteHtml).not.toContain('>back</a>')
   expect(inviteHtml).toContain('Your friends will get a magic link to join textlog.')
+  expect(inviteHtml).not.toContain('or share with friends')
   expect(inviteHtml).not.toContain('up to 20')
   expect(inviteHtml).toContain('name="emails"')
+
+  const accountPage = await request('/account/edit', { cookie })
+  const accountHtml = await accountPage.text()
+  expect(accountHtml).toContain('or share with friends')
+  expect(accountHtml).toContain('https://t.me/share/url?')
+  expect(accountHtml).toContain('https://wa.me/?text=')
+  expect(accountHtml).toContain('https://www.instagram.com/direct/new/')
+  expect(accountHtml).toContain('https://www.messenger.com/new/')
+  expect(accountHtml).toContain('https://www.threads.net/intent/post?text=')
+  expect(accountHtml).toContain('https://x.com/intent/post?text=')
+  expect(accountHtml).toContain('target="_blank" rel="noopener noreferrer"')
+  expect(accountHtml).toContain('Come%20join%20me%20on%20textlog')
+  expect(accountHtml).toContain('class="invite-share-copy"')
+  expect(accountHtml).toContain('Come join me on textlog — a quieter place to write, share, and connect. https://textlog.cc')
 
   const invited = await request('/account/edit/invite', {
     method: 'POST',

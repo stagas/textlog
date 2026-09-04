@@ -5921,6 +5921,51 @@ form.report-panel {
 
 .invite-form textarea { min-height: 9rem; resize: vertical; }
 
+.invite-share {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.invite-share h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-12);
+  font-weight: bold;
+}
+.invite-share-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.invite-share-links > a {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--ink);
+  border: 1px solid var(--soft);
+  border-radius: var(--corner-radius-small);
+  text-decoration: none;
+}
+.invite-share-links > a:hover { color: var(--accent); border-color: var(--accent); }
+.invite-share-links svg { width: 1.15rem; height: 1.15rem; }
+.invite-share-copy {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2);
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--soft);
+  border-radius: var(--corner-radius-small);
+  font-size: var(--font-size-10);
+  line-height: 1.5;
+  cursor: text;
+  user-select: all;
+}
+
 .admin-header.account-settings-heading {
   margin-bottom: var(--space-7);
   padding: var(--space-7) var(--gutter) 0;

@@ -41,6 +41,7 @@
     "nodemailer": "^9.0.5",
     "react": "latest",
     "react-dom": "latest",
+    "react-icons": "^5.7.0",
     "sanitize-html": "^2.17.7",
     "svg-captcha": "^1.4.0",
     "tlds": "^1.261.0",

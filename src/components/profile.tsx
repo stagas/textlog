@@ -5,6 +5,7 @@ import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { Layout } from './layout'
+import { InviteShare } from './invite-share'
 import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
   type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'
@@ -209,6 +210,7 @@ export function Profile(
                   <a className="button" href={`/account/edit/invite${fromQuery}`}>
                     <span className="emoji" aria-hidden="true">👋</span> invite friends
                   </a>
+                  <InviteShare />
                 </div>
                 <div className="profile-presence-section">{presence}</div>
                 <div className="account-danger-zone" id="appearance">
