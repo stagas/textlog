@@ -6,6 +6,7 @@ import { notificationDevice, sessionCookie } from './http'
 import { PAGE_SIZE } from './pagination'
 import { withRequestContext } from './request-context'
 import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
+import { closeLogConnections } from './log-stream'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
@@ -237,7 +238,9 @@ process.once('SIGTERM', () => {
   if (shuttingDown) return
   shuttingDown = true
   console.log('SIGTERM received  draining http connections')
-  void server.stop(false).then(() => {
+  const stopped = server.stop(false)
+  closeLogConnections()
+  void stopped.then(() => {
     runtime.terminate()
     console.log('http listener stopped')
   }).catch(error => {

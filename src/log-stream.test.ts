@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
-import { hasLogSubscribers, LOG_HISTORY_LIMIT, logHistory, openLogStream, publishLog } from './log-stream'
+import { closeLogConnections, hasLogSubscribers, LOG_HISTORY_LIMIT, logHistory, openLogStream, publishLog,
+  registerLogConnectionCloser } from './log-stream'
 
 test('log stream retains and replays only the latest 1,000 entries', () => {
   const prefix = crypto.randomUUID()
@@ -31,4 +32,14 @@ test('log stream replay resumes after the last received event ID', () => {
   const stream = openLogStream(() => undefined, lastSeen)
   expect(stream.history.map(entry => entry.text)).toEqual(['after resume'])
   stream.close()
+})
+
+test('active log connections can be closed during shutdown', () => {
+  let closed = 0
+  const unregister = registerLogConnectionCloser(() => closed++)
+  registerLogConnectionCloser(() => closed++)
+  unregister()
+
+  closeLogConnections()
+  expect(closed).toBe(1)
 })

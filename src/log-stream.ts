@@ -7,6 +7,7 @@ type Listener = (entry: LogEntry) => void
 
 const history: LogEntry[] = []
 const listeners = new Set<Listener>()
+const connectionClosers = new Set<() => void>()
 let nextId = 1
 
 export function publishLog(values: unknown[]) {
@@ -30,4 +31,13 @@ export function logHistory() {
 
 export function hasLogSubscribers() {
   return listeners.size > 0
+}
+
+export function registerLogConnectionCloser(close: () => void) {
+  connectionClosers.add(close)
+  return () => connectionClosers.delete(close)
+}
+
+export function closeLogConnections() {
+  for (const close of [...connectionClosers]) close()
 }
