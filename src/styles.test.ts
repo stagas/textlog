@@ -2,6 +2,13 @@ import { describe, expect, test } from 'bun:test'
 import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styles'
 
 describe('in-memory stylesheet', () => {
+  test('only lets standalone write forms consume spare page height', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('main:has(> .write-compose:not(.embedded-write-compose)) {')
+    expect(css).toContain('.write-compose:not(.embedded-write-compose) {\n  flex: 1;\n}')
+    expect(css).not.toContain('.write-compose {\n  flex: 1;')
+  })
+
   test('spaces post list indentation in monospace character widths', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post-body .markdown-list {\n  margin: 0;\n  padding-left: 3ch;\n  list-style: none;\n}')

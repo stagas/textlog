@@ -3564,13 +3564,12 @@ body.corners-round a.button {
   }
 }
 
-main:has(> .write-compose) {
+main:has(> .write-compose:not(.embedded-write-compose)) {
   display: flex;
   flex-direction: column;
 }
 
 .write-compose {
-  flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -3581,6 +3580,10 @@ main:has(> .write-compose) {
   border-inline: 0;
   border-top: 0;
   border-bottom: 0;
+}
+
+.write-compose:not(.embedded-write-compose) {
+  flex: 1;
 }
 
 .replybox.reply-compose {
