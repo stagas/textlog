@@ -12,7 +12,6 @@ export type AccountGroup = {
 export type AccountGroupUser = {
   id: number
   handle: string
-  mood: string | null
   email: string
   bio: string
   password: string
@@ -79,7 +78,7 @@ export function isPrimaryAccount(database: Database, userId: number) {
 }
 
 function activeAccountQuery(where: string) {
-  return `SELECT u.id,u.handle,u.mood,u.email,u.bio,u.password,u.handle_chosen_at,u.email_verified_at,
+  return `SELECT u.id,u.handle,u.email,u.bio,u.password,u.handle_chosen_at,u.email_verified_at,
       u.account_group_id
     FROM users u JOIN account_groups g ON g.id=u.account_group_id
     WHERE ${where} AND u.deleted_at IS NULL AND u.suspended_at IS NULL`
@@ -87,7 +86,7 @@ function activeAccountQuery(where: string) {
 
 export function accountForEmail(database: Database, email: string) {
   if (!accountGroupsAvailable(database)) {
-    return database.query(`SELECT id,handle,mood,email,bio,'!' password,handle_chosen_at,email_verified_at,
+    return database.query(`SELECT id,handle,email,bio,'!' password,handle_chosen_at,email_verified_at,
       NULL account_group_id FROM users WHERE email=? AND handle_chosen_at IS NOT NULL
       AND deleted_at IS NULL AND suspended_at IS NULL`).get(email) as AccountGroupUser | null
   }
