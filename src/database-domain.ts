@@ -666,6 +666,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
           .run(target.id, currentSessionHash, userId)
       })()
+      if (target.handle_chosen_at) {
+        markAllForYouRead(target.id, false, database)
+        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
+          AND kind IN ('for-you','latest')`).run(target.id)
+      }
       return { status: 'ready', handleChosen: Boolean(target.handle_chosen_at) } as DatabaseDomainOutput<K>
     }
     case 'account.createLinked': {
