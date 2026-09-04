@@ -103,6 +103,7 @@ export function Layout({
           <button className="account-menu-account" type="submit">
             {account.has_unread && <span className="unread-dot" aria-label="unread activity" />}
             <span>@{account.handle}</span>
+            {account.mood && <span className="nav-mood">{account.mood}</span>}
           </button>
         </form>
       ))}

@@ -150,13 +150,13 @@ test('account menu lists linked accounts immediately before logout for one-click
   const html = withAppearance(new Request('https://textlog.test/latest?page=2'), () =>
     renderToStaticMarkup(React.createElement(Layout, {
       user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
-        linked_accounts: [{ id: 2, handle: 'another', handle_chosen_at: '2026-02-01' }] },
+        linked_accounts: [{ id: 2, handle: 'another', mood: '🌞', handle_chosen_at: '2026-02-01' }] },
       children: React.createElement('p', null, 'Hello'),
     })))
 
   const switchForm = '<form action="/account/accounts/select" method="post"><input type="hidden" name="accountId" value="2"/>'
     + '<input type="hidden" name="next" value="/latest?page=2"/>'
-    + '<button class="account-menu-account" type="submit"><span>@another</span></button></form>'
+    + '<button class="account-menu-account" type="submit"><span>@another</span><span class="nav-mood">🌞</span></button></form>'
   expect(html).toContain(switchForm)
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/logout"'))
   const separators = [...html.matchAll(/<hr class="account-menu-separator"\/>/g)].map(match => match.index!)

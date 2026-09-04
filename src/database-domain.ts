@@ -625,7 +625,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const signedIn = sessionUser(database, cookieToken)
       if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
         .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
-        .map(({ id, handle, handle_chosen_at }) => ({ id, handle, handle_chosen_at,
+        .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
           has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database)
             || unreadLatestCount(id, database) > 0 }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
