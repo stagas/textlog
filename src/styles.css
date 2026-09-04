@@ -5340,8 +5340,8 @@ form.report-panel {
 }
 
 .note-streak-grid rect.active {
-  fill: #fff;
-  stroke: #fff;
+  fill: var(--accent);
+  stroke: var(--accent);
 }
 
 .profile-presence-section {

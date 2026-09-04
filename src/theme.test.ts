@@ -40,6 +40,7 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   const sepia = themeStyles(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.rust' } }))
   expect(sepia).toContain('--bg:#f4ecd8')
   expect(sepia).toContain('--accent:#a33b32')
+  expect(sepia).toContain('--accent-dark:#8b392e')
   expect(sepia).toContain('--button-bg:#7d382c')
   expect(sepia).toContain('--button-hover-bg:#86392d')
   expect(sepia).toContain('--button-active-bg:#73382a')
@@ -48,6 +49,9 @@ test('theme stylesheet uses mobile palettes and follows the OS for system', () =
   expect(sepia).toContain('--button-muted-active-bg:#653628')
   expect(sepia).toContain('--error-bg:#eee2de')
   expect(sepia).toContain('--success-bg:#e3eadf')
+  const dracula = themeStyles(new Request('http://localhost', { headers: { cookie: 'appearance=dracula.cyan' } }))
+  expect(dracula).toContain('--accent:#8be9fd')
+  expect(dracula).toContain('--accent-dark:#a6edfa')
   expect(sepia).toContain('--danger-button-bg:#7a3f39')
   expect(sepia).not.toContain('prefers-color-scheme')
 
