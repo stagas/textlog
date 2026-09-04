@@ -1787,6 +1787,7 @@ test('admin metrics use locale-aware number formatting', () => {
   expect(html).toContain('<strong>34</strong><span>anonymous online · 30m</span>')
   expect(html).toContain('<strong>2/2.5</strong><span>median/avg notes per user</span>')
   expect(html).toContain('class="account-settings-heading admin-header"')
+  expect(html).toContain('class="profile-edit-link" href="/admin/logs">logs</a>')
   expect(html).toContain('class="profile-edit-link" href="/admin/email">send email</a>')
   expect(html).toContain(
     '<section class="admin-section admin-ip-requests"><details><summary>top IPs today <span>2</span>',

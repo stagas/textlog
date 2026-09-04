@@ -8379,6 +8379,43 @@ body.full-screen-page.full-screen-scrollable { overflow-y: auto; }
 .people-picker-card .button { margin-top: var(--space-6); }
 .people-picker-card .people-picker-dismiss { margin-top: var(--space-4); }
 
+body:has(.logs-page) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+body:has(.logs-page) main {
+  display: flex;
+  min-height: 0;
+}
+.logs-page {
+  display: flex;
+  width: 100%;
+  min-height: 0;
+  margin-inline: auto;
+}
+#logs-output {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  border: 1px solid var(--soft);
+  border-radius: var(--corner-radius);
+  background: #111;
+  color: #ddd;
+  font: 0.68rem/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre;
+  overflow-wrap: normal;
+}
+.log-entry {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+
 @media (max-width: 30rem) {
   :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
     align-items: start;

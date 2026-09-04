@@ -213,6 +213,7 @@ const server = Bun.serve({
     headers.delete(clientIpHeaderName())
     if (address) headers.set(clientIpHeaderName(), address)
     const applicationRequest = new Request(request, { headers })
+    if (path === '/admin/logs/events') server.timeout(request, 0)
     return withRequestContext({ sessionUser: identity.sessionUser, apiUser: identity.apiUser,
       pageSize: identity.preferences.pageSize, density: identity.preferences.density },
       () => readyApplication.fetch(applicationRequest, server)).then(async response => {

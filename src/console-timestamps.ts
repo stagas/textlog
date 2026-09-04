@@ -1,3 +1,5 @@
+import { publishLog } from './log-stream'
+
 const timestampedConsole = Symbol.for('textlog.timestampedConsole')
 
 export function logTimestamp(date = new Date()) {
@@ -14,7 +16,11 @@ export function installConsoleTimestamps() {
 
   for (const level of ['log', 'info', 'warn', 'error', 'debug'] as const) {
     const original = console[level].bind(console)
-    console[level] = (...values: unknown[]) => original(logTimestamp(), ...values)
+    console[level] = (...values: unknown[]) => {
+      const timestamp = logTimestamp()
+      publishLog([timestamp, ...values])
+      original(timestamp, ...values)
+    }
   }
   timestamped[timestampedConsole] = true
 }

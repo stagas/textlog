@@ -1,4 +1,5 @@
 import { logIpPseudonym } from './ip-privacy'
+import { hasLogSubscribers } from './log-stream'
 
 const ansi = {
   reset: '\x1b[0m',
@@ -14,7 +15,8 @@ const ansi = {
 type Color = keyof typeof ansi
 
 function colorsEnabled() {
-  return Boolean(process.stdout.isTTY) && !('NO_COLOR' in Bun.env) && Bun.env.LOG_COLOR !== 'false'
+  return (Boolean(process.stdout.isTTY) || hasLogSubscribers())
+    && !('NO_COLOR' in Bun.env) && Bun.env.LOG_COLOR !== 'false'
 }
 
 function paint(value: string, color: Color) {

@@ -23,8 +23,55 @@ import { sendPushToAll, sendPushToUser } from '../push'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { isTranslationLanguage, translateText } from '../translation'
 import { currentUser } from '../utils'
+import { LogsPage } from '../components/logs'
+import { openLogStream } from '../log-stream'
 
 export function registerAdminRoutes(app: Hono) {
+  app.get('/admin/logs', c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    return page(<LogsPage user={signedIn} />)
+  })
+
+  app.get('/admin/logs/events', c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn || !isAdmin(signedIn)) return c.text('Forbidden', 403)
+
+    const encoder = new TextEncoder()
+    let close: (() => void) | undefined
+    let heartbeat: ReturnType<typeof setInterval> | undefined
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        const send = (entry: { id: number; text: string }) => controller.enqueue(encoder.encode(
+          `id: ${entry.id}\ndata: ${JSON.stringify(entry.text)}\n\n`,
+        ))
+        const lastEventId = Number(c.req.header('last-event-id'))
+        const stream = openLogStream(send, Number.isSafeInteger(lastEventId) && lastEventId > 0 ? lastEventId : 0)
+        close = stream.close
+        controller.enqueue(encoder.encode('event: ready\ndata: connected\n\n'))
+        for (const entry of stream.history) send(entry)
+        heartbeat = setInterval(() => controller.enqueue(encoder.encode(': keepalive\n\n')), 15_000)
+        c.req.raw.signal.addEventListener('abort', () => {
+          close?.()
+          if (heartbeat) clearInterval(heartbeat)
+          try { controller.close() }
+          catch {}
+        }, { once: true })
+      },
+      cancel() {
+        close?.()
+        if (heartbeat) clearInterval(heartbeat)
+      },
+    })
+    return new Response(body, { headers: {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'private, no-cache, no-transform',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
+    } })
+  })
+
   app.get('/admin/tags', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))

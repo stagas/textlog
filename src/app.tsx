@@ -101,6 +101,13 @@ app.use('*', (c, next) => {
 })
 const stylesPath = new URL('./styles.css', import.meta.url).pathname
 const styles = devReloadEnabled ? undefined : await loadStylesAsset(stylesPath)
+const logsClientBuild = await Bun.build({
+  entrypoints: [new URL('./logs-client.ts', import.meta.url).pathname],
+  target: 'browser',
+  minify: !devReloadEnabled,
+})
+if (!logsClientBuild.success) throw new Error('Failed to build logs client')
+const logsClient = await logsClientBuild.outputs[0].text()
 const publicAssets = await Promise.all([
   ['/favicon.ico', 'image/x-icon'],
   ['/favicon-16x16.png', 'image/png'],
@@ -377,9 +384,9 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   const embeddable = c.req.path.startsWith('/embed/')
-  const notificationSettings = c.req.path === '/account/edit/notifications'
+  const scriptsEnabled = c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
   for (const [name, value] of Object.entries(
-    securityHeaders(devReloadEnabled, undefined, embeddable, notificationSettings),
+    securityHeaders(devReloadEnabled, undefined, embeddable, scriptsEnabled),
   )) c.header(name, value)
   if (c.req.path === '/textlog.svg' || c.req.path === '/favicon-theme.svg') {
     c.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'')
@@ -599,6 +606,10 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
+app.get('/logs.js', () => new Response(logsClient, { headers: {
+  'content-type': 'text/javascript; charset=utf-8',
+  'cache-control': 'no-cache',
+} }))
 const embedStyles = await Bun.file(new URL('./embed.css', import.meta.url)).text()
 app.get('/embed.css', () =>
   new Response(embedStyles, { headers: {
