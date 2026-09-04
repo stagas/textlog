@@ -8384,18 +8384,26 @@ body:has(.logs-page) {
   min-height: 0;
   overflow: hidden;
 }
+body:has(.logs-page) > header,
+body:has(.logs-page) > .site-footer {
+  flex-shrink: 0;
+}
 body:has(.logs-page) main {
   display: flex;
+  flex-basis: 0;
   min-height: 0;
 }
 .logs-page {
   display: flex;
   width: 100%;
+  min-width: 0;
   min-height: 0;
   margin-inline: auto;
 }
 #logs-output {
   flex: 1;
+  width: 0;
+  max-width: 100%;
   height: auto;
   min-height: 0;
   margin: 0;
