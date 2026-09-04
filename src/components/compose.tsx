@@ -131,7 +131,8 @@ export function WriteForm(
       >
         autotag
       </button>
-      <button className="secondary-action" name="action" value="preview" title="Preview this post before publishing">
+      <button className="secondary-action" name="action" value="preview"
+        formAction={embedded ? returnPath : undefined} title="Preview this post before publishing">
         preview
       </button>
       <button className="secondary-action" name="action" value="draft" title="Save this post as a draft"
@@ -186,7 +187,8 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
       >
         autotag
       </button>
-      <button className="secondary-action" name="action" value="preview" title="Preview this post before publishing">
+      <button className="secondary-action" name="action" value="preview" formAction={returnPath}
+        title="Preview this post before publishing">
         preview
       </button>
       <button className="secondary-action" name="action" value="draft" title="Save this post as a draft">draft</button>

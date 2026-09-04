@@ -226,20 +226,19 @@ test('an anonymous feed note is published after signup chooses a handle', async 
   const body = 'A thought carried through signup'
   const ip = '203.0.113.84'
   const draftsBeforePreview = (database.query('SELECT count(*) count FROM drafts').get() as { count: number }).count
-  const preview = await request('/post', {
+  const preview = await request('/hot', {
     method: 'POST',
     ip,
     form: { body, from: '/hot', embedded: '1', action: 'preview' },
   })
-  expect(preview.status).toBe(303)
-  const previewLocation = preview.headers.get('location')!
-  expect(previewLocation).toStartWith('/hot?write_preview=1&write_body=')
-  const previewHtml = await (await request(previewLocation, { ip })).text()
+  expect(preview.status).toBe(200)
+  expect(preview.headers.get('location')).toBeNull()
+  const previewHtml = await preview.text()
   expect(previewHtml).toContain('<h2>preview</h2>')
   expect(previewHtml).toContain(body)
   expect(previewHtml).toContain('anonymous-write-compose')
   expect(previewHtml).not.toContain('<title>write ·')
-  expect(preview.headers.get('set-cookie')).toBeNull()
+  expect(preview.headers.get('set-cookie')).not.toContain('pending_post=')
   expect((database.query('SELECT count(*) count FROM drafts').get() as { count: number }).count)
     .toBe(draftsBeforePreview)
 
@@ -1605,15 +1604,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(embeddedErrorHtml).toContain('The note must contain between 1 and 500 characters.')
   expect(embeddedErrorHtml).not.toContain('<title>write ·')
   const embeddedPreviewBody = 'Preview this note without leaving the feed'
-  const embeddedPreview = await request('/post', {
+  const embeddedPreview = await request('/all', {
     method: 'POST',
     cookie: aliceCookie,
     form: { body: embeddedPreviewBody, action: 'preview', embedded: '1', from: '/all' },
   })
-  expect(embeddedPreview.status).toBe(303)
-  const embeddedPreviewLocation = embeddedPreview.headers.get('location')!
-  expect(embeddedPreviewLocation).toStartWith('/all?write_preview=1&write_body=')
-  const embeddedPreviewHtml = await (await request(embeddedPreviewLocation, { cookie: aliceCookie })).text()
+  expect(embeddedPreview.status).toBe(200)
+  expect(embeddedPreview.headers.get('location')).toBeNull()
+  const embeddedPreviewHtml = await embeddedPreview.text()
   expect(embeddedPreviewHtml).toContain('<h2>preview</h2>')
   expect(embeddedPreviewHtml).toContain(embeddedPreviewBody)
   expect(embeddedPreviewHtml).toContain(

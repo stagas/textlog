@@ -10,7 +10,7 @@ import {
   Legal,
   PublicFeed,
 } from '../components/pages'
-import { currentPage, page, redirect, rememberFeed } from './shared'
+import { currentPage, form, page, redirect, rememberFeed } from './shared'
 
 import type { Context, Hono } from 'hono'
 import { randomInt } from 'node:crypto'
@@ -31,6 +31,7 @@ import {
 } from '../http'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
+import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
 import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
@@ -81,6 +82,35 @@ const anySeed = (value?: string) => {
   return Number.isSafeInteger(parsed) && parsed > 0 && parsed < 2_147_483_647 ? parsed : undefined
 }
 const writeState = async (c: Context) => {
+  if (c.req.method === 'POST') {
+    const fields = await form(c.req.raw)
+    const writeBody = normalizePostBody(fields.body || '')
+    if (fields.action !== 'preview' || fields.embedded !== '1') {
+      return { writeError: 'Unsupported feed action.', writeBody }
+    }
+    if (!validPostBody(writeBody)) return { writeError: postBodyValidationMessage(writeBody), writeBody }
+    const user = currentUser(c.req.raw)
+    let writeDraftId: string | undefined
+    if (user) {
+      const requestedDraftId = /^[0-9a-f-]{32,36}$/i.test(fields.draft_id || '') ? fields.draft_id : null
+      const result = await databaseService().call('drafts.save', {
+        id: requestedDraftId,
+        userId: user.id,
+        parentId: null,
+        body: writeBody,
+      })
+      if (result.status === 'not_found') return { writeError: 'Draft not found.', writeBody }
+      writeDraftId = result.id
+      user.draft_count = Math.max(user.draft_count || 0, 1)
+    }
+    return {
+      writeBody,
+      writeDraftId,
+      writePreview: true,
+      writePreviewExecutionOutput: await executePostCode(writeBody),
+      writePreviewLocation: await previewLocation(writeBody),
+    }
+  }
   const writeBody = c.req.query('write_body')
   const writePreview = c.req.query('write_preview') === '1' && writeBody !== undefined
   return {
@@ -215,7 +245,7 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect(path + new URL(c.req.url).search)
   })
 
-  app.get('/my-feed', async c => {
+  app.on(['GET', 'POST'], '/my-feed', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/my-feed'))
     const write = await writeState(c)
@@ -269,7 +299,7 @@ export function registerFeedsRoutes(app: Hono) {
     return remembered
   })
 
-  app.get('/all', async c => {
+  app.on(['GET', 'POST'], '/all', async c => {
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     rememberFeedVisitor(c.req.raw, user)
@@ -312,7 +342,7 @@ export function registerFeedsRoutes(app: Hono) {
     return remembered
   })
 
-  app.get('/any', async c => {
+  app.on(['GET', 'POST'], '/any', async c => {
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -337,7 +367,7 @@ export function registerFeedsRoutes(app: Hono) {
     return response
   })
 
-  app.get('/new', async c => {
+  app.on(['GET', 'POST'], '/new', async c => {
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
@@ -375,7 +405,7 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect('/my-feed')
   })
 
-  app.get('/@', async c => {
+  app.on(['GET', 'POST'], '/@', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/@'))
     const write = await writeState(c)
@@ -423,7 +453,7 @@ export function registerFeedsRoutes(app: Hono) {
     return redirect('/@')
   })
 
-  app.get('/hot', async c => {
+  app.on(['GET', 'POST'], '/hot', async c => {
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     rememberFeedVisitor(c.req.raw, user)
