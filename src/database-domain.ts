@@ -20,7 +20,7 @@ import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, tr
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
-import { markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead, unreadForYouCount,
+import { hasUnreadForYou, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead, unreadForYouCount,
   unreadToMeCount } from './for-you-state'
 import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
@@ -626,7 +626,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
         .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
         .map(({ id, handle, handle_chosen_at }) => ({ id, handle, handle_chosen_at,
-          has_unread: personalizedUnreadCount(database, id, false) > 0 }))
+          has_unread: hasUnreadForYou(id, database) }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
