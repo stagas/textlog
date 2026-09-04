@@ -36,7 +36,7 @@ export function ChangeAppearance(
   return (
     <Layout user={user} title="change appearance">
       <section className="appearance-page">
-        <AccountSettingsHeader title="appearance" returnPath={returnPath} />
+        <AccountSettingsHeader title="appearance" returnPath={returnPath} anchor="appearance" />
         <nav className="appearance-tabs" aria-label="Appearance settings">
           <a href={`/account/edit/appearance?tab=theme${fromQuery}`}
             aria-current={tab === 'theme' ? 'page' : undefined}

@@ -200,20 +200,23 @@ export function Profile(
                     <button className="button">save profile →</button>
                   </div>
                 </form>
+                <hr className="account-settings-separator" />
+                <div className="account-danger-zone" id="invite-friends">
+                  <div>
+                    <strong>Invite friends</strong>
+                    <span>Send friends a personal invitation and magic link to join textlog.</span>
+                  </div>
+                  <a className="button" href={`/account/edit/invite${fromQuery}`}>
+                    <span className="emoji" aria-hidden="true">👋</span> invite friends
+                  </a>
+                </div>
                 <div className="profile-presence-section">{presence}</div>
-                <div className="account-danger-zone">
+                <div className="account-danger-zone" id="appearance">
                   <div>
                     <strong>Appearance</strong>
                     <span>Choose a theme, fonts, and user interface settings.</span>
                   </div>
                   <a className="button" href={`/account/edit/appearance${fromQuery}`}>change appearance</a>
-                </div>
-                <div className="account-danger-zone">
-                  <div>
-                    <strong>Account security</strong>
-                    <span>Manage your email, feeds, signed-in sessions, create API keys and send magic links.</span>
-                  </div>
-                  <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
                 </div>
                 <div className="account-danger-zone" id="notifications">
                   <div>
@@ -224,26 +227,27 @@ export function Profile(
                 </div>
                 <div className="account-danger-zone" id="email-preferences">
                   <div>
-                    <strong>Email preferences</strong>
+                    <strong>Emails</strong>
                     <span>Choose which emails you&apos;ll receive.</span>
                   </div>
                   <a className="button" href={`/account/email-preferences${fromQuery}`}>manage emails</a>
                 </div>
-                <div className="account-danger-zone">
+                <div className="account-danger-zone" id="security">
                   <div>
-                    <strong>Invite friends</strong>
-                    <span>Send friends a personal invitation and magic link to join textlog.</span>
+                    <strong>Security</strong>
+                    <span>Manage your email, feeds, signed-in sessions, create API keys and send magic links.</span>
                   </div>
-                  <a className="button" href={`/account/edit/invite${fromQuery}`}>invite friends</a>
+                  <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
                 </div>
-                <div className="account-danger-zone">
+                <div className="account-danger-zone" id="download-data">
                   <div>
                     <strong>Download your data</strong>
                     <span>Export your account, notes, connections, and activity as a JSON file.</span>
                   </div>
                   <a className="button" href="/account/export" download>download data</a>
                 </div>
-                <div className="account-danger-zone">
+                <div className="account-danger-zone" id="delete-account">
+                  <span className="danger-zone-label">DANGER ZONE</span>
                   <div>
                     <strong>Delete account</strong>
                     <span>Permanently remove your profile and turn your notes into deleted tombstones.</span>

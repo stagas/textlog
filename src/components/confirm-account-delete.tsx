@@ -37,7 +37,7 @@ export function ConfirmAccountDelete(
             </p>
             <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
             <div className="welcome-actions verify-email-actions">
-              <a className="button" href="/account/edit">back to account</a>
+              <a className="button" href="/account/edit#delete-account">back to account</a>
               {confirmationUrl && <a className="button" href={confirmationUrl}>open development confirmation link</a>}
             </div>
           </Panel>
@@ -57,7 +57,9 @@ export function ConfirmAccountDelete(
                 </p>
               )}
             {invalid
-              ? <a className="button" href={user ? '/account/edit' : '/'}>{user ? 'back to account' : 'go home'}</a>
+              ? <a className="button" href={user ? '/account/edit#delete-account' : '/'}>
+                {user ? 'back to account' : 'go home'}
+              </a>
               : (
                 <form className="account-delete-form" method="post" action="/account/delete">
                   <FormMessage error={error} />
@@ -76,7 +78,9 @@ export function ConfirmAccountDelete(
                   )}
                   <FormActions
                     secondary={
-                      <a className="secondary-action cancel-action" href={user ? '/account/edit' : '/'}>cancel</a>
+                      <a className="secondary-action cancel-action" href={user ? '/account/edit#delete-account' : '/'}>
+                        cancel
+                      </a>
                     }
                     primary={
                       <button className="button button-danger" type="submit">

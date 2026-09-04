@@ -37,7 +37,7 @@ export function AccountSecurity(
   return (
     <Layout user={user} title="account security">
       <section className="security-header">
-        <AccountSettingsHeader title="security" returnPath={returnPath} />
+        <AccountSettingsHeader title="security" returnPath={returnPath} anchor="security" />
       </section>
       <div className="security-page">
         <FormMessage error={error} success={success} />

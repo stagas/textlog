@@ -15,7 +15,7 @@ export function NotificationSettings({ user, publicKey, ios = false, returnPath 
   return (
     <Layout user={user} title="notifications">
       <article className="static-page notifications-page">
-        <AccountSettingsHeader title="notifications" returnPath={returnPath} />
+        <AccountSettingsHeader title="notifications" returnPath={returnPath} anchor="notifications" />
         <p id="notification-status">
           {publicKey
             ? 'Enabling notifications uses JavaScript on this page and installs a small service worker in your browser.'

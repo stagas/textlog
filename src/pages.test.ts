@@ -1983,18 +1983,18 @@ test('appearance misc tab checks included For You follow activity', () => {
 test('account settings pages share one consistent heading', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const pages = [
-    renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    [renderToStaticMarkup(React.createElement(ChangeAppearance, {
       user,
       selected: { theme: 'system', accent: 'theme' },
       selectedFont: 'system',
-    })),
-    renderToStaticMarkup(React.createElement(NotificationSettings, { user, publicKey: null })),
-    renderToStaticMarkup(React.createElement(AccountSecurity, { user, sessions: [] })),
+    })), 'appearance'],
+    [renderToStaticMarkup(React.createElement(NotificationSettings, { user, publicKey: null })), 'notifications'],
+    [renderToStaticMarkup(React.createElement(AccountSecurity, { user, sessions: [] })), 'security'],
   ]
-  for (const html of pages) {
+  for (const [html, anchor] of pages) {
     expect(html).toContain('class="account-settings-heading"')
     expect(html).toContain('<p class="eyebrow">account settings</p>')
-    expect(html).toContain('<a class="profile-edit-link" href="/account/edit">back</a>')
+    expect(html).toContain(`<a class="profile-edit-link" href="/account/edit#${anchor}">back</a>`)
   }
 })
 
@@ -2019,7 +2019,7 @@ test('account settings link to a single email preference page', () => {
   expect(subscribed).toContain('href="/account/email-preferences">manage emails</a>')
   expect(subscribed).toContain('Choose which emails you&#x27;ll receive.')
   expect(preferences).toContain('class="static-page notifications-page"')
-  expect(preferences).toContain('<h1>email preferences</h1>')
+  expect(preferences).toContain('<h1>emails</h1>')
   expect(preferences).toContain('action="/account/email-preferences"')
   expect(preferences).toContain('Choose which emails you&#x27;ll receive.')
   expect(preferences).toContain('name="back" value="/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences"')
@@ -2047,7 +2047,8 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('data-handle="reader"')
   expect(notifications).toContain('data-return-href="/account/edit?from=%2Flatest%3Fpage%3D2#notifications"')
   expect(notifications).toContain('class="static-page notifications-page"')
-  expect(notifications).toContain('class="profile-edit-link" href="/account/edit?from=%2Flatest%3Fpage%3D2">back</a>')
+  expect(notifications)
+    .toContain('class="profile-edit-link" href="/account/edit?from=%2Flatest%3Fpage%3D2#notifications">back</a>')
   expect(notifications).toContain('enable notifications')
   expect(notifications).toContain('name="latest" checked=""')
   expect(notifications).toContain('name="forYou" checked=""')
@@ -3001,7 +3002,7 @@ test('AccountSecurity renders email and safe session controls without passwords'
   expect(html).toContain('generate magic link')
   expect(html).toContain('href="/account/api-keys/new">generate API key')
   expect(html).not.toContain('name="lifetime"')
-  expect(html).toContain('href="/account/edit">back</a>')
+  expect(html).toContain('href="/account/edit#security">back</a>')
   expect(html).not.toContain('type="password"')
   expect(html).toContain('value="revocable-id"')
   expect(html).not.toContain('value="current-id"')
@@ -3093,12 +3094,17 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/export"')
   expect(html).toContain('action="/account/edit"')
   expect(html).toContain('download data')
+  expect(html).toContain('<span class="danger-zone-label">DANGER ZONE</span><div><strong>Delete account</strong>')
   expect(html).toContain('href="/latest?page=2">back</a>')
   expect(html).toContain('type="hidden" name="from" value="/latest?page=2"')
   expect(html).toContain('href="/account/edit/appearance?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('change appearance')
+  expect(html).toContain('<span class="emoji" aria-hidden="true">👋</span> invite friends')
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
+  expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="download-data"'))
+  expect(html.indexOf('id="invite-friends"')).toBeLessThan(html.indexOf('class="profile-presence-section"'))
+  expect(html).toContain('<hr class="account-settings-separator"/><div class="account-danger-zone" id="invite-friends">')
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('You can change your handle up to two times per month.')
   expect(html).toContain('Mood can be any emoji character.')

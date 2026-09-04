@@ -16,7 +16,7 @@ export function EmailPreferences({ user, recap, interactions, token, returnPath,
     <Layout user={user} title="email preferences">
       <article className="static-page notifications-page">
         {user
-          ? <AccountSettingsHeader title="email preferences" returnPath={returnPath} anchor="email-preferences" />
+          ? <AccountSettingsHeader title="emails" returnPath={returnPath} anchor="email-preferences" />
           : <PageHeading eyebrow="email preferences" title="message preferences" />}
         {invalid
           ? <p className="status-message status-error" role="alert">This email preferences link is unavailable.</p>

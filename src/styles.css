@@ -5752,6 +5752,53 @@ form.report-panel {
   flex: none;
 }
 
+#invite-friends {
+  flex-direction: column;
+  margin-bottom: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--soft);
+  background: var(--panel);
+  text-align: center;
+}
+
+#invite-friends > div {
+  justify-items: center;
+}
+
+#invite-friends .button {
+  align-self: center;
+}
+
+.account-settings-separator {
+  width: 100%;
+  margin: var(--space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--soft);
+}
+
+.account-settings-separator + #invite-friends {
+  margin-top: var(--space-4);
+}
+
+#delete-account {
+  position: relative;
+  border-top: 2px solid var(--error-ink);
+}
+
+.account-danger-zone > .danger-zone-label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  padding-inline: var(--space-2);
+  transform: translate(-50%, -50%);
+  background: var(--bg);
+  color: var(--error-ink);
+  font-size: var(--font-size-9);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
 .account-switcher-page {
   max-width: none;
   margin-top: var(--space-7);

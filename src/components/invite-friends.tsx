@@ -35,8 +35,8 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
             primary={<button className="button">send invitations →</button>}
             secondary={
               <a className="secondary-action cancel-action" href={returnPath
-                ? `/account/edit?from=${encodeURIComponent(returnPath)}`
-                : '/account/edit'}
+                ? `/account/edit?from=${encodeURIComponent(returnPath)}#invite-friends`
+                : '/account/edit#invite-friends'}
               >
                 cancel
               </a>
