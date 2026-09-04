@@ -6079,10 +6079,20 @@ form.report-panel {
 
 .appearance-page > .account-settings-heading { margin-bottom: var(--space-7); }
 .appearance-page legend { color: var(--muted); font-size: var(--font-size-10); }
+.appearance-tab-input { position: absolute; opacity: 0; pointer-events: none; }
 .appearance-tabs { display: flex; gap: 0; margin: calc(-1 * var(--space-3)) 0 var(--space-7); border-bottom: 1px solid var(--soft); }
-.appearance-tabs a { display: inline-flex; align-items: center; padding: var(--space-2) var(--space-3); color: var(--muted); font-size: var(--font-size-12); text-decoration: none; border-bottom: 2px solid transparent; }
-.appearance-tabs a:hover { color: var(--tab-hover); }
-.appearance-tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.appearance-tabs label { display: inline-flex; align-items: center; padding: var(--space-2) var(--space-3); color: var(--muted); font-size: var(--font-size-12); border-bottom: 2px solid transparent; cursor: pointer; }
+.appearance-tabs label:hover { color: var(--tab-hover); }
+#appearance-tab-theme:checked ~ .appearance-tabs label[for="appearance-tab-theme"],
+#appearance-tab-font:checked ~ .appearance-tabs label[for="appearance-tab-font"],
+#appearance-tab-misc:checked ~ .appearance-tabs label[for="appearance-tab-misc"] { color: var(--ink); border-bottom-color: var(--accent); }
+.appearance-panel { display: none; }
+#appearance-tab-theme:checked ~ .appearance-panel-theme,
+#appearance-tab-font:checked ~ .appearance-panel-font,
+#appearance-tab-misc:checked ~ .appearance-panel-misc { display: block; }
+#appearance-tab-theme:focus-visible ~ .appearance-tabs label[for="appearance-tab-theme"],
+#appearance-tab-font:focus-visible ~ .appearance-tabs label[for="appearance-tab-font"],
+#appearance-tab-misc:focus-visible ~ .appearance-tabs label[for="appearance-tab-misc"] { outline: 1px solid var(--accent); outline-offset: 2px; }
 .appearance-page fieldset { padding: 0; margin: 0 0 var(--space-7); border: 0; }
 .appearance-page legend { margin-bottom: var(--space-3); }
 .theme-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); }
@@ -6217,7 +6227,7 @@ form.report-panel {
 .density-option { min-width: 82px; padding: 0; gap: var(--space-2); font-size: var(--font-size-9); border: 0; }
 .corners-setting { display: grid; gap: var(--space-3); margin-bottom: var(--space-5); color: var(--muted); font-size: var(--font-size-12); }
 .corner-option { min-width: 100px; }
-.corner-preview { display: block; width: 42px; height: 25px; margin: 0 auto; border: 2px solid var(--accent); }
+.corner-preview { display: block; width: 42px; height: 25px; margin: 0 auto; border: 2px solid var(--muted); opacity: 0.55; }
 .corner-preview-sharp { border-radius: 0 !important; }
 .corner-preview-round { border-radius: 8px !important; }
 .density-option:has(input:checked) { border-color: transparent; box-shadow: none; }
@@ -6386,7 +6396,7 @@ form.report-panel {
   .account-danger-zone .button,
   .security-section > .button,
   .security-form > .button,
-  .appearance-page form > .button {
+  .appearance-panel > .button {
     align-self: flex-end;
     justify-self: end;
   }

@@ -1868,7 +1868,7 @@ test('pages inline the cookie-aware theme and logo', () => {
   expect(html).not.toContain('src="/textlog.svg')
 })
 
-test('appearance theme tab is a server-rendered form with mobile appearance choices', () => {
+test('appearance is one server-rendered form with CSS tabs and every choice', () => {
   const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
     selected: { theme: 'sepia', accent: 'amber' },
@@ -1876,13 +1876,17 @@ test('appearance theme tab is a server-rendered form with mobile appearance choi
   }))
   expect(html).toContain('<p class="eyebrow">account settings</p><h1>appearance</h1>')
   expect(html).toContain('action="/account/edit/appearance"')
-  expect(html).toContain('aria-current="page">theme</a>')
+  expect(html).toContain('id="appearance-tab-theme" name="tab" checked="" value="theme"')
+  expect(html).toContain('for="appearance-tab-theme">theme</label>')
+  expect(html).toContain('name="completeAppearance" value="yes"')
   expect(html).toContain('name="theme" value="dracula"')
   expect(html).toContain('name="accent" value="rust"')
   expect(html).toContain('class="accent-swatch accent-swatch-rust"')
   expect(html).toContain('class="accent-swatch accent-swatch-theme accent-swatch-theme-sepia"')
   expect(html).toContain('name="theme" checked="" value="sepia"')
   expect(html).toContain('name="accent" checked="" value="amber"')
+  expect(html).toContain('name="fontSize"')
+  expect(html).toContain('name="density"')
   expect(html).not.toContain('<script')
   expect(html).not.toContain('style=')
 })
@@ -1897,7 +1901,7 @@ test('appearance misc tab hides page size and forces 100', () => {
     selectedCorners: 'round',
     tab: 'misc',
   }))
-  expect(html).toContain('aria-current="page">misc</a>')
+  expect(html).toContain('id="appearance-tab-misc" name="tab" checked="" value="misc"')
   expect(html).toContain('<input type="hidden" name="pageSize" value="100"/>')
   expect(html).not.toContain('<legend>page size</legend>')
   expect(html).toContain('name="density" value="compact"')
@@ -1920,7 +1924,7 @@ test('appearance misc tab hides page size and forces 100', () => {
   expect(html).toContain('Include hashtag follow activity in My Feed')
   expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
   expect(html).not.toContain('name="includeHashtagFollowActivity" checked=""')
-  expect(html).toContain('save misc →')
+  expect(html).toContain('save →')
 })
 
 test('appearance misc tab can render link previews disabled', () => {
@@ -2113,7 +2117,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
     tab: 'font',
   }))
   expect(html).toContain('action="/account/edit/appearance"')
-  expect(html).toContain('aria-current="page">font</a>')
+  expect(html).toContain('id="appearance-tab-font" name="tab" checked="" value="font"')
   expect(html).toContain('name="font" checked="" value="consolas"')
   expect(html).toContain('font-preview-sf-mono')
   expect(html).toContain('font-preview-dejavu-sans-mono')

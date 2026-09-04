@@ -486,25 +486,35 @@ export function registerAccountRoutes(app: Hono) {
     const returnPath = f.from ? safeNext(f.from) : undefined
     const tab = f.tab === 'font' || f.tab === 'misc' ? f.tab : 'theme'
     const query = `?tab=${tab}${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
-    if (tab === 'misc') {
-      const selectedPageSize = PAGE_SIZE
-      const selectedDensity = f.density as DensityChoice
-      const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
-      if (!PAGE_SIZE_CHOICES.includes(selectedPageSize) || !DENSITY_CHOICES.includes(selectedDensity)
-        || !CORNER_CHOICES.includes(selectedCorners))
-      {
-        return page(
-          <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
-            selectedSize={fontSizeChoice(c.req.raw)} selectedPageSize={resolvedPageSize(c.req.raw)}
-            selectedDensity={resolvedDensity(c.req.raw)} tab="misc" returnPath={returnPath} />,
-          400,
-        )
-      }
-      const deviceId = notificationDevice(c.req.raw) || token()
+    const completeAppearance = f.completeAppearance === 'yes'
+    const theme = (f.theme || appearance(c.req.raw).theme) as ThemeChoice
+    const accent = (f.accent || appearance(c.req.raw).accent) as AccentChoice
+    const selectedFont = (f.font || fontChoice(c.req.raw)) as FontChoice
+    const selectedSansSerif = (f.sansSerifFont || sansSerifFontChoice(c.req.raw)) as SansSerifFontChoice
+    const selectedPrimary = (f.primaryFont || primaryFontChoice(c.req.raw)) as PrimaryFontChoice
+    const selectedSize = (f.fontSize || fontSizeChoice(c.req.raw)) as FontSizeChoice
+    const selectedDensity = (f.density || resolvedDensity(c.req.raw)) as DensityChoice
+    const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
+    if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)
+      || !FONT_CHOICES.some(font => font.value === selectedFont)
+      || !SANS_SERIF_FONT_CHOICES.some(font => font.value === selectedSansSerif)
+      || !PRIMARY_FONT_CHOICES.includes(selectedPrimary)
+      || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)
+      || !DENSITY_CHOICES.includes(selectedDensity) || !CORNER_CHOICES.includes(selectedCorners)) {
+      return page(
+        <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
+          selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}
+          selectedSize={fontSizeChoice(c.req.raw)} tab={tab} selectedPageSize={resolvedPageSize(c.req.raw)}
+          selectedDensity={resolvedDensity(c.req.raw)} returnPath={returnPath} />,
+        400,
+      )
+    }
+    const deviceId = notificationDevice(c.req.raw) || token()
+    if (completeAppearance || tab === 'misc') {
       await databaseService().call('account.saveAppearancePreferences', {
         userId: user.id,
         deviceId,
-        pageSize: selectedPageSize,
+        pageSize: PAGE_SIZE,
         density: selectedDensity,
         showLinkPreviews: f.showLinkPreviews === 'yes',
         showModeratedContent: f.showModeratedContent === 'yes',
@@ -513,47 +523,16 @@ export function registerAccountRoutes(app: Hono) {
         showNoteStreak: f.showNoteStreak === 'yes',
         showTimestamps: f.showTimestamps === 'yes',
       })
-      await markAppearanceBannerHandled(c.req.raw, user.id)
-      const response = redirect('/account/edit/appearance' + query, notificationDeviceCookie(deviceId))
-      response.headers.append('set-cookie', cornerCookie(selectedCorners))
-      return response
-    }
-    if (tab === 'font') {
-      const selected = f.font as FontChoice
-      const selectedSansSerif = f.sansSerifFont as SansSerifFontChoice
-      const selectedPrimary = f.primaryFont as PrimaryFontChoice
-      const selectedSize = f.fontSize as FontSizeChoice
-      if (!FONT_CHOICES.some(font => font.value === selected)
-        || !SANS_SERIF_FONT_CHOICES.some(font => font.value === selectedSansSerif)
-        || !PRIMARY_FONT_CHOICES.includes(selectedPrimary)
-        || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize))
-      {
-        return page(
-          <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
-            selectedSize={fontSizeChoice(c.req.raw)} tab="font" selectedPageSize={resolvedPageSize(c.req.raw)}
-            selectedDensity={resolvedDensity(c.req.raw)} returnPath={returnPath} />,
-          400,
-        )
-      }
-      const response = redirect('/account/edit/appearance' + query, fontCookie(selected))
-      response.headers.append('set-cookie', sansSerifFontCookie(selectedSansSerif))
-      response.headers.append('set-cookie', primaryFontCookie(selectedPrimary))
-      response.headers.append('set-cookie', fontSizeCookie(selectedSize))
-      await markAppearanceBannerHandled(c.req.raw, user.id)
-      return response
-    }
-    const theme = f.theme as ThemeChoice
-    const accent = f.accent as AccentChoice
-    if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)) {
-      return page(
-        <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
-          selectedSize={fontSizeChoice(c.req.raw)} tab="theme" selectedPageSize={resolvedPageSize(c.req.raw)}
-          selectedDensity={resolvedDensity(c.req.raw)} returnPath={returnPath} />,
-        400,
-      )
     }
     await markAppearanceBannerHandled(c.req.raw, user.id)
-    return redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
+    const response = redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
+    response.headers.append('set-cookie', fontCookie(selectedFont))
+    response.headers.append('set-cookie', sansSerifFontCookie(selectedSansSerif))
+    response.headers.append('set-cookie', primaryFontCookie(selectedPrimary))
+    response.headers.append('set-cookie', fontSizeCookie(selectedSize))
+    response.headers.append('set-cookie', notificationDeviceCookie(deviceId))
+    response.headers.append('set-cookie', cornerCookie(selectedCorners))
+    return response
   })
 
   app.get('/account/edit/theme', c => {

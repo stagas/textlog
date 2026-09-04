@@ -32,29 +32,25 @@ export function ChangeAppearance(
       showTimestamps?: boolean
     },
 ) {
-  const fromQuery = returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''
   return (
     <Layout user={user} title="change appearance">
       <section className="appearance-page">
         <AccountSettingsHeader title="appearance" returnPath={returnPath} anchor="appearance" />
-        <nav className="appearance-tabs" aria-label="Appearance settings">
-          <a href={`/account/edit/appearance?tab=theme${fromQuery}`}
-            aria-current={tab === 'theme' ? 'page' : undefined}
-          >
-            theme
-          </a>
-          <a href={`/account/edit/appearance?tab=font${fromQuery}`} aria-current={tab === 'font' ? 'page' : undefined}>
-            font
-          </a>
-          <a href={`/account/edit/appearance?tab=misc${fromQuery}`} aria-current={tab === 'misc' ? 'page' : undefined}>
-            misc
-          </a>
-        </nav>
-        {tab === 'theme'
-          ? (
-            <form method="post" action="/account/edit/appearance">
-              <input type="hidden" name="tab" value="theme" />
-              {returnPath && <input type="hidden" name="from" value={returnPath} />}
+        <form method="post" action="/account/edit/appearance" className="appearance-form">
+          <input type="hidden" name="completeAppearance" value="yes" />
+          {returnPath && <input type="hidden" name="from" value={returnPath} />}
+          <input className="appearance-tab-input" type="radio" name="tab" value="theme" id="appearance-tab-theme"
+            defaultChecked={tab === 'theme'} />
+          <input className="appearance-tab-input" type="radio" name="tab" value="font" id="appearance-tab-font"
+            defaultChecked={tab === 'font'} />
+          <input className="appearance-tab-input" type="radio" name="tab" value="misc" id="appearance-tab-misc"
+            defaultChecked={tab === 'misc'} />
+          <nav className="appearance-tabs" aria-label="Appearance settings">
+            <label htmlFor="appearance-tab-theme">theme</label>
+            <label htmlFor="appearance-tab-font">font</label>
+            <label htmlFor="appearance-tab-misc">misc</label>
+          </nav>
+          <div className="appearance-panel appearance-panel-theme">
               <fieldset>
                 <legend>theme</legend>
                 <div className="theme-options">
@@ -87,14 +83,9 @@ export function ChangeAppearance(
                   ))}
                 </div>
               </fieldset>
-              <button className="button">save theme →</button>
-            </form>
-          )
-          : tab === 'font'
-          ? (
-            <form method="post" action="/account/edit/appearance">
-              <input type="hidden" name="tab" value="font" />
-              {returnPath && <input type="hidden" name="from" value={returnPath} />}
+            <button className="button">save →</button>
+          </div>
+          <div className="appearance-panel appearance-panel-font">
               <fieldset>
                 <legend>font size</legend>
                 <div className="font-size-options">
@@ -145,13 +136,9 @@ export function ChangeAppearance(
               <p className="font-note">
                 Fonts are used from your device. Unavailable faces fall back to your system&apos;s fonts.
               </p>
-              <button className="button">save font →</button>
-            </form>
-          )
-          : (
-            <form method="post" action="/account/edit/appearance">
-              <input type="hidden" name="tab" value="misc" />
-              {returnPath && <input type="hidden" name="from" value={returnPath} />}
+            <button className="button">save →</button>
+          </div>
+          <div className="appearance-panel appearance-panel-misc">
               <input type="hidden" name="pageSize" value="100" />
               <fieldset>
                 <legend>density</legend>
@@ -218,9 +205,9 @@ export function ChangeAppearance(
                   <span>Include hashtag follow activity in My Feed</span>
                 </label>
               </fieldset>
-              <button className="button">save misc →</button>
-            </form>
-          )}
+            <button className="button">save →</button>
+          </div>
+        </form>
       </section>
     </Layout>
   )
