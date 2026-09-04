@@ -523,7 +523,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   database?.close()
-  if (server && server.exitCode === null) server.kill()
+  if (server && server.exitCode === null) server.kill('SIGKILL')
   if (server) await server.exited
   rmSync(temporaryDirectory, { recursive: true, force: true })
 })

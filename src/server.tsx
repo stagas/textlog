@@ -229,3 +229,19 @@ const server = Bun.serve({
 })
 
 console.log(`http listener ready  http://${server.hostname}:${server.port}`)
+
+let shuttingDown = false
+
+process.once('SIGTERM', () => {
+  if (shuttingDown) return
+  shuttingDown = true
+  console.log('SIGTERM received  draining http connections')
+  void server.stop(false).then(() => {
+    runtime.terminate()
+    console.log('http listener stopped')
+  }).catch(error => {
+    console.error('graceful shutdown failed', error)
+    runtime.terminate()
+    process.exitCode = 1
+  })
+})
