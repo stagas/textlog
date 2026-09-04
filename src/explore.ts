@@ -4,6 +4,7 @@ import type { PersonView } from './types'
 export type TrendingTag = { tag: string; count: number; following: boolean }
 
 const TRENDING_TAG_WINDOW_DAYS = 30
+const TRENDING_TAG_HALF_LIFE_HOURS = 72
 
 export function trendingTags(database: Database, viewerId: number, limit = 12, now = new Date().toISOString(),
   offset = 0)
@@ -11,20 +12,37 @@ export function trendingTags(database: Database, viewerId: number, limit = 12, n
   const canonical = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()
     ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
     : 'ph.tag'
+  const hasConversationHotScores = ['post_conversations', 'hot_feed_projection'].every(table =>
+    database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table))
+  const hotScoreJoin = hasConversationHotScores
+    ? `LEFT JOIN post_conversations pc ON pc.post_id=p.id
+      LEFT JOIN (SELECT conversation_id,max(hot_score) hot_score FROM hot_feed_projection
+        GROUP BY conversation_id) conversation_hot ON conversation_hot.conversation_id=pc.conversation_id`
+    : ''
+  const hotScore = hasConversationHotScores ? 'coalesce(conversation_hot.hot_score,0)' : '0'
   return database.query(
     `WITH canonical_tags AS (
       SELECT DISTINCT ph.post_id,${canonical} tag FROM post_hashtags ph
-    ) SELECT ct.tag,count(*) count,
-      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ct.tag) following,
-      sum(pow(0.5,max(0,(julianday(?) - julianday(p.created_at))*24)/24.0)) trend_score,
-      max(p.created_at) latest_post_at
+    ), eligible_tags AS (
+      SELECT ct.tag,p.user_id,p.created_at,${hotScore} post_hot_score
       FROM canonical_tags ct JOIN posts p ON p.id=ct.post_id
+      ${hotScoreJoin}
       WHERE p.deleted_at IS NULL AND p.created_at>=datetime(?,'-${TRENDING_TAG_WINDOW_DAYS} days')
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
       AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ct.tag))
-      GROUP BY ct.tag ORDER BY trend_score DESC,latest_post_at DESC,ct.tag LIMIT ? OFFSET ?`,
-  ).all(viewerId, now, now, viewerId, viewerId, viewerId, viewerId, viewerId, limit, offset) as TrendingTag[]
+    ), ranked_posts AS (
+      SELECT *,row_number() OVER (PARTITION BY tag,user_id ORDER BY created_at DESC) author_post_number
+      FROM eligible_tags
+    ) SELECT tag,count(*) count,
+      EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ranked_posts.tag) following,
+      sum(pow(0.5,max(0,(julianday(?) - julianday(created_at))*24)/${TRENDING_TAG_HALF_LIFE_HOURS})
+        / author_post_number
+        * (1+min(1,log(1+post_hot_score)/log(2)/8.0))) trend_score,
+      max(created_at) latest_post_at
+      FROM ranked_posts
+      GROUP BY tag ORDER BY trend_score DESC,latest_post_at DESC,tag LIMIT ? OFFSET ?`,
+  ).all(now, viewerId, viewerId, viewerId, viewerId, viewerId, viewerId, now, limit, offset) as TrendingTag[]
 }
 
 export function trendingTagCount(database: Database, viewerId: number, now = new Date().toISOString()) {

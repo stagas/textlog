@@ -183,6 +183,56 @@ describe('trending tags', () => {
     expect(tags[0].following).toBeTruthy()
   })
 
+  test('rewards participation by different authors over repetition by one author', () => {
+    const database = tagFixture()
+    database.run(`
+      INSERT INTO posts VALUES
+        (10,6,'2026-08-07 20:00:00',NULL),(11,6,'2026-08-07 19:00:00',NULL),
+        (12,6,'2026-08-07 18:00:00',NULL),(13,6,'2026-08-07 17:00:00',NULL),
+        (14,7,'2026-08-07 16:00:00',NULL),(15,8,'2026-08-07 15:00:00',NULL),
+        (16,9,'2026-08-07 14:00:00',NULL);
+      INSERT INTO post_hashtags VALUES
+        (10,'repeated'),(11,'repeated'),(12,'repeated'),(13,'repeated'),
+        (14,'community'),(15,'community'),(16,'community');
+    `)
+
+    const tags = trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')
+    expect(tags.findIndex(tag => tag.tag === 'community'))
+      .toBeLessThan(tags.findIndex(tag => tag.tag === 'repeated'))
+  })
+
+  test('keeps meaningful activity from the last few days competitive', () => {
+    const database = tagFixture()
+    database.run(`
+      INSERT INTO posts VALUES
+        (10,6,'2026-08-05 00:00:00',NULL),(11,7,'2026-08-05 00:00:00',NULL),
+        (12,8,'2026-08-05 00:00:00',NULL);
+      INSERT INTO post_hashtags VALUES(10,'sustained'),(11,'sustained'),(12,'sustained');
+    `)
+
+    expect(trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')[0].tag).toBe('sustained')
+  })
+
+  test('boosts tags participating in hot conversations without making engagement unbounded', () => {
+    const database = tagFixture()
+    database.run(`
+      CREATE TABLE post_conversations (post_id INTEGER PRIMARY KEY,conversation_id INTEGER);
+      CREATE TABLE hot_feed_projection (post_id INTEGER,conversation_id INTEGER,hot_score REAL);
+      INSERT INTO posts VALUES
+        (10,6,'2026-08-07 20:00:00',NULL),(11,7,'2026-08-07 20:00:00',NULL),
+        (12,8,'2026-08-07 20:00:00',NULL);
+      INSERT INTO post_hashtags VALUES(10,'cold'),(11,'engaged'),(12,'viral');
+      INSERT INTO post_conversations VALUES(10,10),(11,11),(12,12);
+      INSERT INTO hot_feed_projection VALUES(10,10,0),(11,11,15),(12,12,1000000);
+    `)
+
+    const tags = trendingTags(database, 1, 12, '2026-08-08T00:00:00.000Z')
+    expect(tags.findIndex(tag => tag.tag === 'engaged')).toBeLessThan(tags.findIndex(tag => tag.tag === 'cold'))
+    const engaged = tags.find(tag => tag.tag === 'engaged') as typeof tags[number] & { trend_score: number }
+    const viral = tags.find(tag => tag.tag === 'viral') as typeof tags[number] & { trend_score: number }
+    expect(viral.trend_score).toBeCloseTo(engaged.trend_score * 4 / 3)
+  })
+
   test('respects blocked people and hashtags', () => {
     const database = tagFixture()
     database.run(`INSERT INTO blocks VALUES(1,2); INSERT INTO blocked_hashtags VALUES(1,'busy'),(1,'older');`)
