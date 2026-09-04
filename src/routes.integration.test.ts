@@ -330,8 +330,7 @@ test('an anonymous feed note is published after signup chooses a handle', async 
     'SELECT id,body FROM posts WHERE user_id=(SELECT id FROM users WHERE handle=?) ORDER BY id DESC',
   )
     .get('pending_writer') as { id: number; body: string }
-  const publishedPath = `/post/${root.id}?from=${encodeURIComponent(`/hot?expand=${root.id}#post-${root.id}`)}`
-    + `&to=${root.id}#post-${root.id}`
+  const publishedPath = `/all?expand=${root.id}#post-${root.id}`
   expect(published.headers.get('location')).toBe(publishedPath)
   expect(root.body).toBe(body)
   const guardedPost = await request(published.headers.get('location')!, { cookie: cookies, acceptHtml: true, ip })
@@ -1536,10 +1535,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(createPost.status).toBe(303)
   const post = database.query('SELECT id,body FROM posts WHERE user_id=? ORDER BY id DESC LIMIT 1')
     .get(alice.id) as { id: number; body: string }
-  expect(createPost.headers.get('location')).toBe(
-    `/post/${post.id}?from=${encodeURIComponent(`/all?expand=${post.id}#post-${post.id}`)}`
-      + `&to=${post.id}#post-${post.id}`,
-  )
+  expect(createPost.headers.get('location')).toBe(`/all?expand=${post.id}#post-${post.id}`)
 
   const unpublishable = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,NULL,?,datetime(\'now\')) RETURNING id',

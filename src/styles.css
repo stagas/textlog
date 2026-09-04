@@ -7329,6 +7329,10 @@ form.report-panel {
   font-weight: 600;
 }
 
+.moderation-header {
+  border-bottom: 0;
+}
+
 .moderation-post {
   padding: 0;
   border-bottom: 1px solid var(--soft);

@@ -203,7 +203,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       const replyPageId = pending.replyPageId || pending.parentId
-      let destination = postedPostPath(result.id, pending.returnPath)
+      let destination = postedPostPath(result.id)
       if (pending.parentId) {
         const replyTarget = await replyDestination(replyPageId!, result.id, user.id)
         destination = postedReplyPath(replyTarget.pageId, result.id, pending.returnPath || undefined,
@@ -525,7 +525,7 @@ export function registerPostsRoutes(app: Hono) {
       if (!result.duplicate) await persistPreviews(result.id, 'save', body)
       if (!result.duplicate) notifyPost()
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
-      return redirect(postedPostPath(result.id, returnPath))
+      return redirect(postedPostPath(result.id))
     }
     catch (error) {
       logError('POST /post', error)

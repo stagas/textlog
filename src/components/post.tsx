@@ -453,12 +453,8 @@ export function replyAnchorReturnPath(threadRootId: number, replyId: number, ret
   return `/post/${threadRootId}${returnQuery}#post-${replyId}`
 }
 
-export function postedPostPath(postId: number, returnPath: string) {
-  const target = new URL(returnPath, 'http://textlog.local')
-  target.searchParams.set('expand', String(postId))
-  target.hash = `post-${postId}`
-  const backPath = target.pathname + target.search + target.hash
-  return `/post/${postId}?from=${encodeURIComponent(backPath)}&to=${postId}#post-${postId}`
+export function postedPostPath(postId: number) {
+  return `/all?expand=${postId}#post-${postId}`
 }
 
 export function postedReplyPath(pageId: number, replyId: number, returnPath?: string, expandedRootId = pageId) {

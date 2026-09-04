@@ -4500,9 +4500,8 @@ test('thread replies use their own permanent anchor as the next return path', ()
     .toBe('/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2#post-7')
 })
 
-test('a posted note opens its permanent page at its stable anchor', () => {
-  expect(postedPostPath(42, '/hot?cursor=abc#post-7'))
-    .toBe('/post/42?from=%2Fhot%3Fcursor%3Dabc%26expand%3D42%23post-42&to=42#post-42')
+test('a posted note opens the all feed expanded at its stable anchor', () => {
+  expect(postedPostPath(42)).toBe('/all?expand=42#post-42')
 })
 
 test('a posted reply returns to its originating thread and preserves that thread back path', () => {
