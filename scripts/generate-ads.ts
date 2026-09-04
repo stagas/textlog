@@ -1,4 +1,4 @@
-import { createCanvas } from 'canvas'
+import { createCanvas, type CanvasRenderingContext2D } from 'canvas'
 import { writeFile } from 'node:fs/promises'
 
 const cream = '#f4f3ee'
@@ -8,7 +8,7 @@ const sage = '#749668'
 const paleSage = '#dfe7db'
 
 function roundedRect(
-  ctx: ReturnType<typeof createCanvas>['getContext'],
+  ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   width: number,
@@ -20,7 +20,7 @@ function roundedRect(
 }
 
 function drawMark(
-  ctx: ReturnType<typeof createCanvas>['getContext'],
+  ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   size: number,
