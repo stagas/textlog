@@ -3121,11 +3121,19 @@ body.corners-round a.button {
 
 .post-body .markdown-list {
   margin: 0;
-  padding-left: 2em;
+  padding-left: 3ch;
 }
 
 .post-body .markdown-list li {
-  padding-left: var(--space-1);
+  padding-left: 1ch;
+}
+
+.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list {
+  padding-left: calc(3ch - 1.5px);
+}
+
+.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list li {
+  padding-left: calc(1ch - .5px);
 }
 
 .post-body .markdown-table-wrap {

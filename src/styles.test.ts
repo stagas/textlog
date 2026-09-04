@@ -2,6 +2,16 @@ import { describe, expect, test } from 'bun:test'
 import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styles'
 
 describe('in-memory stylesheet', () => {
+  test('spaces post list indentation in monospace character widths', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post-body .markdown-list {\n  margin: 0;\n  padding-left: 3ch;\n}')
+    expect(css).toContain('.post-body .markdown-list li {\n  padding-left: 1ch;\n}')
+    expect(css).toContain(
+      '.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list {\n'
+        + '  padding-left: calc(3ch - 1.5px);\n}',
+    )
+  })
+
   test('aligns each post paragraph from its detected writing direction', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('text-align: start;\n  unicode-bidi: plaintext;\n  white-space: pre-wrap;')
