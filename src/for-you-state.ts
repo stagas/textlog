@@ -38,6 +38,29 @@ const hasVisibleDescendantFromAnotherUser = `EXISTS (WITH RECURSIVE descendants(
   AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
 
+const projectedDescendsFromViewer = `EXISTS (SELECT 1 FROM post_ancestors ancestry
+  WHERE ancestry.post_id=p.id AND ancestry.ancestor_user_id=$viewer)`
+const projectedDescendsFromFollowedUser = `EXISTS (SELECT 1 FROM post_ancestors ancestry
+  JOIN follows ON follows.following_id=ancestry.ancestor_user_id
+  WHERE ancestry.post_id=p.id AND follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
+const projectedDescendsFromFollowedTag = `EXISTS (SELECT 1 FROM post_ancestors ancestry
+  JOIN post_hashtags ph ON ph.post_id=ancestry.ancestor_id JOIN hashtag_follows hf ON hf.tag=ph.tag
+  WHERE ancestry.post_id=p.id AND hf.user_id=$viewer AND p.created_at>=hf.created_at)`
+const projectedVisibleDescendant = `EXISTS (SELECT 1 FROM post_ancestors ancestry JOIN posts d ON d.id=ancestry.post_id
+  WHERE ancestry.ancestor_id=p.id AND d.user_id!=$viewer AND d.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+    (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer))
+  AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+    WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
+
+function projectedEvents(sql: string, database: Database) {
+  if (!database.query(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_ancestors'`).get()) return sql
+  return sql.replaceAll(descendsFromViewer, projectedDescendsFromViewer)
+    .replaceAll(descendsFromFollowedUser, projectedDescendsFromFollowedUser)
+    .replaceAll(descendsFromFollowedTag, projectedDescendsFromFollowedTag)
+    .replaceAll(hasVisibleDescendantFromAnotherUser, projectedVisibleDescendant)
+}
+
 const visibleEvents = `
   SELECT 'post:' || printf('%020d',p.id) event_key FROM posts p
     LEFT JOIN posts parent ON parent.id=p.parent_id
@@ -138,25 +161,25 @@ function stateParameters(userId: number, database: Database) {
 }
 
 export function hasUnreadForYou(userId: number, database: Database) {
-  return !!database.query(`SELECT 1 FROM (${visibleEvents}) event WHERE NOT EXISTS
+  return !!database.query(`SELECT 1 FROM (${projectedEvents(visibleEvents, database)}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
 
 export function unreadForYouCount(userId: number, database: Database) {
-  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${visibleEvents}) event WHERE NOT EXISTS
+  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${projectedEvents(visibleEvents, database)}) event WHERE NOT EXISTS
     (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
     .get(stateParameters(userId, database)) as { count: number }).count
 }
 
 export function hasUnreadToMe(userId: number, database: Database) {
-  return !!database.query(`SELECT 1 FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
+  return !!database.query(`SELECT 1 FROM (${projectedEvents(visibleToMeEvents, database)}) event WHERE NOT EXISTS
     (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key) LIMIT 1`)
     .get(stateParameters(userId, database))
 }
 
 export function unreadToMeCount(userId: number, database: Database) {
-  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${visibleToMeEvents}) event WHERE NOT EXISTS
+  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${projectedEvents(visibleToMeEvents, database)}) event WHERE NOT EXISTS
     (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
     .get(stateParameters(userId, database)) as { count: number }).count
 }
@@ -190,7 +213,7 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
 
 export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[], toMe = false, database: Database) {
   if (!eventKeys.length) return 0
-  const events = toMe ? visibleToMeEvents : visibleForYouEvents
+  const events = projectedEvents(toMe ? visibleToMeEvents : visibleForYouEvents, database)
   const placeholders = eventKeys.map((_, index) => `$event${index}`).join(',')
   const parameters = { ...stateParameters(userId, database),
     ...Object.fromEntries(eventKeys.map((eventKey, index) => [`event${index}`, eventKey])) }
@@ -214,7 +237,7 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
 }
 
 export function markAllForYouRead(userId: number, toMe: boolean, database: Database) {
-  const events = toMe ? visibleToMeEvents : visibleEvents
+  const events = projectedEvents(toMe ? visibleToMeEvents : visibleEvents, database)
   const parameters = stateParameters(userId, database)
   const latestPostIds = [...new Set((database.query(`SELECT event_key FROM (${events})
     WHERE event_key GLOB 'post:[0-9]*'`).all(parameters) as Array<{ event_key: string }>)
@@ -224,7 +247,7 @@ export function markAllForYouRead(userId: number, toMe: boolean, database: Datab
       SELECT $viewer,event_key FROM (${events})`).run(parameters)
     if (toMe) {
       database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
-      SELECT $viewer,event_key FROM (${visibleToMeEvents})`).run(parameters)
+      SELECT $viewer,event_key FROM (${projectedEvents(visibleToMeEvents, database)})`).run(parameters)
     }
     database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
       SELECT user_id,'post:' || CAST(substr(event_key,6) AS INTEGER)
