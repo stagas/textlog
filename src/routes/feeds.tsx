@@ -317,8 +317,8 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
         viewerCacheVersion(12, user, notificationBanner), false,
         renderForCache, async () => {
-        await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
-          toMe: false })
+        return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
+          toMe: false }) > 0
       })
       : await render()
     const remembered = rememberFeed(response, 'following')

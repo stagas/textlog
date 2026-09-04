@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { hydrateMaterializedFeedCounts, materializedFeedTemplate } from './database-domain'
-import { materializedBody, memoryHitNeedsReadAction,
+import { materializedBody, memoryHitNeedsReadAction, readActionNeedsRerender,
   personalizedReadActionOutOfSync } from './materialized-feed-service'
 
 test('anonymous feed caches never expose unread-counter template tokens', () => {
@@ -68,4 +68,10 @@ test('personalized memory hits always run their page-read action', () => {
   expect(memoryHitNeedsReadAction('to-me', true)).toBe(true)
   expect(memoryHitNeedsReadAction('hot', true)).toBe(false)
   expect(memoryHitNeedsReadAction('latest', false)).toBe(true)
+})
+
+test('a no-op page-read action does not rebuild cached feed HTML', () => {
+  expect(readActionNeedsRerender(false)).toBeFalse()
+  expect(readActionNeedsRerender(false, true)).toBeTrue()
+  expect(readActionNeedsRerender(true)).toBeTrue()
 })

@@ -8531,7 +8531,8 @@ body:has(.logs-page) main {
 }
 .log-path,
 .log-username {
-  border-bottom: 0;
+  border: 0 !important;
+  box-shadow: none;
   color: inherit;
   text-decoration: none;
 }

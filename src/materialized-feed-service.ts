@@ -73,6 +73,10 @@ export function memoryHitNeedsReadAction(kind: MaterializedFeedKind, hitActionDo
   return !hitActionDone || actionStale || kind === 'for-you' || kind === 'to-me'
 }
 
+export function readActionNeedsRerender(changed: boolean | void, actionStale = false) {
+  return changed !== false || actionStale
+}
+
 function appearanceVariant(request: Request) {
   const cookie = request.headers.get('cookie') || ''
   const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device',
@@ -84,7 +88,7 @@ function appearanceVariant(request: Request) {
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
   render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false,
-  renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => void | Promise<void>)
+  renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => boolean | void | Promise<boolean | void>)
 {
   if (Bun.env.DEV_RELOAD === 'true') return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
@@ -94,24 +98,25 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   if (memory) {
     memoryMaterializations.delete(key)
     memoryMaterializations.set(key, memory)
-    const latestBody = kind === 'latest' && viewerId >= 0
-      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
-      : undefined
     const hydratedMemoryBody = viewerId >= 0
       ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
       : memory.body
     const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
       && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
+    let memoryBodyChanged = false
     // Personalized pages can gain new unread entries without changing this process's memory entry. Consume the
     // visible page on every visit so reads made in My Feed are reflected in All before the response is returned.
     if (memoryHitNeedsReadAction(kind, memory.hitActionDone, personalizedActionStale) && onCacheHit) {
       memory.hitActionDone = true
-      await onCacheHit()
-      if (renderForCache) memory.body = materializedBody(await (await renderForCache()).text(), viewerId)
+      const changed = await onCacheHit()
+      if (renderForCache && readActionNeedsRerender(changed, personalizedActionStale)) {
+        memory.body = materializedBody(await (await renderForCache()).text(), viewerId)
+        memoryBodyChanged = true
+      }
     }
-    const body = latestBody ?? (viewerId >= 0
+    const body = viewerId >= 0 && memoryBodyChanged
       ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
-      : memory.body)
+      : hydratedMemoryBody
     const headers = new Headers(memory.headers)
     headers.set('x-feed-cache', 'memory')
     return new Response(body, { status: memory.status, headers })
@@ -122,8 +127,8 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     materialization = (async () => {
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
-        await onCacheHit?.()
-        const cachedHtml = onCacheHit && renderForCache
+        const changed = await onCacheHit?.()
+        const cachedHtml = onCacheHit && renderForCache && changed !== false
           ? await (await renderForCache()).text()
           : cached.html
         if (cachedHtml !== cached.html) {
