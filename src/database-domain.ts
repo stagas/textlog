@@ -626,7 +626,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
         .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
         .map(({ id, handle, handle_chosen_at }) => ({ id, handle, handle_chosen_at,
-          has_unread: personalizedUnreadCount(database, id, false) > 0 }))
+          has_unread: personalizedUnreadCount(database, id, true) > 0 }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
@@ -667,9 +667,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           .run(target.id, currentSessionHash, userId)
       })()
       if (target.handle_chosen_at) {
-        markAllForYouRead(target.id, false, database)
+        markAllForYouRead(target.id, true, database)
         cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('for-you','latest')`).run(target.id)
+          AND kind IN ('for-you','to-me','latest')`).run(target.id)
       }
       return { status: 'ready', handleChosen: Boolean(target.handle_chosen_at) } as DatabaseDomainOutput<K>
     }
