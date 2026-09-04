@@ -3122,18 +3122,51 @@ body.corners-round a.button {
 .post-body .markdown-list {
   margin: 0;
   padding-left: 3ch;
+  list-style: none;
 }
 
 .post-body .markdown-list li {
-  padding-left: 1ch;
+  position: relative;
+  padding-left: 0;
+}
+
+.post-body ul.markdown-list > li::before {
+  position: absolute;
+  left: -2ch;
+  width: 1ch;
+  content: "•";
+}
+
+.post-body ol.markdown-list > li::before {
+  position: absolute;
+  right: calc(100% + 1ch);
+  content: counter(list-item) ".";
+  white-space: nowrap;
+}
+
+.post-body ol.markdown-list {
+  padding-left: 4ch;
 }
 
 .post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list {
   padding-left: calc(3ch - 1.5px);
 }
 
+.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body ol.markdown-list {
+  padding-left: calc(4ch - 2px);
+}
+
 .post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list li {
-  padding-left: calc(1ch - .5px);
+  padding-left: 0;
+}
+
+.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body ul.markdown-list > li::before {
+  left: calc(-2ch + 1px);
+  width: calc(1ch - .5px);
+}
+
+.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body ol.markdown-list > li::before {
+  right: calc(100% + 1ch - .5px);
 }
 
 .post-body .markdown-table-wrap {

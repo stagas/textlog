@@ -4,11 +4,21 @@ import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styl
 describe('in-memory stylesheet', () => {
   test('spaces post list indentation in monospace character widths', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post-body .markdown-list {\n  margin: 0;\n  padding-left: 3ch;\n}')
-    expect(css).toContain('.post-body .markdown-list li {\n  padding-left: 1ch;\n}')
+    expect(css).toContain('.post-body .markdown-list {\n  margin: 0;\n  padding-left: 3ch;\n  list-style: none;\n}')
+    expect(css).toContain('.post-body .markdown-list li {\n  position: relative;\n  padding-left: 0;\n}')
+    expect(css).toContain(
+      '.post-body ul.markdown-list > li::before {\n  position: absolute;\n  left: -2ch;\n  width: 1ch;\n'
+        + '  content: "•";\n}',
+    )
+    expect(css).toContain('content: counter(list-item) ".";')
+    expect(css).toContain('.post-body ol.markdown-list {\n  padding-left: 4ch;\n}')
     expect(css).toContain(
       '.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body .markdown-list {\n'
         + '  padding-left: calc(3ch - 1.5px);\n}',
+    )
+    expect(css).toContain(
+      '.post-page-thread:not(.feed-thread) .thread-root > .post > .post-body ol.markdown-list {\n'
+        + '  padding-left: calc(4ch - 2px);\n}',
     )
   })
 
