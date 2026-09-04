@@ -181,6 +181,8 @@ export type DatabaseDomainOperations = {
   'admin.decideReport': { input: { id: number; decision: 'resolve' | 'dismiss'; actorId: number; note: string };
     output: boolean }
   'admin.post': { input: { id: number }; output: (PostRow & { handle: string }) | null }
+  'admin.moderatePost': { input: { id: number; actorId: number; category: string | null };
+    output: { status: 'not_found' } | { status: 'ready' } }
   'admin.deletePost': { input: { id: number; actorId: number; note: string };
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
   'admin.translatePost': { input: { id: number; translation: string };

@@ -4,6 +4,7 @@ import {
   AdminDashboard,
   AdminEmail,
   AdminPush,
+  AdminPostModeration,
   AdminTags,
   AdminTranslate,
   AdminUser,
@@ -320,10 +321,43 @@ export function registerAdminRoutes(app: Hono) {
     const id = Number(c.req.param('id'))
     const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
     if (!post) return c.text('Not found', 404)
-    const returnTo = c.req.query('report')
+    const returnTo = c.req.query('from')
+      ? safeLocalPath(c.req.query('from'), c.req.url, `/post/${id}`)
+      : c.req.query('report')
       ? '/admin'
       : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${id}`)
     return page(<AdminConfirm user={signedIn} kind="delete_post" post={post} returnTo={returnTo} />)
+  })
+
+  app.get('/admin/posts/:id/moderate', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    if (!post) return c.text('Not found', 404)
+    const returnTo = c.req.query('from')
+      ? safeLocalPath(c.req.query('from'), c.req.url, `/post/${id}`)
+      : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${id}`)
+    return page(<AdminPostModeration user={signedIn} post={post} returnTo={returnTo} />)
+  })
+
+  app.post('/admin/posts/:id/moderate', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    if (!Number.isInteger(id)) return c.text('Not found', 404)
+    const f = await form(c.req.raw)
+    const action = f.action || ''
+    const category = action === 'mark' ? (f.category || '').trim() : null
+    if (!['mark', 'unmark'].includes(action) || action === 'mark' && (!category || category.length > 100)) {
+      return c.text('Invalid moderation action', 400)
+    }
+    const changed = await databaseService().call('admin.moderatePost', { id, actorId: signedIn.id, category })
+    if (changed.status === 'not_found') return c.text('Not found', 404)
+    const returnTo = safeLocalPath(f.returnTo, c.req.url, `/post/${id}`)
+    return redirect(`/admin/posts/${id}/moderate?from=${encodeURIComponent(returnTo)}`)
   })
 
   app.post('/admin/posts/:id/delete', async c => {

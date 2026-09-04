@@ -5,6 +5,7 @@ import { displayPostBody } from '../utils'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
 import { Panel } from './panel'
+import { Post } from './post'
 
 export function AdminTranslate({ user, post, returnTo }: {
   user: User
@@ -31,6 +32,72 @@ export function AdminTranslate({ user, post, returnTo }: {
             primary={<button className="button">translate</button>} />
         </form>
       </Panel>
+    </Layout>
+  )
+}
+
+export function AdminPostModeration({ user, post, returnTo }: {
+  user: User
+  post: PostRow & { handle: string }
+  returnTo: string
+}) {
+  return (
+    <Layout user={user} title="moderate post">
+      <header className="page-header moderation-header">
+        <div>
+          <p className="eyebrow">admin moderation</p>
+          <h1>Review post</h1>
+        </div>
+        <a className="quiet" href={returnTo}>back</a>
+      </header>
+      <section className="moderation-post" aria-label="Post under review">
+        <Post p={post} user={user} suppressContentWarning showReadAction={false} />
+      </section>
+      <section className="moderation-actions" aria-label="Moderation actions">
+        <div className="moderation-status">
+          <div>
+            <h2>Status</h2>
+            {post.moderation_category
+              ? (
+                <p>
+                  {post.moderation_score != null ? 'Automatically hidden' : 'Hidden'} behind a content warning for{' '}
+                  <strong>{post.moderation_category}</strong>
+                  {post.moderation_score != null && ` (score ${post.moderation_score.toFixed(2)})`}.
+                </p>
+              )
+              : <p>This post is currently visible without a content warning.</p>}
+          </div>
+          {post.moderation_category && (
+            <form method="post" action={`/admin/posts/${post.id}/moderate`}>
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <input type="hidden" name="action" value="unmark" />
+              <button className="button" type="submit">remove warning</button>
+            </form>
+          )}
+        </div>
+        <form className="moderation-mark-form" method="post" action={`/admin/posts/${post.id}/moderate`}>
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <input type="hidden" name="action" value="mark" />
+          <label htmlFor="moderation-category">Content warning</label>
+          <p>Describe the trigger briefly. This text will be shown to readers.</p>
+          <div>
+            <input className="form-control" id="moderation-category" name="category" maxLength={100} required
+              defaultValue={post.moderation_category || ''} placeholder="e.g. graphic violence" autoComplete="off" />
+            <button className="button" type="submit">
+              {post.moderation_category ? 'update warning' : 'add warning'}
+            </button>
+          </div>
+        </form>
+        <nav className="moderation-other-actions" aria-label="Other post actions">
+          <a className="quiet" href={`/post/${post.id}`}>view post</a>
+          <a className="quiet" href={`/admin/posts/${post.id}/translate?from=${encodeURIComponent(returnTo)}`}>
+            translate
+          </a>
+          <a className="quiet danger" href={`/admin/posts/${post.id}/delete?from=${encodeURIComponent(returnTo)}`}>
+            delete post
+          </a>
+        </nav>
+      </section>
     </Layout>
   )
 }

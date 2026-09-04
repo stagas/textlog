@@ -7311,6 +7311,96 @@ form.report-panel {
   margin-top: var(--space-2);
 }
 
+.moderation-header .eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--accent);
+  font-size: var(--font-size-10);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.moderation-header h1,
+.moderation-actions h2,
+.moderation-actions p {
+  margin: 0;
+}
+
+.moderation-header h1 {
+  font-weight: 600;
+}
+
+.moderation-post {
+  padding: 0;
+  border-bottom: 1px solid var(--soft);
+}
+
+.moderation-post>.post {
+  border-top: 0;
+}
+
+.moderation-actions {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--gutter);
+}
+
+.moderation-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.moderation-status>div,
+.moderation-mark-form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.moderation-actions h2,
+.moderation-mark-form label {
+  color: var(--ink);
+  font-size: var(--font-size-13);
+  font-weight: 600;
+}
+
+.moderation-actions p {
+  color: var(--muted);
+  font-size: var(--font-size-11);
+}
+
+.moderation-mark-form>div {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.moderation-mark-form .form-control {
+  flex: 1;
+  font-size: var(--font-size-12);
+}
+
+.moderation-other-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--soft);
+}
+
+.moderation-other-actions .danger {
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .moderation-status,
+  .moderation-mark-form>div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 600px) {
   .admin-actions-log article {
     grid-template-columns: 1fr;

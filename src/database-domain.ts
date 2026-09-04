@@ -1245,9 +1245,25 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'admin.post': {
       const { id } = input as DatabaseDomainInput<'admin.post'>
-      return (database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,u.handle
+      return (database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
+        p.moderation_category,p.moderation_score,u.handle
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id)
         || null) as DatabaseDomainOutput<K>
+    }
+    case 'admin.moderatePost': {
+      const { id, actorId, category } = input as DatabaseDomainInput<'admin.moderatePost'>
+      const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL').get(id) as {
+        user_id: number
+      } | null
+      if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      database.transaction(() => {
+        database.query('UPDATE posts SET moderation_category=?,moderation_score=NULL WHERE id=?')
+          .run(category, id)
+        recordAdminAction(database, actorId, 'edit_post', post.user_id, id,
+          category ? `Marked as moderated: ${category}` : 'Removed moderation')
+      })()
+      invalidatePostFeedCaches()
+      return { status: 'ready' } as DatabaseDomainOutput<K>
     }
     case 'admin.deletePost': {
       const { id, actorId, note } = input as DatabaseDomainInput<'admin.deletePost'>

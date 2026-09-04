@@ -8,6 +8,7 @@ import {
   AccountSecurity,
   AccountSwitcher,
   AdminDashboard,
+  AdminPostModeration,
   ApiDocs,
   Auth,
   BlogBuildingWithoutJavascript,
@@ -4741,15 +4742,32 @@ test('Post renders moderation controls only for admins on the detail page', () =
     showModerateAction: true,
   }))
 
-  expect(adminFeedHtml).not.toContain('/admin/posts/2/delete')
-  expect(adminDetailHtml).toContain('/admin/posts/2/delete')
-  expect(adminDetailHtml).toContain('href="/admin/posts/2/translate?from=%2Fpost%2F2"')
-  expect(adminDetailHtml).toContain('aria-label="translate this post with Google">translate</a>')
+  expect(adminFeedHtml).not.toContain('/admin/posts/2/moderate')
+  expect(adminDetailHtml).toContain('/admin/posts/2/moderate')
+  expect(adminDetailHtml).not.toContain('/admin/posts/2/translate')
   expect(adminDetailHtml).toContain('href="/post/2/edit" aria-label="edit this post">edit</a>')
   expect(adminDetailHtml.indexOf('href="/post/2/edit"')).toBeLessThan(adminDetailHtml.indexOf('<div class="postfoot">'))
-  expect(userDetailHtml).not.toContain('/admin/posts/2/delete')
+  expect(userDetailHtml).not.toContain('/admin/posts/2/moderate')
   expect(userDetailHtml).not.toContain('/admin/posts/2/translate')
   expect(userDetailHtml).not.toContain('href="/post/2/edit"')
+})
+
+test('post moderation review offers manual moderation, automatic unmarking, and deletion', () => {
+  const html = renderToStaticMarkup(React.createElement(AdminPostModeration, {
+    user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
+    post: { id: 2, user_id: 2, parent_id: null, body: 'Sensitive note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, moderation_category: 'violence',
+      moderation_score: 0.91 },
+    returnTo: '/post/2',
+  }))
+
+  expect(html).toContain('Sensitive note')
+  expect(html).toContain(
+    'Automatically hidden behind a content warning for <strong>violence</strong> (score 0.91)',
+  )
+  expect(html).toContain('name="action" value="unmark"')
+  expect(html).toContain('name="category"')
+  expect(html).toContain('href="/admin/posts/2/delete?from=%2Fpost%2F2"')
 })
 
 test('Post detail places moderate immediately before report for admins', () => {
@@ -4766,7 +4784,7 @@ test('Post detail places moderate immediately before report for admins', () => {
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('moderate this post')
 })
 
-test('Post detail shows translation moderation for a reply opened as the primary post', () => {
+test('Post detail shows moderation for a reply opened as the primary post', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
     p: { id: 2716, user_id: 2, parent_id: 20, body: 'reply', handle: 'writer', created_at: '2026-08-03 12:00:00',
@@ -4776,7 +4794,7 @@ test('Post detail shows translation moderation for a reply opened as the primary
     showModerateAction: true,
   }))
 
-  expect(html).toContain('href="/admin/posts/2716/translate?from=%2Fpost%2F2716"')
-  expect(html.match(/\/admin\/posts\/2716\/translate/g)).toHaveLength(1)
-  expect(html.indexOf('/admin/posts/2716/translate')).toBeGreaterThan(html.indexOf('class="parent-quote"'))
+  expect(html).toContain('href="/admin/posts/2716/moderate"')
+  expect(html.match(/\/admin\/posts\/2716\/moderate/g)).toHaveLength(1)
+  expect(html.indexOf('/admin/posts/2716/moderate')).toBeGreaterThan(html.indexOf('class="parent-quote"'))
 })
