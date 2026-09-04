@@ -43,7 +43,7 @@ test('removing the selected primary promotes a remaining account', () => {
   expect(accountForEmail(database, 'shared@example.com')?.id).toBe(persona.id)
 })
 
-test('linked-account unread activity appears live and is cleared only by reading activity', async () => {
+test('linked-account unread activity reflects only My Feed and @', async () => {
   const { database, primary, persona } = fixture()
   const actor = database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
     VALUES('actor','actor@example.com','!',CURRENT_TIMESTAMP) RETURNING id`).get() as { id: number }
@@ -107,7 +107,7 @@ test('linked-account unread activity appears live and is cleared only by reading
     sessionToken: token, bearerToken: null, deviceId: null, now,
   })
   expect(afterAllOnlyActivity.sessionUser?.linked_accounts).toEqual([
-    expect.objectContaining({ id: persona.id, has_unread: true }),
+    expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
   markLatestPostsRead(persona.id, [unrelated.id], database)
   const afterReadingAllOnlyActivity = await executeDatabaseDomain(database, 'auth.resolve', {

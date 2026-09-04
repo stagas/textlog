@@ -626,8 +626,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
         .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
         .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
-          has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database)
-            || unreadLatestCount(id, database) > 0 }))
+          has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
