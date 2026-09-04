@@ -36,11 +36,14 @@ const groups: Array<{ title: string; items: StatItem[] }> = [
   { title: 'Campaigns', items: [
     ['redditVisitors', 'unique visitors · reddit'],
     ['redditNewUsers', 'new users · reddit'],
+    ['fourChanVisitors', 'unique visitors · 4chan'],
+    ['fourChanNewUsers', 'new users · 4chan'],
   ] },
 ]
 
 const privateStats: Array<keyof DashboardStats> = [
   'suspendedUsers', 'usersOnline', 'anonymousOnline', 'redditVisitors', 'redditNewUsers',
+  'fourChanVisitors', 'fourChanNewUsers',
 ]
 
 export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {

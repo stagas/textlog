@@ -4,3 +4,4 @@ node_modules
 storage/backups
 storage/uploads
 public/dump.zip
+public/ad-*

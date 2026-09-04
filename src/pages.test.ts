@@ -1760,6 +1760,8 @@ test('admin metrics use locale-aware number formatting', () => {
       visitors7d: 0,
       redditVisitors: 1234,
       redditNewUsers: 12,
+      fourChanVisitors: 4321,
+      fourChanNewUsers: 21,
     },
     reports: [],
     actions: [],

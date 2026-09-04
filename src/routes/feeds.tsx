@@ -227,8 +227,13 @@ export function registerFeedsRoutes(app: Hono) {
   app.get('/', async c => {
     const user = currentUser(c.req.raw)
     if (!user) {
+      const campaign = c.req.query('reddit') !== undefined
+        ? 'reddit'
+        : c.req.query('4chan') !== undefined
+        ? '4chan'
+        : null
       return redirect('/hot' + new URL(c.req.url).search,
-        c.req.query('reddit') !== undefined ? campaignAttributionCookie('reddit') : undefined)
+        campaign ? campaignAttributionCookie(campaign) : undefined)
     }
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'new'

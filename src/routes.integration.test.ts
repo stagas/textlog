@@ -222,6 +222,40 @@ test('/?reddit attributes a completed signup', async () => {
     .toEqual({ count: 1 })
 })
 
+test('/?4chan counts each IP once and attributes a completed signup', async () => {
+  const landing = await request('/?4chan', { ip: '203.0.113.85' })
+  expect(landing.status).toBe(303)
+  expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=4chan')
+  const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
+  await request('/styles.css', { ip: '203.0.113.85', cookie: attributionCookie })
+  await request('/styles.css', { ip: '203.0.113.85', cookie: attributionCookie })
+
+  const email = '4chan-attributed@example.com'
+  expect((await request('/enter', {
+    method: 'POST',
+    cookie: attributionCookie,
+    form: { email },
+    ip: '203.0.113.85',
+  })).status).toBe(200)
+  const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
+    cookie: attributionCookie,
+  })
+  const cookie = `${sessionCookie(magic)}; ${attributionCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST',
+    cookie,
+    form: { handle: 'four_chan_user', next: '/explore' },
+  })
+
+  expect(chosen.status).toBe(303)
+  expect(chosen.headers.get('set-cookie')).toContain('campaign_attribution=; Max-Age=0')
+  expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='4chan'`).get())
+    .toEqual({ count: 1 })
+  expect(database.query(`SELECT count(*) count FROM campaign_signups WHERE campaign='4chan'`).get())
+    .toEqual({ count: 1 })
+})
+
 test('an anonymous feed note is published after signup chooses a handle', async () => {
   const body = 'A thought carried through signup'
   const ip = '203.0.113.84'

@@ -69,7 +69,9 @@ export function dashboardStats(database: Database): DashboardStats {
     (SELECT count(*) FROM posts p JOIN users u ON u.id=p.user_id
       WHERE p.deleted_at IS NULL AND p.created_at>=datetime('now','-7 days')) posts7d,
     (SELECT count(*) FROM campaign_visitors WHERE campaign='reddit') redditVisitors,
-    (SELECT count(*) FROM campaign_signups WHERE campaign='reddit') redditNewUsers`)
+    (SELECT count(*) FROM campaign_signups WHERE campaign='reddit') redditNewUsers,
+    (SELECT count(*) FROM campaign_visitors WHERE campaign='4chan') fourChanVisitors,
+    (SELECT count(*) FROM campaign_signups WHERE campaign='4chan') fourChanNewUsers`)
 
   return {
     ...(stats.get() as Omit<DashboardStats,

@@ -288,6 +288,8 @@ export type DashboardStats = {
   visitors7d: number
   redditVisitors: number
   redditNewUsers: number
+  fourChanVisitors: number
+  fourChanNewUsers: number
 }
 
 export type AdminReportView = {
