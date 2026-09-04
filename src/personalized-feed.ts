@@ -98,11 +98,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,NULL target_bio,
         0 target_is_viewer,
         0 targeted_to_viewer,NULL posts
-      FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+      FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+      JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE EXISTS (SELECT 1 FROM personalized_post_candidates candidate
-          WHERE candidate.viewer_id=$viewer AND candidate.post_id=p.id)
-        AND p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at) OR ${descendsFromViewer}
@@ -124,11 +123,10 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         CASE WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
-      FROM posts p JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+      FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+      JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE EXISTS (SELECT 1 FROM personalized_post_candidates candidate
-          WHERE candidate.viewer_id=$viewer AND candidate.post_id=p.id)
-        AND p.deleted_at IS NULL AND p.user_id!=$viewer
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND p.user_id!=$viewer
         AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
         AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
           WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
