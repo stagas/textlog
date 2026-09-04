@@ -8380,7 +8380,10 @@ body.full-screen-page.full-screen-scrollable { overflow-y: auto; }
 .people-picker-card .people-picker-dismiss { margin-top: var(--space-4); }
 
 body:has(.logs-page) {
-  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100svh;
   min-height: 0;
   overflow: hidden;
 }
@@ -8388,9 +8391,11 @@ body:has(.logs-page) > header,
 body:has(.logs-page) > .site-footer {
   flex-shrink: 0;
 }
+body:has(.logs-page) > .site-footer {
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
 body:has(.logs-page) main {
   display: flex;
-  flex-basis: 0;
   min-height: 0;
 }
 .logs-page {
