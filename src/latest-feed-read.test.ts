@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
+import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
 
@@ -61,6 +62,37 @@ test('reading My Feed reduces the All counter before All renders', async () => {
   })
   expect(allFeed.latestCount).toBe(0)
   expect(allFeed.latestUnread).toBe(false)
+})
+
+test('reading All does not consume matching unread My Feed activity', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-27 08:00:00');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES
+    (1,2,'first','2026-08-27 09:00:00'),(2,2,'second','2026-08-27 10:00:00');`)
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
+
+  const allFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+  })
+
+  expect(allFeed.unreadPostIds).toEqual([2, 1])
+  expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
+  expect(unreadForYouCount(1, database)).toBe(2)
+  const myFeed = await executeDatabaseDomain(database, 'feeds.personalizedPage', {
+    user: database.query('SELECT * FROM users WHERE id=1').get() as any,
+    page: 1,
+    pageSize: 20,
+    toMe: false,
+    path: '/my-feed',
+    markRead: false,
+  })
+  expect(myFeed.forYouCount).toBe(2)
+  expect(myFeed.timeline.filter(row => row.unread).map(row => row.id)).toEqual([2, 1])
 })
 
 test('latest includes unread replies beyond the normal conversation preview', async () => {

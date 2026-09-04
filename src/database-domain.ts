@@ -20,8 +20,8 @@ import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, tr
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
-import { hasUnreadForYou, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead, unreadForYouCount,
-  unreadToMeCount } from './for-you-state'
+import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
+  unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { dropUsername, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion, refreshHotFeedProjection } from './hot'
@@ -626,7 +626,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
         .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
         .map(({ id, handle, handle_chosen_at }) => ({ id, handle, handle_chosen_at,
-          has_unread: hasUnreadForYou(id, database) }))
+          has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database)
+            || unreadLatestCount(id, database) > 0 }))
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
@@ -666,13 +667,6 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
           .run(target.id, currentSessionHash, userId)
       })()
-      if (target.handle_chosen_at) {
-        markAllForYouRead(target.id, false, database)
-        database.query(`DELETE FROM feed_snapshots WHERE viewer_id=?
-          AND kind LIKE 'for-you:%'`).run(target.id)
-        cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
-          AND kind IN ('for-you','latest')`).run(target.id)
-      }
       return { status: 'ready', handleChosen: Boolean(target.handle_chosen_at) } as DatabaseDomainOutput<K>
     }
     case 'account.createLinked': {
