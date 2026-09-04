@@ -283,6 +283,97 @@ function materializedStrictGeneration(database: Database, kind: string) {
   }).strict_generation
 }
 
+type PublicFeedProjection = {
+  generation: string
+  conversationIds: number[]
+  newRootIds: number[]
+  seededConversationIds: Map<number, number[]>
+}
+
+const publicFeedProjections = new WeakMap<Database, PublicFeedProjection>()
+const MAX_SEEDED_PUBLIC_PROJECTIONS = 64
+
+function publicFeedProjection(database: Database) {
+  const generation = `${materializedFeedGeneration(database, 'latest', -1)}:${
+    materializedStrictGeneration(database, 'latest')}`
+  const cached = publicFeedProjections.get(database)
+  if (cached?.generation === generation) return cached
+  const conversationIds = (database.query(`SELECT h.conversation_id FROM conversation_heads h
+    WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
+      WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+    AND ${excludesMetaPosts('h.conversation_id')}
+    ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
+    .map(row => row.conversation_id)
+  const newRootIds = (database.query(`SELECT p.id FROM posts p JOIN users u ON u.id=p.user_id
+    WHERE p.deleted_at IS NULL AND p.parent_id IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+    AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
+    ORDER BY p.created_at DESC,p.id DESC`).all() as Array<{ id: number }>).map(row => row.id)
+  const projection = { generation, conversationIds, newRootIds, seededConversationIds: new Map() }
+  publicFeedProjections.set(database, projection)
+  return projection
+}
+
+function seededPublicConversationIds(database: Database, seed: number) {
+  const projection = publicFeedProjection(database)
+  const cached = projection.seededConversationIds.get(seed)
+  if (cached) {
+    projection.seededConversationIds.delete(seed)
+    projection.seededConversationIds.set(seed, cached)
+    return cached
+  }
+  const hashes = new Map(projection.conversationIds.map(id => [id,
+    createHash('sha256').update(`${seed}:${id}`).digest()]))
+  const ids = [...projection.conversationIds].sort((left, right) => hashes.get(left)!.compare(hashes.get(right)!))
+  projection.seededConversationIds.set(seed, ids)
+  while (projection.seededConversationIds.size > MAX_SEEDED_PUBLIC_PROJECTIONS) {
+    projection.seededConversationIds.delete(projection.seededConversationIds.keys().next().value!)
+  }
+  return ids
+}
+
+function visibleProjectedIds(database: Database, ids: number[], viewerId: number, page: number, pageSize: number,
+  kind: 'new' | 'conversation') {
+  const approximateTotal = ids.length
+  const approximatePages = Math.max(1, Math.ceil(approximateTotal / pageSize))
+  const safePage = Math.min(page, approximatePages)
+  const skip = (safePage - 1) * pageSize
+  const wanted = skip + pageSize
+  const visible: number[] = []
+  const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
+  const chunkSize = Math.max(100, pageSize * 4)
+  for (let offset = 0; offset < ids.length && visible.length < wanted; offset += chunkSize) {
+    const chunk = ids.slice(offset, offset + chunkSize)
+    if (viewerId < 0) visible.push(...chunk)
+    else {
+      const placeholders = chunk.map(() => '?').join(',')
+      const rows = kind === 'new'
+        ? database.query(`SELECT p.id FROM posts p WHERE p.id IN (${placeholders})
+          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
+          AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId,
+          blockViewerId, viewerId) as Array<{ id: number }>
+        : database.query(`SELECT DISTINCT pc.conversation_id id FROM post_conversations pc
+          JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
+          WHERE pc.conversation_id IN (${placeholders}) AND p.deleted_at IS NULL
+          AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
+              WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
+            OR (b.blocked_id=? AND (b.blocker_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
+              WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocker_id)))))
+          AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
+          AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId,
+          blockViewerId, viewerId) as Array<{ id: number }>
+      const allowed = new Set(rows.map(row => row.id))
+      visible.push(...chunk.filter(id => allowed.has(id)))
+    }
+  }
+  return { items: visible.slice(skip, wanted), page: safePage, totalItems: approximateTotal,
+    totalPages: approximatePages }
+}
+
 function hydrateMaterializedFeed(html: string, database: Database, viewerId: number) {
   if (viewerId < 0 || !html.includes('{{')) return html
   const forYou = personalizedUnreadCount(database, viewerId, false)
@@ -2969,10 +3060,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
               .compare(createHash('sha256').update(`${sampleSeed}:${right}`).digest())
           )
           : ids
+      const sharedRandomPage = sampleSeed
+        ? visibleProjectedIds(database, seededPublicConversationIds(database, sampleSeed), viewerId, 1, pageSize,
+          'conversation')
+        : null
       // Anonymous page one has no read-state navigation that needs positions from a complete snapshot. Keep its
       // cold path proportional to the requested page; deeper pages still use a snapshot for stable pagination.
       const directAnonymousFirstPage = viewerId < 0 && page === 1 && !sampleSeed
-      const snapshot = directAnonymousFirstPage
+      const snapshot = sharedRandomPage
+        ? { snapshotId: 0, ...sharedRandomPage }
+        : directAnonymousFirstPage
         ? (() => {
           const filters = `NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
@@ -3120,26 +3217,32 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.newPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.newPage'>
-      const moderator = viewerIsModerator(database, viewerId)
-      const blockViewerId = moderator ? -1 : viewerId
-      const visibility = viewerId < 0 ? 'p.deleted_at IS NULL' : `p.deleted_at IS NULL
-        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=? AND b.blocked_id=p.user_id)
-          OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
-        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-          WHERE ph.post_id=p.id AND bh.user_id=?)`
-      const parameters = viewerId < 0 ? [] : [blockViewerId, blockViewerId, blockViewerId, viewerId]
-      const filters = `${visibility} AND p.parent_id IS NULL AND ${excludesWhisperPosts('p.id')}
-        AND ${excludesMetaPosts('p.id')}`
-      const totalItems = (database.query(`SELECT count(*) count FROM posts p WHERE ${filters}`)
-        .get(...parameters) as { count: number }).count
-      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
-      const safePage = Math.min(page, totalPages)
-      const rows = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-        WHERE ${filters} ORDER BY p.created_at DESC,p.id DESC LIMIT ? OFFSET ?`)
-        .all(...parameters, pageSize, (safePage - 1) * pageSize) as PostView[]
-      const projected = rows.flatMap(root => {
-        const projection = projectRecentConversation([root, ...loadThreadReplies(database, root.id, viewerId)], {
+      const snapshot = visibleProjectedIds(database, publicFeedProjection(database).newRootIds, viewerId, page,
+        pageSize, 'new')
+      const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
+      const conversationRows = snapshot.items.length
+        ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
+          JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
+          WHERE pc.conversation_id IN (${snapshot.items.map(() => '?').join(',')})
+          AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
+              WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
+            OR (b.blocked_id=? AND (b.blocker_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
+              WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocker_id)))))
+          AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
+          AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?) ORDER BY p.id DESC`)
+          .all(...snapshot.items, blockViewerId, blockViewerId, blockViewerId, viewerId) as Array<
+            PostView & { conversation_id: number }
+          >
+        : []
+      const byConversation = new Map<number, PostView[]>()
+      for (const row of conversationRows) {
+        byConversation.set(row.conversation_id, [...(byConversation.get(row.conversation_id) || []), row])
+      }
+      const projected = snapshot.items.flatMap(rootId => {
+        const projection = projectRecentConversation(byConversation.get(rootId) || [], {
           forceRoot: true,
         })
         return projection.root ? [projection.root, ...projection.replies] : []
@@ -3147,7 +3250,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
-      return { posts, page: safePage, totalItems, totalPages, forYouCount, toMeCount,
+      return { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
+        forYouCount, toMeCount,
         latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0, forYouUnread: forYouCount > 0,
         toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
     }

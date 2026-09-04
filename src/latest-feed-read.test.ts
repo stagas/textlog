@@ -274,3 +274,32 @@ test('Any deterministically shuffles the full conversation pool from its seed', 
   expect(repeated.posts.map(post => post.id)).toEqual(first.posts.map(post => post.id))
   expect(reshuffled.posts.map(post => post.id)).not.toEqual(first.posts.map(post => post.id))
 })
+
+test('New and Any apply viewer blocks after selecting their shared public projection', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'blocked','blocked@example.test','x'),
+    (3,'visible','visible@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES
+    (1,2,'blocked author','2026-09-01 10:00:00'),
+    (2,3,'#hidden topic','2026-09-02 10:00:00'),
+    (3,3,'visible topic','2026-09-03 10:00:00');
+    INSERT INTO post_hashtags(post_id,tag) VALUES(2,'hidden');
+    INSERT INTO blocks(blocker_id,blocked_id) VALUES(1,2);
+    INSERT INTO blocked_hashtags(user_id,tag) VALUES(1,'hidden');`)
+
+  const fresh = await executeDatabaseDomain(database, 'feeds.newPage', {
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+  })
+  const random = await executeDatabaseDomain(database, 'feeds.randomPage', {
+    viewerId: 1,
+    pageSize: 20,
+    sampleSeed: 123,
+  })
+
+  expect(fresh.posts.map(post => post.id)).toEqual([3])
+  expect(random.posts.map(post => post.id)).toEqual([3])
+})
