@@ -460,6 +460,66 @@ test('an anonymous hovercard follow survives signup and completes before onboard
     .get(follower.id, target.id)).toEqual({ count: 1 })
 })
 
+test('an anonymous poll response survives signup and returns to the poll after onboarding gates', async () => {
+  const ip = '203.0.113.87'
+  const author = database.query(`INSERT INTO users(handle,email,password,bio,handle_chosen_at)
+    VALUES('pending_poll_author','pending-poll-author@example.com','!','',CURRENT_TIMESTAMP) RETURNING id`)
+    .get() as { id: number }
+  const poll = database.query(`INSERT INTO posts(user_id,body)
+    VALUES(?,'Pick one #poll\nFirst\nSecond') RETURNING id`).get(author.id) as { id: number }
+  const option = database.query(`INSERT INTO poll_options(post_id,position,label)
+    VALUES(?,0,'First') RETURNING id`).get(poll.id) as { id: number }
+  database.query(`INSERT INTO poll_options(post_id,position,label) VALUES(?,1,'Second')`).run(poll.id)
+
+  const started = await request(`/post/${poll.id}/poll`, {
+    method: 'POST',
+    ip,
+    form: { option: String(option.id), from: '/hot' },
+  })
+  expect(started.status).toBe(303)
+  expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-poll')
+  const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
+  expect(pendingCookie).toStartWith('pending_poll=')
+
+  const email = 'pending-poll-signup@example.com'
+  await request('/enter', {
+    method: 'POST',
+    cookie: pendingCookie,
+    ip,
+    form: { email, next: '/pending-poll' },
+  })
+  const message = capturedEmails().filter(item => item.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message))}`, {
+    cookie: pendingCookie,
+    ip,
+  })
+  const loginCookie = sessionCookie(magic)
+  expect(magic.headers.get('location')).toBe('/choose-handle?next=%2Fpending-poll')
+  const cookies = `${loginCookie}; ${pendingCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST',
+    cookie: cookies,
+    ip,
+    form: { handle: 'pending_poll_voter', next: '/pending-poll' },
+  })
+  expect(chosen.headers.get('location')).toBe('/pending-poll')
+
+  const voted = await request('/pending-poll', { cookie: cookies, acceptHtml: true, ip })
+  const destination = `/post/${poll.id}#post-${poll.id}`
+  expect(voted.status).toBe(303)
+  expect(voted.headers.get('location')).toBe(destination)
+  expect(voted.headers.get('set-cookie')).toContain('pending_poll=')
+  expect(voted.headers.get('set-cookie')).toContain('Max-Age=0')
+  const voter = database.query('SELECT id FROM users WHERE handle=?').get('pending_poll_voter') as { id: number }
+  expect(database.query('SELECT option_id FROM poll_votes WHERE post_id=? AND user_id=?').get(poll.id, voter.id))
+    .toEqual({ option_id: option.id })
+
+  const guardedPoll = await request(destination, { cookie: cookies, acceptHtml: true, ip })
+  const guardedPollHtml = await guardedPoll.text()
+  expect(guardedPollHtml).toContain('action="/pick-mood"')
+  expect(guardedPollHtml).toContain(`name="returnTo" value="/post/${poll.id}"`)
+})
+
 test('instant scroll actions are applied once without client-side scripts', async () => {
   const marked = await request('/about?_scroll=instant')
   expect(marked.status).toBe(303)

@@ -155,6 +155,7 @@ const EXPLORE_WELCOME_COOKIE = 'explore_welcome'
 const RETURNING_VISITOR_COOKIE = 'returning_visitor'
 const PENDING_POST_COOKIE = 'pending_post'
 const PENDING_FOLLOW_COOKIE = 'pending_follow'
+const PENDING_POLL_COOKIE = 'pending_poll'
 
 function cookieValue(request: Request, name: string) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -236,6 +237,36 @@ export function pendingFollowCookie(kind: 'user' | 'tag', target: string, return
 
 export function clearPendingFollowCookie(appUrl: string | undefined = Bun.env.APP_URL) {
   return pendingFollowCookie('user', '', '/', 0, appUrl)
+}
+
+export function pendingPoll(request: Request) {
+  const value = cookieValue(request, PENDING_POLL_COOKIE)
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as {
+      postId?: unknown
+      optionId?: unknown
+    }
+    if (!Number.isInteger(parsed.postId) || Number(parsed.postId) < 1
+      || !Number.isInteger(parsed.optionId) || Number(parsed.optionId) < 1) return null
+    return { postId: Number(parsed.postId), optionId: Number(parsed.optionId) }
+  }
+  catch {
+    return null
+  }
+}
+
+export function pendingPollCookie(postId: number, optionId: number, maxAge = 20 * 60,
+  appUrl: string | undefined = Bun.env.APP_URL)
+{
+  const value = Buffer.from(JSON.stringify({ postId, optionId })).toString('base64url')
+  return `${PENDING_POLL_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${
+    secureCookie(appUrl)
+  }`
+}
+
+export function clearPendingPollCookie(appUrl: string | undefined = Bun.env.APP_URL) {
+  return pendingPollCookie(0, 0, 0, appUrl)
 }
 
 export function exploreWelcome(request: Request) {
