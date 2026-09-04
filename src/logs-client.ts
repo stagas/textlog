@@ -1,24 +1,29 @@
 import { AnsiUp } from 'ansi_up'
-import { httpLogPath } from './logs-path'
+import { httpLogPath, httpLogUsername } from './logs-path'
 
 const output = typeof document === 'undefined' ? null : document.querySelector<HTMLPreElement>('#logs-output')
 
-function linkHttpPath(entry: HTMLElement, value: string) {
-  const path = httpLogPath(value)
-  if (!path) return
-
+function linkText(entry: HTMLElement, text: string, href: string, className: string) {
   const walker = document.createTreeWalker(entry, NodeFilter.SHOW_TEXT)
   let node: Text | null
   while ((node = walker.nextNode() as Text | null)) {
-    const start = node.data.indexOf(path)
+    const start = node.data.indexOf(text)
     if (start === -1) continue
     const link = document.createElement('a')
-    link.className = 'log-path'
-    link.href = path
-    link.textContent = path
-    node.replaceWith(node.data.slice(0, start), link, node.data.slice(start + path.length))
+    link.className = className
+    link.href = href
+    link.textContent = text
+    if (className === 'log-username' && node.parentElement) node.parentElement.classList.add('log-username-ansi')
+    node.replaceWith(node.data.slice(0, start), link, node.data.slice(start + text.length))
     return
   }
+}
+
+function linkHttpFields(entry: HTMLElement, value: string) {
+  const username = httpLogUsername(value)
+  if (username) linkText(entry, `@${username}`, `/u/${encodeURIComponent(username)}`, 'log-username')
+  const path = httpLogPath(value)
+  if (path) linkText(entry, path, path, 'log-path')
 }
 
 if (output) {
@@ -40,7 +45,7 @@ if (output) {
     const entry = document.createElement('span')
     entry.className = 'log-entry'
     entry.innerHTML = converter.ansi_to_html(value)
-    linkHttpPath(entry, value)
+    linkHttpFields(entry, value)
     output.append(entry)
     entries.push(entry)
     while (entries.length > 1_000) entries.shift()?.remove()

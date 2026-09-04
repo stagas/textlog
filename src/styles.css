@@ -8529,13 +8529,13 @@ body:has(.logs-page) main {
   min-width: 100%;
   white-space: pre;
 }
-.log-path {
+.log-path,
+.log-username {
+  border-bottom: 0;
   color: inherit;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
-  text-underline-offset: 0.15em;
+  text-decoration: none;
 }
-.log-path:hover { text-decoration-color: currentColor; }
+.log-username-ansi:hover { opacity: 0.65 !important; }
 
 @media (max-width: 30rem) {
   :is(.handle-picker, .mood-picker, .tag-picker, .people-picker) {
