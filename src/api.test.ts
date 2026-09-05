@@ -155,8 +155,9 @@ describe('public API', () => {
     const service: DatabaseService = { call: (operation, input) => executeDatabaseDomain(database, operation, input) }
     registerApiRoutes(app, null, undefined, service, request => apiUser(request, database))
 
-    for (const kind of ['latest', 'hot'] as const) {
-      const web = await executeDatabaseDomain(database, kind === 'latest' ? 'feeds.latestPage' : 'feeds.hotPage',
+    for (const kind of ['latest', 'new', 'hot'] as const) {
+      const web = await executeDatabaseDomain(database, kind === 'latest' ? 'feeds.latestPage'
+        : kind === 'new' ? 'feeds.newPage' : 'feeds.hotPage',
         kind === 'latest'
           ? { viewerId: -1, page: 1, pageSize: 20, markRead: false }
           : { viewerId: -1, page: 1, pageSize: 20 })
@@ -176,7 +177,19 @@ describe('public API', () => {
     }
 
     expect((await request(app, '/api/v1/feeds/latest/conversations?limit=21')).status).toBe(400)
+    expect((await request(app, '/api/v1/feeds/new/conversations?limit=21')).status).toBe(400)
     expect((await request(app, '/api/v1/feeds/hot/conversations?cursor=broken')).status).toBe(400)
+  })
+
+  test('serves the new feed as newest top-level posts', async () => {
+    const { app } = fixture()
+    const response = await request(app, '/api/v1/feeds/new?limit=2')
+    const payload = await response.json() as any
+
+    expect(response.status).toBe(200)
+    expect(payload.data.map((post: any) => post.id)).toEqual([3, 1])
+    expect(payload.data.every((post: any) => post.parent_id === null)).toBeTrue()
+    expect((await request(app, '/new.json?limit=2')).status).toBe(200)
   })
 
   test('uses stable cursor pagination and validates pagination input', async () => {
@@ -555,7 +568,7 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(52)
+    expect(Object.keys(spec.paths)).toHaveLength(54)
     expect(spec.paths['/autotag'].post.security).toEqual([{ bearerAuth: [] }])
     expect(spec.paths['/bookmarks'].get.responses['401']).toBeDefined()
     expect(spec.paths['/posts/{id}/bookmark'].post).toBeDefined()

@@ -319,7 +319,7 @@ export type DatabaseDomainOperations = {
     | { kind: 'replies'; origin: string; id: number; limit: number; before: number | null; depth: number;
       viewerId?: number }; output: { status: 'ready'; value: unknown } | { status: 'not_found' } }
   'api.threadedFeed': {
-    input: { kind: 'latest' | 'hot'; origin: string; viewerId: number; page: number; pageSize: PageSizeChoice }
+    input: { kind: 'latest' | 'new' | 'hot'; origin: string; viewerId: number; page: number; pageSize: PageSizeChoice }
     output: unknown
   }
   'api.threadedActivityFeed': {

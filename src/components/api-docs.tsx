@@ -209,6 +209,7 @@ curl -X DELETE '${origin}/api/v1/posts/123/bookmark' \
           </p>
           <CodeBlock language="bash">
             {`curl '${origin}/api/v1/feeds/all/conversations?limit=20'
+curl '${origin}/api/v1/feeds/new/conversations?limit=20'
 curl '${origin}/api/v1/feeds/hot/conversations?limit=20'
 
 curl '${origin}/api/v1/activities/my-feed/conversations?limit=20' \\
@@ -354,7 +355,8 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
             to fetch the next page. Replies include their immediate quoted post in{' '}
             <code>parent</code>, so displaying a feed needs no per-post follow-up requests.
           </p>
-          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/all?limit=10'`}</CodeBlock>
+          <CodeBlock language="bash">{`curl '${origin}/api/v1/feeds/all?limit=10'
+curl '${origin}/api/v1/feeds/new?limit=10'`}</CodeBlock>
           <CodeBlock language="bash">
             {`curl '${origin}/api/v1/activities/my-feed?limit=10' \\
   -H "authorization: Bearer $TOKEN"`}

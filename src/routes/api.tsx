@@ -246,6 +246,10 @@ function openApiDocument() {
         get: { summary: 'Hot posts', security: optionalAuthSecurity, parameters: collectionParameters,
           responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/hot.json'] },
       },
+      '/feeds/new': {
+        get: { summary: 'Newest top-level posts', security: optionalAuthSecurity, parameters: collectionParameters,
+          responses: { ...jsonResponses, '200': collectionResponse }, 'x-root-aliases': ['/new.json'] },
+      },
       '/feeds/all/conversations': {
         'x-backward-compatible-aliases': ['/feeds/latest/conversations'],
         get: { summary: 'All feed grouped into web conversations', security: optionalAuthSecurity,
@@ -253,6 +257,10 @@ function openApiDocument() {
       },
       '/feeds/hot/conversations': {
         get: { summary: 'Hot feed grouped into web conversations', security: optionalAuthSecurity,
+          parameters: threadedFeedParameters, responses: { ...jsonResponses, '200': threadedFeedResponse } },
+      },
+      '/feeds/new/conversations': {
+        get: { summary: 'New feed grouped into web conversations', security: optionalAuthSecurity,
           parameters: threadedFeedParameters, responses: { ...jsonResponses, '200': threadedFeedResponse } },
       },
       '/search': { get: { summary: 'Search public posts', security: optionalAuthSecurity, parameters: [
@@ -832,6 +840,11 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   app.get('/api/v1/feeds/all', latestFeed)
   app.get('/api/v1/feeds/latest', latestFeed)
 
+  const newFeed = (c: Context) => collection(c, service, { topLevelOnly: true }, appUrl,
+    requestApiUser(c.req.raw)?.id)
+  app.get('/new.json', newFeed)
+  app.get('/api/v1/feeds/new', newFeed)
+
   const markAllFeedPostsRead = async (c: Context) => {
     const user = requestApiUser(c.req.raw)
     if (!user) return apiError('unauthorized', 'Provide a bearer token from /api/v1/auth/verify', 401)
@@ -986,7 +999,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   app.get('/hot.json', hotFeed)
   app.get('/api/v1/feeds/hot', hotFeed)
 
-  const threadedFeed = (kind: 'latest' | 'hot') => async (c: Context) => {
+  const threadedFeed = (kind: 'latest' | 'new' | 'hot') => async (c: Context) => {
     const parsed = parseCollectionParams(c.req.query('limit'), c.req.query('cursor'))
     if (!parsed || !PAGE_SIZE_CHOICES.includes(parsed.limit as PageSizeChoice)) {
       return apiError('invalid_pagination',
@@ -1003,6 +1016,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   }
   app.get('/api/v1/feeds/all/conversations', threadedFeed('latest'))
   app.get('/api/v1/feeds/latest/conversations', threadedFeed('latest'))
+  app.get('/api/v1/feeds/new/conversations', threadedFeed('new'))
   app.get('/api/v1/feeds/hot/conversations', threadedFeed('hot'))
 
   app.get('/api/v1/posts/:id', async c => {

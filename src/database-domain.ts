@@ -1915,6 +1915,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const feed = request.kind === 'latest'
         ? await executeDatabaseDomain(database, 'feeds.latestPage', { viewerId: request.viewerId, page: request.page,
           pageSize: request.pageSize, markRead: false })
+        : request.kind === 'new'
+        ? await executeDatabaseDomain(database, 'feeds.newPage', { viewerId: request.viewerId, page: request.page,
+          pageSize: request.pageSize })
         : await executeDatabaseDomain(database, 'feeds.hotPage', { viewerId: request.viewerId, page: request.page,
           pageSize: request.pageSize })
       const selected = new Map(feed.posts.map(post => [post.id, post]))
