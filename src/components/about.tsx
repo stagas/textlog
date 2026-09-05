@@ -23,9 +23,8 @@ export function AboutContent({ user, embedded = false }: { user: User | null; em
       <p>
         {name}{' '}
         is built around words: notes, people, hashtags, and conversations. It is intentionally small, straightforward,
-        and easy to follow. There are no likes, karma points, follower or following counts, timestamps, or other
-        engagement tricks competing for your attention — nothing to bias what you read or influence what you choose to
-        say.
+        and easy to follow. There are no likes, karma points, follower or following counts, or timestamps to bias what
+        you read or influence what you choose to say. There are no engagement tricks or pressure to build an audience.
       </p>
       <p>
         Your profile and notes are public. Joining is free, and you can download or delete your account data whenever
