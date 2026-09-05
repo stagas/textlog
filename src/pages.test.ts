@@ -45,8 +45,8 @@ import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEngl
   ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import React from 'preact/compat'
+import { renderToStaticMarkup } from './render'
 import { maskEmail } from './components/auth'
 import { HotFeed } from './components/hot-feed'
 import { Layout } from './components/layout'
@@ -184,7 +184,7 @@ test('account navigation marks linked accounts with unread activity', () => {
 })
 
 test('panels gallery renders every shared panel variation', () => {
-  const html = renderToStaticMarkup(React.createElement(PanelsGallery))
+  const html = renderToStaticMarkup(React.createElement(PanelsGallery as React.FunctionComponent, {}))
 
   expect(html).toContain('<h1>panels gallery</h1>')
   expect(html).toContain('class="account-settings-heading panels-gallery-header"')
@@ -350,7 +350,7 @@ test('account switcher errors use the shared error notice', () => {
 })
 
 test('auth pages render through the shared centered panel', () => {
-  const html = renderToStaticMarkup(React.createElement(Auth, {}))
+  const html = renderToStaticMarkup(React.createElement(Auth as React.FunctionComponent, {}))
   expect(html).toContain('<body class="density-regular full-screen-page full-screen-scrollable">')
   expect(html).toContain('class="panel-shell auth-shell enter-shell"')
   expect(html).toContain('class="panel panel-surface panel-narrow auth-panel enter-panel"')
@@ -2787,7 +2787,7 @@ describe('About', () => {
 
 describe('Auth', () => {
   test('forgot password form has a clear heading', () => {
-    const html = renderToStaticMarkup(React.createElement(ForgotPassword))
+    const html = renderToStaticMarkup(React.createElement(ForgotPassword as React.FunctionComponent, {}))
 
     expect(html).toContain('<h1>Reset your password</h1>')
     expect(html).toContain('class="forgot-password-copy">Enter your email address or your handle')
@@ -2803,7 +2803,7 @@ describe('Auth', () => {
   })
 
   test('enter accepts an email address or handle', () => {
-    const html = renderToStaticMarkup(React.createElement(Auth))
+    const html = renderToStaticMarkup(React.createElement(Auth as React.FunctionComponent, {}))
 
     expect(html).toContain('<h1>New here or returning?</h1>')
     expect(html).toContain('action="/enter"')
@@ -2821,7 +2821,7 @@ describe('Auth', () => {
   })
 
   test('handle choice explains validation without blocking the server submission', () => {
-    const html = renderToStaticMarkup(React.createElement(ChooseHandle))
+    const html = renderToStaticMarkup(React.createElement(ChooseHandle as React.FunctionComponent, {}))
 
     expect(html).toContain('Handles must be 2–24 characters')
     expect(html).toContain('Pick the name people will see.')
@@ -4291,7 +4291,7 @@ test('Anonymous tag and people pages end with join and browse actions', () => {
     bio: '',
     created_at: '2026-08-03 12:00:00',
   }
-  const pages = [
+  const pages: React.ReactNode[] = [
     React.createElement(TagFeed, {
       user: null,
       tag: 'writing',
@@ -4322,7 +4322,7 @@ test('Anonymous tag and people pages end with join and browse actions', () => {
   ]
 
   for (const page of pages) {
-    const html = renderToStaticMarkup(page)
+    const html = renderToStaticMarkup(page as React.ReactElement)
     expect(html).toContain('class="action-pair post-page-actions"')
     expect(html).toContain('class="button" href="/enter" rel="nofollow">join the community</a>')
     expect(html).toContain('href="/hot">browse more notes</a>')

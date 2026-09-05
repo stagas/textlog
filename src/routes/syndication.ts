@@ -1,5 +1,5 @@
 import type { Context, Hono, Next } from 'hono'
-import React from 'react'
+import React from 'preact/compat'
 import { apiOrigin } from '../api'
 import { appName } from '../brand'
 import { PersonalizedFeedLanding } from '../components/personalized-feed-landing'

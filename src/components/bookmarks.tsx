@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'preact/compat'
 import type { BookmarksData, User } from '../types'
 import { Layout } from './layout'
 import { Pagination } from './page-shared'
@@ -20,7 +20,7 @@ export function Bookmarks({ user, query, page, data }: {
           <label className="visually-hidden" htmlFor="bookmark-search-query">Search bookmarks</label>
           <input id="bookmark-search-query" type="search" name="q" maxLength={100} defaultValue={query}
             placeholder="search bookmarks" autoFocus={false} autoComplete="off" inputMode="search"
-            enterKeyHint="search" />
+            enterkeyhint="search" />
           <button className="button">search</button>
         </form>
       </section>

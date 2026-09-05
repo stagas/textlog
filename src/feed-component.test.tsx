@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import React from 'preact/compat'
+import { renderToStaticMarkup } from './render'
 import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
 import { FeedThreads, postAgeTitle } from './components/post'

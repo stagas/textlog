@@ -1,5 +1,5 @@
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import React from 'preact/compat'
+import { renderToStaticMarkup } from '../render'
 import { isAdmin } from '../admin'
 import { displayedExecutionOutput } from '../code-execution'
 import { containsAsciiArt, containsSpoilerTag, extractAuthoredHashtags, extractHashtags, extractMentions,

@@ -35,7 +35,7 @@ export function Auth({ error, email = '', next, returning = false }: {
             <span>email address or handle</span>
           </label>
           <input id="enter-identifier" name="identifier" required maxLength={254} autoComplete="username" autoFocus
-            autoCapitalize="none" spellCheck={false} inputMode="email" enterKeyHint="send" defaultValue={email}
+            autoCapitalize="none" spellcheck={false} inputMode="email" enterkeyhint="send" defaultValue={email}
             placeholder="you@example.com or your_handle" />
           <button className="button">
             send magic link <span aria-hidden="true">→</span>
@@ -77,13 +77,13 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
             <span>email address or handle</span>
           </label>
           <input id="login-identifier" name="identifier" required maxLength={254} autoComplete="username"
-            autoCapitalize="none" spellCheck={false} autoFocus={!error} defaultValue={identifier} inputMode="email"
-            enterKeyHint="next" placeholder="you@example.com or your_handle" />
+            autoCapitalize="none" spellcheck={false} autoFocus={!error} defaultValue={identifier} inputMode="email"
+            enterkeyhint="next" placeholder="you@example.com or your_handle" />
           <label htmlFor="login-password">
             <span>password</span>
           </label>
           <input id="login-password" type="password" name="password" required maxLength={128}
-            autoComplete="current-password" enterKeyHint={captcha ? 'next' : 'go'} autoFocus={!!error}
+            autoComplete="current-password" enterkeyhint={captcha ? 'next' : 'go'} autoFocus={!!error}
             placeholder="••••••••" />
           {captcha && (
             <div className="captcha-field">
@@ -93,7 +93,7 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
               <img src={captcha.image} alt="CAPTCHA: enter the characters shown" />
               <input type="hidden" name="captchaToken" value={captcha.token} />
               <input id="login-captcha" name="captchaAnswer" required maxLength={12} autoComplete="off"
-                autoCapitalize="none" spellCheck={false} inputMode="text" enterKeyHint="go" />
+                autoCapitalize="none" spellcheck={false} inputMode="text" enterkeyhint="go" />
             </div>
           )}
           <button className="button">
@@ -145,7 +145,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
           <div className="entry-code-row">
             <input id="entry-code" name="code" aria-label="six-digit code" required inputMode="numeric"
               autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="123456"
-              aria-describedby="entry-code-help" enterKeyHint="go" />
+              aria-describedby="entry-code-help" enterkeyhint="go" />
             <button className="button">
               enter <span aria-hidden="true">→</span>
             </button>
@@ -175,7 +175,7 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
             <input className="form-control" name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus
-              autoComplete="username" inputMode="text" enterKeyHint="done" autoCapitalize="none" spellCheck={false}
+              autoComplete="username" inputMode="text" enterkeyhint="done" autoCapitalize="none" spellcheck={false}
               defaultValue={handle} placeholder="your_handle" />
             <p id="handle-help" className="form-hint">
               Handles must be 2–24 characters and use only letters, numbers, or underscores. You can change it later.

@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'preact/compat'
 
 export function LogoutForm({ children }: { children: React.ReactNode }) {
   return (

@@ -1,5 +1,5 @@
 import type { Hono } from 'hono'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToStaticMarkup } from '../render'
 import { Embed } from '../components/embed'
 import { normalizeHashtag } from '../content'
 import { databaseService } from '../database-service'

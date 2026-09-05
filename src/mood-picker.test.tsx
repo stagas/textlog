@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToStaticMarkup } from './render'
 import { MoodPicker, shouldShowMoodPicker } from './components/mood-picker'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
@@ -18,7 +18,7 @@ describe('mood prompt', () => {
       user={{ id: 1, handle: 'alice', email: 'alice@example.com', bio: '' } as User}
       returnTo="/@?page=2"
     />)
-    expect(html).toContain('What&#x27;s up?')
+    expect(html).toContain("What's up?")
     expect(html).toContain('name="mood" value="😊"')
     expect(html).toContain('name="returnTo" value="/@?page=2"')
     expect(html).toContain('I&#x27;ll do it later, thanks')

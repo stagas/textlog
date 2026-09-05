@@ -28,7 +28,7 @@ export function InviteFriends({ user, emails = '', error, sent = 0, returnPath }
             email addresses
             <textarea className="form-control" name="emails" required maxLength={25_500} defaultValue={emails}
               placeholder="friend@example.com, another@example.com" autoComplete="off" inputMode="email"
-              enterKeyHint="enter" aria-describedby="invite-email-help" autoFocus />
+              enterkeyhint="enter" aria-describedby="invite-email-help" autoFocus />
             <span className="form-hint" id="invite-email-help">Separate addresses with a space or comma.</span>
           </label>
           <FormActions

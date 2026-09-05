@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment } from 'preact/compat'
 import { BIO_MAX, BIO_MAX_LINES } from '../bio-body'
 import { extractAuthoredHashtags, extractMentions, normalizeHashtagSpelling } from '../content'
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
@@ -163,8 +163,8 @@ export function Profile(
                   <div className="profile-identity-fields">
                     <label className="profile-handle-field">
                       handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
-                        autoComplete="username" inputMode="text" enterKeyHint="next" autoCapitalize="none"
-                        spellCheck={false} />
+                        autoComplete="username" inputMode="text" enterkeyhint="next" autoCapitalize="none"
+                        spellcheck={false} />
                     </label>
                     <label className="profile-mood-field">
                       <span className="profile-mood-label">mood</span>
@@ -180,7 +180,7 @@ export function Profile(
                     <label>
                       bio<textarea name="bio" maxLength={BIO_MAX} defaultValue={bio}
                         placeholder="Tell people a little about yourself…" autoComplete="off" inputMode="text"
-                        enterKeyHint="enter" />
+                        enterkeyhint="enter" />
                     </label>
                     <PostingSuggestionResults search={suggestionSearch} />
                     <PostingHelp maxLength={BIO_MAX} maxLines={BIO_MAX_LINES} search={suggestionSearch} oneLine />

@@ -46,13 +46,13 @@ export function AccountSecurity(
             <label>
               new email
               <input type="email" name="email" required maxLength={254} autoComplete="email" inputMode="email"
-                enterKeyHint={passwordEnabled ? 'next' : 'done'} />
+                enterkeyhint={passwordEnabled ? 'next' : 'done'} />
             </label>
             {passwordEnabled && (
               <label>
                 current password
                 <input type="password" name="password" required maxLength={128} autoComplete="current-password"
-                  enterKeyHint="done" />
+                  enterkeyhint="done" />
               </label>
             )}
             <button className="button">confirm new email →</button>
@@ -193,7 +193,7 @@ export function AccountApiKeyCreate({ user, name = '', lifetime = 'year', error 
           <label>
             key name
             <input name="name" required minLength={1} maxLength={64} placeholder="my integration" defaultValue={name}
-              autoFocus autoComplete="off" inputMode="text" enterKeyHint="done" />
+              autoFocus autoComplete="off" inputMode="text" enterkeyhint="done" />
           </label>
           <fieldset className="api-key-lifetimes">
             <legend>expiration</legend>
@@ -348,14 +348,14 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
                     <span>old password</span>
                   </label>
                   <input id="old-password" type="password" name="oldPassword" required maxLength={128}
-                    autoComplete="current-password" enterKeyHint="next" autoFocus />
+                    autoComplete="current-password" enterkeyhint="next" autoFocus />
                 </>
               )}
               <label htmlFor="new-password">
                 <span>{enabled ? 'new password' : 'password'}</span>
               </label>
               <input id="new-password" type="password" name="newPassword" required minLength={8} maxLength={128}
-                autoComplete="new-password" enterKeyHint="done" autoFocus={!enabled} placeholder="8–128 characters" />
+                autoComplete="new-password" enterkeyhint="done" autoFocus={!enabled} placeholder="8–128 characters" />
               <button className="button">
                 {enabled ? 'change password' : 'enable password login'} <span>→</span>
               </button>

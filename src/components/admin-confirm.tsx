@@ -136,7 +136,7 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
           <label>
             moderation note (optional)
             <textarea name="note" maxLength={500} placeholder="Context for the audit log…" autoComplete="off"
-              inputMode="text" enterKeyHint="enter" />
+              inputMode="text" enterkeyhint="enter" />
           </label>
           <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
             primary={

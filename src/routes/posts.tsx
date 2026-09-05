@@ -17,7 +17,7 @@ import { canPublishPosts } from '../posting-policy'
 import { form, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
-import type { ComponentProps } from 'react'
+import type { ComponentProps } from 'preact/compat'
 import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
 import { publishPost } from '../api-broker'

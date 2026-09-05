@@ -1,4 +1,4 @@
-import type React from 'react'
+import type React from 'preact/compat'
 import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import type { LocationView, User } from '../types'
@@ -47,7 +47,7 @@ export function ReplyBox(
         {beforeTextarea}
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus} defaultValue={body}
-            placeholder={placeholder} autoComplete="off" inputMode="text" enterKeyHint="enter" />
+            placeholder={placeholder} autoComplete="off" inputMode="text" enterkeyhint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
             <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />

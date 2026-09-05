@@ -165,7 +165,7 @@ export function WriteForm(
             accessKey={embedded ? 'w' : undefined} defaultValue={body}
             placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
             aria-label={`What’s on your mind, @${user.handle}?`} autoComplete="off" inputMode="text"
-            enterKeyHint="enter" />
+            enterkeyhint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           {controls}
         </div>
@@ -203,7 +203,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} defaultValue={body}
             placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
-            enterKeyHint="enter" />
+            enterkeyhint="enter" />
           <div className="composefoot">
             <PostingHelp controlledBy={helpId} actions={moreActions} />
             <FormActions secondary={

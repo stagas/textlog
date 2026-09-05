@@ -23,7 +23,7 @@ export function NavigationCaptcha({ user, target, captcha, error }: {
             <img src={captcha.image} alt="CAPTCHA: enter the characters shown" />
             <input type="hidden" name="captchaToken" value={captcha.token} />
             <input id="navigation-captcha" name="captchaAnswer" required maxLength={12} autoComplete="off"
-              autoCapitalize="none" spellCheck={false} inputMode="text" enterKeyHint="go" autoFocus />
+              autoCapitalize="none" spellcheck={false} inputMode="text" enterkeyhint="go" autoFocus />
           </div>
           <button className="button">
             continue <span aria-hidden="true">→</span>

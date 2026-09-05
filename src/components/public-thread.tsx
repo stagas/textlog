@@ -1,4 +1,4 @@
-import type React from 'react'
+import type React from 'preact/compat'
 import { Post, postAnchorId, ThreadReplies } from './post'
 
 import type { PostView } from '../types'

@@ -1,4 +1,4 @@
-import React from 'react'
+import React from 'preact/compat'
 import type { User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'

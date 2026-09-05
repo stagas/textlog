@@ -3,7 +3,7 @@ import { displayBio, linkify } from '../utils'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
 import { randomInt } from 'node:crypto'
-import React from 'react'
+import React from 'preact/compat'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
 import { moderatedContentDescription } from '../moderation'
@@ -80,7 +80,7 @@ function PostingSuggestionSearchField({ kind, search }: {
     <div className="posting-help-search">
       <input type="search" name={inputName} aria-label={`Search ${searchLabel}`} maxLength={100}
         defaultValue={active ? search.query : ''} placeholder={`search ${searchLabel}`} autoComplete="off"
-        inputMode="search" enterKeyHint="search" />
+        inputMode="search" enterkeyhint="search" />
       <button className="button" type="submit" name="action" value={`search-${kind}`} formNoValidate>
         search
       </button>
@@ -542,7 +542,7 @@ export function Pagination(
                   {instantScroll && <input type="hidden" name="_scroll" value="instant" />}
                   <input className="current" aria-label={`Current page, ${page} of ${totalPages}`} type="number"
                     name={pageParam} min={1} max={totalPages} defaultValue={value} required autoComplete="off"
-                    inputMode="numeric" enterKeyHint="go" />
+                    inputMode="numeric" enterkeyhint="go" />
                 </form>
               )
               : (

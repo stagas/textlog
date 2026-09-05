@@ -4,8 +4,8 @@ import { PAGE_SIZE } from '../pagination'
 import { currentUser, hash, sessionToken, token } from '../utils'
 
 import type { Context } from 'hono'
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import React from 'preact/compat'
+import { renderToStaticMarkup } from '../render'
 import { isAdmin } from '../admin'
 import { clientIpHeaderName } from '../brand'
 import { AccountSecurity, ErrorPage } from '../components/pages'
@@ -18,18 +18,19 @@ import { sessionHash } from '../sessions'
 export function page(node: React.ReactNode, status = 200) {
   const measureRender = Bun.env.REACT_RENDER_METRICS === 'true'
   const startedAt = measureRender ? performance.now() : 0
-  const markup = renderToStaticMarkup(node)
+  const markup = renderToStaticMarkup(node as React.ReactElement)
   if (measureRender) {
     const durationMs = performance.now() - startedAt
     const minimumMs = Math.max(0, Number(Bun.env.REACT_RENDER_METRICS_MIN_MS || 1))
     if (durationMs >= minimumMs) {
-      const component = React.isValidElement(node)
-        ? typeof node.type === 'string'
-          ? node.type
-          : node.type === React.Fragment
+      const element = React.isValidElement(node) ? node as React.ReactElement : null
+      const component = element
+        ? typeof element.type === 'string'
+          ? element.type
+          : element.type === React.Fragment
           ? 'Fragment'
-          : (node.type as { displayName?: string; name?: string }).displayName
-            || (node.type as { name?: string }).name || 'Anonymous'
+          : (element.type as { displayName?: string; name?: string }).displayName
+            || (element.type as { name?: string }).name || 'Anonymous'
         : 'Unknown'
       logInfo(`react_render component=${component} status=${status} duration_ms=${durationMs.toFixed(1)}`
         + ` html_chars=${markup.length}`)

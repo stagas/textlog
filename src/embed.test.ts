@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
-import React from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+import React from 'preact/compat'
+import { renderToStaticMarkup } from './render'
 import { Embed } from './components/embed'
 import { themeStyles } from './theme'
 

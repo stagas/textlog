@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToStaticMarkup } from './render'
 import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'

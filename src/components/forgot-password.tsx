@@ -34,8 +34,8 @@ export function ForgotPassword({ sent = false, error, identifier = '' }: {
                   <span>email address or handle</span>
                 </label>
                 <input id="forgot-password-identifier" name="identifier" required maxLength={254}
-                  autoComplete="username" autoFocus inputMode="email" enterKeyHint="send" autoCapitalize="none"
-                  spellCheck={false} defaultValue={identifier} placeholder="you@example.com or your_handle" />
+                  autoComplete="username" autoFocus inputMode="email" enterkeyhint="send" autoCapitalize="none"
+                  spellcheck={false} defaultValue={identifier} placeholder="you@example.com or your_handle" />
                 <button className="button button-wide">send reset link →</button>
               </form>
               <p className="switch">

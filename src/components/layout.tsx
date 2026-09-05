@@ -9,7 +9,7 @@ import {
   cornerChoice,
 } from '../theme'
 
-import React from 'react'
+import React from 'preact/compat'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
 import { resolvedDensity } from '../request-preferences'
@@ -205,7 +205,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1420" />
+        <link rel="stylesheet" href="/styles.css?v=1421" />
         <style>{themeCss}</style>
       </head>
       <body
