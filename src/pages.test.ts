@@ -2708,6 +2708,8 @@ describe('About', () => {
     const html = renderToStaticMarkup(React.createElement(About, { user: null }))
 
     expect(html).toContain('Small by design')
+    expect(html).toContain('There are no likes, karma points, follower or following counts, timestamps, or engagement')
+    expect(html).toContain('nothing to bias what you read or influence what you choose to say')
     expect(html).toContain('Your profile and notes are public')
     expect(html).toContain('download or delete your account data')
     expect(html).toContain('class="action-pair about-actions"')
