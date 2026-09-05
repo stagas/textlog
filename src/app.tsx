@@ -608,10 +608,11 @@ app.get('/styles.css', async c => {
   const asset = styles ?? await loadStylesAsset(stylesPath)
   return stylesResponse(asset, c.req.raw, !devReloadEnabled)
 })
-app.get('/logs.js', () => new Response(logsClient, { headers: {
-  'content-type': 'text/javascript; charset=utf-8',
-  'cache-control': 'no-cache',
-} }))
+app.get('/logs.js', () =>
+  new Response(logsClient, { headers: {
+    'content-type': 'text/javascript; charset=utf-8',
+    'cache-control': 'no-cache',
+  } }))
 const embedStyles = await Bun.file(new URL('./embed.css', import.meta.url)).text()
 app.get('/embed.css', () =>
   new Response(embedStyles, { headers: {

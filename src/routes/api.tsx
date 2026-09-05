@@ -844,8 +844,7 @@ export function registerApiRoutes(app: Hono, appUrl: string | null | undefined =
   app.get('/api/v1/feeds/all', latestFeed)
   app.get('/api/v1/feeds/latest', latestFeed)
 
-  const newFeed = (c: Context) => collection(c, service, { topLevelOnly: true }, appUrl,
-    requestApiUser(c.req.raw)?.id)
+  const newFeed = (c: Context) => collection(c, service, { topLevelOnly: true }, appUrl, requestApiUser(c.req.raw)?.id)
   app.get('/new.json', newFeed)
   app.get('/api/v1/feeds/new', newFeed)
 

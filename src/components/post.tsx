@@ -1,11 +1,11 @@
 import React from 'preact/compat'
-import { renderToStaticMarkup } from '../render'
 import { isAdmin } from '../admin'
 import { displayedExecutionOutput } from '../code-execution'
 import { containsAsciiArt, containsSpoilerTag, extractAuthoredHashtags, extractHashtags, extractMentions,
   normalizeHashtagSpelling } from '../content'
 import { collapsedConversationPreview } from '../latest-conversation'
 import { parsePoll, pollDisplayBody } from '../polls'
+import { renderToStaticMarkup } from '../render'
 import { parseTodo, todoDisplayBody } from '../todos'
 import type { User } from '../types'
 import type { BioReferenceData, ParentPost, PostView, UserProfileStats } from '../types'
@@ -170,8 +170,8 @@ function Todo(
       p.mention_note_counts, { signedIn: !!user, currentHandle: user?.handle, formPrefix,
       mentionFollowing: p.mention_following, mentionFollowsViewer: p.mention_follows_viewer,
       mentionProfileStats: p.mention_profile_stats, hashtagFollowing: p.hashtag_following,
-      hashtagFollowerCounts: p.hashtag_follower_counts, hashtagTargets: p.hashtag_targets, linkPreviews: p.link_previews,
-      linkUnknownMentions: preview || p.id < 0 }, false),
+      hashtagFollowerCounts: p.hashtag_follower_counts, hashtagTargets: p.hashtag_targets,
+      linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 }, false),
   })
   const spoilerEntry = todo.entries.findIndex(entry =>
     entry.type === 'text'
@@ -770,8 +770,7 @@ export function Post({
       formPrefix: `${formPrefix}-translation`, mentionFollowing: p.mention_following,
       mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
       hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
-      hashtagTargets: p.hashtag_targets,
-      linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 })
+      hashtagTargets: p.hashtag_targets, linkPreviews: p.link_previews, linkUnknownMentions: preview || p.id < 0 })
     : undefined
   if (p.deleted_at) {
     return (
@@ -929,8 +928,8 @@ export function Post({
             currentHandle: user?.handle, formPrefix, mentionFollowing: p.mention_following,
             mentionFollowsViewer: p.mention_follows_viewer, mentionProfileStats: p.mention_profile_stats,
             hashtagFollowing: p.hashtag_following, hashtagFollowerCounts: p.hashtag_follower_counts,
-            hashtagTargets: p.hashtag_targets,
-            linkPreviews: p.link_previews, location: p.location, linkUnknownMentions: preview || p.id < 0 }),
+            hashtagTargets: p.hashtag_targets, linkPreviews: p.link_previews, location: p.location,
+            linkUnknownMentions: preview || p.id < 0 }),
         }} />
         {p.execution_output !== null && p.execution_output !== undefined && (
           <ExecutionOutput output={p.execution_output} />
@@ -963,9 +962,7 @@ export function Post({
             {(canModerate || reportHref || bookmarkAction) && (
               <span className="post-actions">
                 {canModerate && (
-                  <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'}
-                    aria-label="moderate this post"
-                  >
+                  <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
                     moderate
                   </a>
                 )}

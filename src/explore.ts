@@ -13,7 +13,8 @@ export function trendingTags(database: Database, viewerId: number, limit = 12, n
     ? 'coalesce((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)'
     : 'ph.tag'
   const hasConversationHotScores = ['post_conversations', 'hot_feed_projection'].every(table =>
-    database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table))
+    database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)
+  )
   const hotScoreJoin = hasConversationHotScores
     ? `LEFT JOIN post_conversations pc ON pc.post_id=p.id
       LEFT JOIN (SELECT conversation_id,max(hot_score) hot_score FROM hot_feed_projection

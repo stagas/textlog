@@ -27,7 +27,8 @@ export function AccountSettingsHeader({ title, returnPath, anchor }: {
   anchor?: string
 }) {
   const backHref = `${returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'}${
-    anchor ? `#${anchor}` : ''}`
+    anchor ? `#${anchor}` : ''
+  }`
   return (
     <PageHeading
       eyebrow="account settings"

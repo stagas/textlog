@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import { hydrateMaterializedFeedCounts, materializedFeedTemplate } from './database-domain'
-import { materializedBody, memoryHitNeedsReadAction, readActionNeedsRerender,
-  personalizedReadActionOutOfSync } from './materialized-feed-service'
+import { materializedBody, memoryHitNeedsReadAction, personalizedReadActionOutOfSync,
+  readActionNeedsRerender } from './materialized-feed-service'
 
 test('anonymous feed caches never expose unread-counter template tokens', () => {
   const html = '<nav><a href="/hot">hot</a><a href="/all">all</a></nav>'

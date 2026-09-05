@@ -42,8 +42,13 @@ const groups: Array<{ title: string; items: StatItem[] }> = [
 ]
 
 const privateStats: Array<keyof DashboardStats> = [
-  'suspendedUsers', 'usersOnline', 'anonymousOnline', 'redditVisitors', 'redditNewUsers',
-  'fourChanVisitors', 'fourChanNewUsers',
+  'suspendedUsers',
+  'usersOnline',
+  'anonymousOnline',
+  'redditVisitors',
+  'redditNewUsers',
+  'fourChanVisitors',
+  'fourChanNewUsers',
 ]
 
 export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats; publicOnly?: boolean }) {
@@ -81,7 +86,9 @@ export function StatsGrid({ stats, publicOnly = false }: { stats: DashboardStats
                     <span>Conversion rate · yesterday</span>
                   </article>
                   <article>
-                    <strong>{signupActiveRateYesterday.toLocaleString(undefined, { maximumFractionDigits: 2 })}%</strong>
+                    <strong>
+                      {signupActiveRateYesterday.toLocaleString(undefined, { maximumFractionDigits: 2 })}%
+                    </strong>
                     <span>Signup-to-active conversion · yesterday</span>
                   </article>
                 </>

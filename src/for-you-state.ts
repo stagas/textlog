@@ -66,9 +66,9 @@ function projectedEvents(sql: string, database: Database) {
   ).get()
   let projected = hasAncestorProjection
     ? sql.replaceAll(descendsFromViewer, projectedDescendsFromViewer)
-    .replaceAll(descendsFromFollowedUser, projectedDescendsFromFollowedUser)
-    .replaceAll(descendsFromFollowedTag, projectedDescendsFromFollowedTag)
-    .replaceAll(hasVisibleDescendantFromAnotherUser, projectedVisibleDescendant)
+      .replaceAll(descendsFromFollowedUser, projectedDescendsFromFollowedUser)
+      .replaceAll(descendsFromFollowedTag, projectedDescendsFromFollowedTag)
+      .replaceAll(hasVisibleDescendantFromAnotherUser, projectedVisibleDescendant)
     : sql
   if (database.query(
     `SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'`,

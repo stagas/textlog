@@ -56,7 +56,10 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
   insertSession(database, token, primary.id, now + 60_000, now, 'test')
 
   const before = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(before.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: true }),
@@ -70,16 +73,23 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     .toContain('aria-label="unread account activity"')
 
   await executeDatabaseDomain(database, 'account.select', {
-    userId: primary.id, targetId: persona.id, sessionHash: sessionHash(token),
+    userId: primary.id,
+    targetId: persona.id,
+    sessionHash: sessionHash(token),
   })
   markLatestPostsRead(persona.id, [feedPost.id], database)
   expect(hasUnreadForYou(persona.id, database)).toBe(true)
   await executeDatabaseDomain(database, 'account.select', {
-    userId: persona.id, targetId: primary.id, sessionHash: sessionHash(token),
+    userId: persona.id,
+    targetId: primary.id,
+    sessionHash: sessionHash(token),
   })
 
   const afterSwitching = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterSwitching.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: true }),
@@ -87,7 +97,10 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
 
   markAllForYouRead(persona.id, false, database)
   const afterReading = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterReading.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: false }),
@@ -101,7 +114,10 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
   expect(hasUnreadForYou(persona.id, database)).toBe(false)
   expect(hasUnreadToMe(persona.id, database)).toBe(true)
   const afterToMeOnlyActivity = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterToMeOnlyActivity.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: true }),
@@ -114,14 +130,20 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     VALUES(?,'unrelated all activity',datetime('now','+2 seconds')) RETURNING id`).get(outsider.id) as { id: number }
   expect(hasUnreadForYou(persona.id, database)).toBe(false)
   const afterAllOnlyActivity = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterAllOnlyActivity.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
   markLatestPostsRead(persona.id, [unrelated.id], database)
   const afterReadingAllOnlyActivity = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterReadingAllOnlyActivity.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: false }),
@@ -130,7 +152,10 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
   database.query(`INSERT INTO posts(user_id,body,created_at)
     VALUES(?,'newer followed post',datetime('now','+3 seconds'))`).run(actor.id)
   const afterNewActivity = await executeDatabaseDomain(database, 'auth.resolve', {
-    sessionToken: token, bearerToken: null, deviceId: null, now,
+    sessionToken: token,
+    bearerToken: null,
+    deviceId: null,
+    now,
   })
   expect(afterNewActivity.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: true }),

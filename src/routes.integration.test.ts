@@ -751,7 +751,9 @@ test('signed-in users can invite a deduplicated list of friends with join magic 
   expect(accountHtml).toContain('target="_blank" rel="noopener noreferrer"')
   expect(accountHtml).toContain('Come%20join%20me%20on%20textlog')
   expect(accountHtml).toContain('class="invite-share-copy"')
-  expect(accountHtml).toContain('Come join me on textlog — a quieter place to write, share, and connect. https://textlog.cc')
+  expect(accountHtml).toContain(
+    'Come join me on textlog — a quieter place to write, share, and connect. https://textlog.cc',
+  )
 
   const invited = await request('/account/edit/invite', {
     method: 'POST',
@@ -1099,7 +1101,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { recap: '1', interactions: '1', back: '/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences' },
   })
   expect(savedEmailPreferences.status).toBe(303)
-  expect(savedEmailPreferences.headers.get('location')).toBe('/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences')
+  expect(savedEmailPreferences.headers.get('location')).toBe(
+    '/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences',
+  )
   const recapToken = issueRecapUnsubscribeToken(database, alice.id)
   const unsubscribedRecaps = await request(
     '/account/recap-emails/unsubscribe?token=' + encodeURIComponent(recapToken),
@@ -1416,7 +1420,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(missingProfileHtml).toContain('class="account-nav"')
   const clientError = await request('/client-error')
   expect(clientError.status).toBe(400)
-  expect(await clientError.text()).toContain("We couldn't process that request.")
+  expect(await clientError.text()).toContain('We couldn\'t process that request.')
   expect(clientError.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   const serverError = await request('/server-error')
   expect(serverError.status).toBe(500)
@@ -1668,7 +1672,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     redirect: 'manual',
   })
   expect(unsupportedPost.status).toBe(415)
-  expect(await unsupportedPost.text()).toContain("We couldn't read that request.")
+  expect(await unsupportedPost.text()).toContain('We couldn\'t read that request.')
 
   expect(post.body).toBe('A route-level integration post')
   const invalidPostBody = `remember post ${'x'.repeat(490)}`
@@ -2029,7 +2033,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(markedForYou.headers.get('location')).toBe('/my-feed')
   const readForYou = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(readForYou).not.toContain('action="/my-feed/read-all"')
-  expect(readForYou).not.toContain("you've seen it all")
+  expect(readForYou).not.toContain('you\'ve seen it all')
   const blockBob = await request('/block/bob', { method: 'POST', cookie: aliceCookie })
   expect(blockBob.status).toBe(303)
   expect(database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(alice.id, bob.id)).toBeTruthy()
@@ -2060,7 +2064,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
   expect(invalidTagFollow.status).toBe(400)
   expect(invalidTagFollow.headers.get('content-type')).toBe('text/html;charset=utf-8')
-  expect(await invalidTagFollow.text()).toContain("We couldn't process that request.")
+  expect(await invalidTagFollow.text()).toContain('We couldn\'t process that request.')
   database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
   database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
@@ -2348,7 +2352,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(markedActivity.headers.get('location')).toBe('/@')
   const readAdminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
   expect(readAdminActivity).not.toContain('action="/my-feed/read-all"')
-  expect(readAdminActivity).not.toContain("you've seen it all")
+  expect(readAdminActivity).not.toContain('you\'ve seen it all')
   const ordinaryActivity = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(ordinaryActivity).not.toContain('signed up:</span>')
   const dashboard = await request('/admin', { cookie: adminCookie })

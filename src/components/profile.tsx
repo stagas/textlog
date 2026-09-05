@@ -4,8 +4,8 @@ import { extractAuthoredHashtags, extractMentions, normalizeHashtagSpelling } fr
 import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
-import { Layout } from './layout'
 import { InviteShare } from './invite-share'
+import { Layout } from './layout'
 import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
   type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'

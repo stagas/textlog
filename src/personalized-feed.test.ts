@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { apiActivities } from './api-activity'
 import { softDeletePost } from './admin'
+import { apiActivities } from './api-activity'
 import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test'
 import React from 'preact/compat'
-import { renderToStaticMarkup } from './render'
 import { Embed } from './components/embed'
+import { renderToStaticMarkup } from './render'
 import { themeStyles } from './theme'
 
 test('embed appearance query parameters select known themes and accents', () => {

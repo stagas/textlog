@@ -51,160 +51,159 @@ export function ChangeAppearance(
             <label htmlFor="appearance-tab-misc">misc</label>
           </nav>
           <div className="appearance-panel appearance-panel-theme">
-              <fieldset>
-                <legend>theme</legend>
-                <div className="theme-options">
-                  {THEME_CHOICES.map(theme => (
-                    <label key={theme} className={`theme-option theme-preview-${theme}`}>
-                      <input type="radio" name="theme" value={theme} defaultChecked={selected.theme === theme} />
-                      <span className="theme-preview" aria-hidden="true">
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                      <span>{theme}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>accent</legend>
-                <div className="accent-options">
-                  {ACCENT_CHOICES.map(accent => (
-                    <label key={accent} className="accent-option">
-                      <input type="radio" name="accent" value={accent} defaultChecked={selected.accent === accent} />
-                      <span className={`accent-swatch accent-swatch-${accent}${
-                        accent === 'theme'
-                          ? ` accent-swatch-theme-${selected.theme}`
-                          : ''
-                      }`} />
-                      <span>{accent}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+            <fieldset>
+              <legend>theme</legend>
+              <div className="theme-options">
+                {THEME_CHOICES.map(theme => (
+                  <label key={theme} className={`theme-option theme-preview-${theme}`}>
+                    <input type="radio" name="theme" value={theme} defaultChecked={selected.theme === theme} />
+                    <span className="theme-preview" aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    <span>{theme}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>accent</legend>
+              <div className="accent-options">
+                {ACCENT_CHOICES.map(accent => (
+                  <label key={accent} className="accent-option">
+                    <input type="radio" name="accent" value={accent} defaultChecked={selected.accent === accent} />
+                    <span className={`accent-swatch accent-swatch-${accent}${
+                      accent === 'theme'
+                        ? ` accent-swatch-theme-${selected.theme}`
+                        : ''
+                    }`} />
+                    <span>{accent}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <button className="button">save →</button>
           </div>
           <div className="appearance-panel appearance-panel-font">
-              <fieldset>
-                <legend>font size</legend>
-                <div className="font-size-options">
-                  {FONT_SIZE_CHOICES.map(choice => (
-                    <label key={choice.value} className={`font-size-option font-size-${choice.value}`}>
-                      <input type="radio" name="fontSize" value={choice.value}
-                        defaultChecked={selectedSize === choice.value} />
-                      <span>{choice.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>primary font</legend>
-                <div className="font-size-options">
-                  {PRIMARY_FONT_CHOICES.map(choice => (
-                    <label key={choice} className={`font-size-option primary-font-${choice}`}>
-                      <input type="radio" name="primaryFont" value={choice}
-                        defaultChecked={selectedPrimaryFont === choice} />
-                      <span>{choice}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>monospace fonts</legend>
-                <div className="font-options">
-                  {FONT_CHOICES.map(font => (
-                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
-                      <input type="radio" name="font" value={font.value} defaultChecked={selectedFont === font.value} />
-                      <span className="font-sample">{font.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>sans serif fonts</legend>
-                <div className="font-options">
-                  {SANS_SERIF_FONT_CHOICES.map(font => (
-                    <label key={font.value} className={`font-option font-preview-${font.value}`}>
-                      <input type="radio" name="sansSerifFont" value={font.value}
-                        defaultChecked={selectedSansSerifFont === font.value} />
-                      <span className="font-sample">{font.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <p className="font-note">
-                Fonts are used from your device. Unavailable faces fall back to your system&apos;s fonts.
-              </p>
+            <fieldset>
+              <legend>font size</legend>
+              <div className="font-size-options">
+                {FONT_SIZE_CHOICES.map(choice => (
+                  <label key={choice.value} className={`font-size-option font-size-${choice.value}`}>
+                    <input type="radio" name="fontSize" value={choice.value}
+                      defaultChecked={selectedSize === choice.value} />
+                    <span>{choice.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>primary font</legend>
+              <div className="font-size-options">
+                {PRIMARY_FONT_CHOICES.map(choice => (
+                  <label key={choice} className={`font-size-option primary-font-${choice}`}>
+                    <input type="radio" name="primaryFont" value={choice}
+                      defaultChecked={selectedPrimaryFont === choice} />
+                    <span>{choice}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>monospace fonts</legend>
+              <div className="font-options">
+                {FONT_CHOICES.map(font => (
+                  <label key={font.value} className={`font-option font-preview-${font.value}`}>
+                    <input type="radio" name="font" value={font.value} defaultChecked={selectedFont === font.value} />
+                    <span className="font-sample">{font.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>sans serif fonts</legend>
+              <div className="font-options">
+                {SANS_SERIF_FONT_CHOICES.map(font => (
+                  <label key={font.value} className={`font-option font-preview-${font.value}`}>
+                    <input type="radio" name="sansSerifFont" value={font.value}
+                      defaultChecked={selectedSansSerifFont === font.value} />
+                    <span className="font-sample">{font.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <p className="font-note">
+              Fonts are used from your device. Unavailable faces fall back to your system&apos;s fonts.
+            </p>
             <button className="button">save →</button>
           </div>
           <div className="appearance-panel appearance-panel-misc">
-              <input type="hidden" name="pageSize" value="100" />
-              <fieldset>
-                <legend>density</legend>
+            <input type="hidden" name="pageSize" value="100" />
+            <fieldset>
+              <legend>density</legend>
+              <div className="misc-options">
+                {DENSITY_CHOICES.map(density => (
+                  <label key={density} className="misc-option density-option">
+                    <input type="radio" name="density" value={density} defaultChecked={selectedDensity === density} />
+                    <span className={`density-preview density-preview-${density}`} aria-hidden="true">
+                      <svg viewBox="0 0 62 36" focusable="false">
+                        <rect width="62" height="2" />
+                        <rect width="47" height="2" />
+                        <rect width="55" height="2" />
+                        <rect width="36" height="2" />
+                      </svg>
+                    </span>
+                    <span>{density}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>ui</legend>
+              <div className="corners-setting">
+                <span>corners</span>
                 <div className="misc-options">
-                  {DENSITY_CHOICES.map(density => (
-                    <label key={density} className="misc-option density-option">
-                      <input type="radio" name="density" value={density} defaultChecked={selectedDensity === density} />
-                      <span className={`density-preview density-preview-${density}`} aria-hidden="true">
-                        <svg viewBox="0 0 62 36" focusable="false">
-                          <rect width="62" height="2" />
-                          <rect width="47" height="2" />
-                          <rect width="55" height="2" />
-                          <rect width="36" height="2" />
-                        </svg>
-                      </span>
-                      <span>{density}</span>
+                  {CORNER_CHOICES.map(corners => (
+                    <label key={corners} className="misc-option corner-option">
+                      <input type="radio" name="corners" value={corners} defaultChecked={selectedCorners === corners} />
+                      <span className={`corner-preview corner-preview-${corners}`} aria-hidden="true" />
+                      <span>{corners}</span>
                     </label>
                   ))}
                 </div>
-              </fieldset>
-              <fieldset>
-                <legend>ui</legend>
-                <div className="corners-setting">
-                  <span>corners</span>
-                  <div className="misc-options">
-                    {CORNER_CHOICES.map(corners => (
-                      <label key={corners} className="misc-option corner-option">
-                        <input type="radio" name="corners" value={corners}
-                          defaultChecked={selectedCorners === corners} />
-                        <span className={`corner-preview corner-preview-${corners}`} aria-hidden="true" />
-                        <span>{corners}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
-                    defaultChecked={selectedLinkPreviews} />
-                  <span>Show link previews</span>
-                </label>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showNoteStreak" value="yes"
-                    defaultChecked={showNoteStreak} />
-                  <span>Show note streak</span>
-                </label>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showTimestamps" value="yes"
-                    defaultChecked={showTimestamps} />
-                  <span>Show timestamps</span>
-                </label>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent" value="yes"
-                    defaultChecked={showModeratedContent} />
-                  <span>Show moderated content</span>
-                </label>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="includePeopleFollowActivity"
-                    value="yes" defaultChecked={includePeopleFollowActivity} />
-                  <span>Include people&apos;s follow activity in My Feed</span>
-                </label>
-                <label className="link-preview-setting">
-                  <input className="form-checkbox" type="checkbox" role="switch" name="includeHashtagFollowActivity"
-                    value="yes" defaultChecked={includeHashtagFollowActivity} />
-                  <span>Include hashtag follow activity in My Feed</span>
-                </label>
-              </fieldset>
+              </div>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="showLinkPreviews" value="yes"
+                  defaultChecked={selectedLinkPreviews} />
+                <span>Show link previews</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="showNoteStreak" value="yes"
+                  defaultChecked={showNoteStreak} />
+                <span>Show note streak</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="showTimestamps" value="yes"
+                  defaultChecked={showTimestamps} />
+                <span>Show timestamps</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent" value="yes"
+                  defaultChecked={showModeratedContent} />
+                <span>Show moderated content</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="includePeopleFollowActivity"
+                  value="yes" defaultChecked={includePeopleFollowActivity} />
+                <span>Include people&apos;s follow activity in My Feed</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="includeHashtagFollowActivity"
+                  value="yes" defaultChecked={includeHashtagFollowActivity} />
+                <span>Include hashtag follow activity in My Feed</span>
+              </label>
+            </fieldset>
             <button className="button">save →</button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
-import { normalizeWord } from './wordnet'
 import { linkify } from './utils'
+import { normalizeWord } from './wordnet'
 
 test('normalizes adjective and adverb forms to their WordNet noun topic', async () => {
   expect(await normalizeWord('philosophical')).toBe('philosophy')

@@ -75,8 +75,8 @@ export function personalizedUnreadCount(database: Database, userId: number, toMe
     FROM feed_snapshot_items item,json_each(item.payload) entry
     LEFT JOIN ${reads} seen ON seen.user_id=? AND seen.event_key=json_extract(entry.value,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL LIMIT 99)`).get(userId, snapshot.id) as {
-      count: number
-    }).count
+    count: number
+  }).count
   projections.set(projectionKey, count)
   while (projections.size > MAX_UNREAD_COUNT_PROJECTIONS) projections.delete(projections.keys().next().value!)
   return count
@@ -363,9 +363,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       || ''
   })
   const wordNet = loadWordNetNormalizations(database, relevantBios)
-  const bioReferences = new Map(relevantIds.map((id, index) =>
-    [id, loadBioReferenceData(database, relevantBios[index], id, user.id, wordNet)] as const
-  ))
+  const bioReferences = new Map(
+    relevantIds.map((id, index) =>
+      [id, loadBioReferenceData(database, relevantBios[index], id, user.id, wordNet)] as const
+    ),
+  )
   const enriched = new Map(
     enrichPosts(database, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
       .map(post => [post.id, post]),

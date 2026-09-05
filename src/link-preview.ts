@@ -1,8 +1,8 @@
 import type { Database } from 'bun:sqlite'
-import { databaseIdentity } from './database-identity'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { appName, appOrigin } from './brand'
+import { databaseIdentity } from './database-identity'
 import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey,
   MAX_IMAGE_BYTES, uploadImage, validateImageData } from './image-storage'
 import type { LinkPreview } from './types'

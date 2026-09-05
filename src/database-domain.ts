@@ -48,7 +48,6 @@ import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
-import { normalizeWord } from './wordnet'
 import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail, recapEmailV2 } from './recap-email'
 import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } from './search'
@@ -59,6 +58,7 @@ import type { PostFeedPage, User } from './types'
 import type { PostView } from './types'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
+import { normalizeWord } from './wordnet'
 
 function attachPeopleStats(database: Database, people: import('./types').PersonView[], viewerId: number) {
   const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
@@ -177,8 +177,8 @@ function canonicalTag(database: Database, tag: string) {
   const invariant = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()
     && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
   const wordnet = !invariant && database.query(
-    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
-  ).get()
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+    ).get()
     ? (database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(spelling) as {
       normalized_word: string
     } | null)?.normalized_word
@@ -256,9 +256,10 @@ export function materializedFeedTemplate(html: string) {
 export function hydrateMaterializedFeedCounts(html: string,
   counts: { forYou: number; toMe: number; latest: number; drafts?: number })
 {
-  const count = (value: number) => value
-    ? `<span class="to-me-count">${value >= 99 ? '99+' : value}</span>`
-    : ''
+  const count = (value: number) =>
+    value
+      ? `<span class="to-me-count">${value >= 99 ? '99+' : value}</span>`
+      : ''
   return html.replaceAll('{{for-you-count}}', count(counts.forYou))
     .replaceAll('{{to-me-count}}', count(counts.toMe))
     .replaceAll('{{latest-count}}', count(counts.latest))
@@ -307,7 +308,8 @@ const MAX_SEEDED_PUBLIC_PROJECTIONS = 64
 
 function publicFeedProjection(database: Database) {
   const generation = `${materializedFeedGeneration(database, 'latest', -1)}:${
-    materializedStrictGeneration(database, 'latest')}`
+    materializedStrictGeneration(database, 'latest')
+  }`
   const cached = publicFeedProjections.get(database)
   if (cached?.generation === generation) return cached
   const conversationIds = (database.query(`SELECT h.conversation_id FROM conversation_heads h
@@ -333,8 +335,9 @@ function seededPublicConversationIds(database: Database, seed: number) {
     projection.seededConversationIds.set(seed, cached)
     return cached
   }
-  const hashes = new Map(projection.conversationIds.map(id => [id,
-    createHash('sha256').update(`${seed}:${id}`).digest()]))
+  const hashes = new Map(
+    projection.conversationIds.map(id => [id, createHash('sha256').update(`${seed}:${id}`).digest()]),
+  )
   const ids = [...projection.conversationIds].sort((left, right) => hashes.get(left)!.compare(hashes.get(right)!))
   projection.seededConversationIds.set(seed, ids)
   while (projection.seededConversationIds.size > MAX_SEEDED_PUBLIC_PROJECTIONS) {
@@ -344,7 +347,8 @@ function seededPublicConversationIds(database: Database, seed: number) {
 }
 
 function visibleProjectedIds(database: Database, ids: number[], viewerId: number, page: number, pageSize: number,
-  kind: 'new' | 'conversation') {
+  kind: 'new' | 'conversation')
+{
   const approximateTotal = ids.length
   const approximatePages = Math.max(1, Math.ceil(approximateTotal / pageSize))
   const safePage = Math.min(page, approximatePages)
@@ -363,8 +367,8 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId,
-          blockViewerId, viewerId) as Array<{ id: number }>
+            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId, blockViewerId,
+          viewerId) as Array<{ id: number }>
         : database.query(`SELECT DISTINCT pc.conversation_id id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${placeholders}) AND p.deleted_at IS NULL
@@ -376,8 +380,8 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
               WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocker_id)))))
           AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId,
-          blockViewerId, viewerId) as Array<{ id: number }>
+            WHERE ph.post_id=p.id AND bh.user_id=?)`).all(...chunk, blockViewerId, blockViewerId, blockViewerId,
+          viewerId) as Array<{ id: number }>
       const allowed = new Set(rows.map(row => row.id))
       visible.push(...chunk.filter(id => allowed.has(id)))
     }
@@ -610,7 +614,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
   // These operations define explicit exceptions/canonical forms and must not be
   // influenced by automatic normalization before their changes are applied.
   if (operation !== 'admin.addTagInvariant' && operation !== 'admin.removeTagInvariant'
-    && operation !== 'admin.addTagAliases') {
+    && operation !== 'admin.addTagAliases')
+  {
     await learnWordNetTagAliases(database, inputHashtagWords(input))
   }
   switch (operation) {
@@ -739,10 +744,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'auth.resolve': {
       const { sessionToken: cookieToken, bearerToken, deviceId, now } = input as DatabaseDomainInput<'auth.resolve'>
       const signedIn = sessionUser(database, cookieToken)
-      if (signedIn) signedIn.linked_accounts = accountChoices(database, signedIn.id)
-        .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
-        .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
-          has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) }))
+      if (signedIn) {
+        signedIn.linked_accounts = accountChoices(database, signedIn.id)
+          .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
+          .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
+            has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) })
+          )
+      }
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
       const row = signedIn && deviceId
         ? database.query('SELECT page_size pageSize,density FROM device_settings WHERE user_id=? AND device_id=?')
@@ -1877,10 +1885,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       }
       const posts = kind === 'hot'
         ? apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data
-        : apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null,
-          ...(kind === 'latest' ? { excludeWhispers: true }
-            : kind === 'new' ? { topLevelOnly: true }
-            : { tag: identifier || '' }) }).data
+        : apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null, ...(kind === 'latest'
+          ? { excludeWhispers: true }
+          : kind === 'new'
+          ? { topLevelOnly: true }
+          : { tag: identifier || '' }) }).data
       return { status: 'ready', posts, activities: [], postTitlePrefixes: {} } as DatabaseDomainOutput<K>
     }
     case 'api.publicRead': {
@@ -3113,16 +3122,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             totalPages: Math.max(1, Math.ceil(totalItems / pageSize)) }
         })()
         : feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
-        if (viewerId < 0) {
-          return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
+          if (viewerId < 0) {
+            return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
             AND ${excludesMetaPosts('h.conversation_id')}
             ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
-            .map(row => row.conversation_id))
-        }
-        const rows = database.query(
-          `SELECT h.conversation_id FROM conversation_heads h WHERE EXISTS (
+              .map(row => row.conversation_id))
+          }
+          const rows = database.query(
+            `SELECT h.conversation_id FROM conversation_heads h WHERE EXISTS (
           SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id=h.conversation_id AND p.deleted_at IS NULL
           AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
@@ -3136,8 +3145,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
             WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)
           ORDER BY h.latest_post_id DESC,h.conversation_id DESC`,
-        ).all(...parameters) as Array<{ conversation_id: number }>
-        return seededOrder(rows.map(row => row.conversation_id))
+          ).all(...parameters) as Array<{ conversation_id: number }>
+          return seededOrder(rows.map(row => row.conversation_id))
         }, pageSize, cacheDb)
       const conversationIds = snapshot.items
       const rows = conversationIds.length
@@ -3281,9 +3290,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
       return { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
-        forYouCount, toMeCount,
-        latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0, forYouUnread: forYouCount > 0,
-        toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
+        forYouCount, toMeCount, latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
+        forYouUnread: forYouCount > 0, toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
     }
     case 'feeds.flushRelationshipInvalidation': {
       if (!database.query(`SELECT 1 FROM sqlite_master

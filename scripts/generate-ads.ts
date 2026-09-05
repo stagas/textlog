@@ -1,4 +1,4 @@
-import { createCanvas, type CanvasRenderingContext2D } from 'canvas'
+import { type CanvasRenderingContext2D, createCanvas } from 'canvas'
 import { writeFile } from 'node:fs/promises'
 
 const cream = '#f4f3ee'

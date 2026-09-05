@@ -3,10 +3,10 @@ import { clientIpHeaderName, sessionCookieName } from './brand'
 import { validateStartupConfiguration } from './config'
 import { configureDatabaseService } from './database-service'
 import { notificationDevice, sessionCookie } from './http'
+import { closeLogConnections } from './log-stream'
 import { PAGE_SIZE } from './pagination'
 import { withRequestContext } from './request-context'
 import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
-import { closeLogConnections } from './log-stream'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment

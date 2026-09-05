@@ -32,9 +32,9 @@ export function loadWordNetNormalizations(database: Database, bodies: string[]):
   ).get()) return new Map()
   const rows = database.query(`SELECT word,normalized_word FROM wordnet_normalizations
     WHERE word IN (${words.map(() => '?').join(',')})`).all(...words) as Array<{
-      word: string
-      normalized_word: string
-    }>
+    word: string
+    normalized_word: string
+  }>
   return new Map(rows.map(row => [row.word, row.normalized_word]))
 }
 
@@ -70,8 +70,8 @@ function canonicalTags(database: Database, tags: string[], wordNet?: WordNetNorm
   return new Map(unique.map((tag, index) => [tag, primaryByAlias.get(normalized[index]) || normalized[index]]))
 }
 
-export function loadBioReferenceData(database: Database, bio: string, profileId: number,
-  viewerId = -1, wordNet?: WordNetNormalizations): BioReferenceData
+export function loadBioReferenceData(database: Database, bio: string, profileId: number, viewerId = -1,
+  wordNet?: WordNetNormalizations): BioReferenceData
 {
   const tags = extractAuthoredHashtags(bio).map(({ authored }) => normalizeHashtagSpelling(authored))
   const handles = extractMentions(bio)

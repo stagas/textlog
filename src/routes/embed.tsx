@@ -1,8 +1,8 @@
 import type { Hono } from 'hono'
-import { renderToStaticMarkup } from '../render'
 import { Embed } from '../components/embed'
 import { normalizeHashtag } from '../content'
 import { databaseService } from '../database-service'
+import { renderToStaticMarkup } from '../render'
 import { ACCENT_CHOICES, type AccentChoice, EMBED_FONT_CHOICES, type EmbedFontChoice, THEME_CHOICES,
   type ThemeChoice } from '../theme'
 import type { PostView } from '../types'

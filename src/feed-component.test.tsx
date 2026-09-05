@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test'
 import React from 'preact/compat'
-import { renderToStaticMarkup } from './render'
 import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
 import { FeedThreads, postAgeTitle } from './components/post'
 import { PublicFeed } from './components/public-feed'
+import { renderToStaticMarkup } from './render'
 import type { ParentPost, PersonalizedTimelineRow } from './types'
 
 function postActivity(id: number, actorId: number, handle: string): PersonalizedTimelineRow {

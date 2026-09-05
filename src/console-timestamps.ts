@@ -3,11 +3,10 @@ import { publishLog } from './log-stream'
 const timestampedConsole = Symbol.for('textlog.timestampedConsole')
 
 export function logTimestamp(date = new Date()) {
-  const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()]
+  const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()]
   const twoDigits = (value: number) => String(value).padStart(2, '0')
-  return `${month} ${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:` +
-    `${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}`
+  return `${month} ${twoDigits(date.getDate())} ${twoDigits(date.getHours())}:`
+    + `${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}`
 }
 
 export function installConsoleTimestamps() {

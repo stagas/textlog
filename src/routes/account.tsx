@@ -290,8 +290,10 @@ export function registerAccountRoutes(app: Hono) {
       token: user ? undefined : value,
     })
     if (!preference) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
-    return page(<EmailPreferences user={user} recap={preference.recap} interactions={preference.interactions}
-      token={user ? undefined : value} returnPath={returnPath} />)
+    return page(
+      <EmailPreferences user={user} recap={preference.recap} interactions={preference.interactions}
+        token={user ? undefined : value} returnPath={returnPath} />,
+    )
   })
 
   app.post('/account/email-preferences', async c => {
@@ -305,8 +307,10 @@ export function registerAccountRoutes(app: Hono) {
     })
     if (!changed) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
     if (f.back) return redirect(safeNext(f.back))
-    return page(<EmailPreferences user={user} recap={f.recap === '1'} interactions={f.interactions === '1'}
-      token={user ? undefined : f.token} changed />)
+    return page(
+      <EmailPreferences user={user} recap={f.recap === '1'} interactions={f.interactions === '1'}
+        token={user ? undefined : f.token} changed />,
+    )
   })
 
   app.get('/account/recap-emails/unsubscribe', async c => {
@@ -314,8 +318,9 @@ export function registerAccountRoutes(app: Hono) {
     const changed = await databaseService().call('account.setRecapPreference', { token: value, subscribed: false })
     if (!changed) return page(<EmailPreferences recap={false} interactions={false} invalid />, 404)
     const preference = await databaseService().call('account.emailPreferences', { token: value })
-    return page(<EmailPreferences recap={false} interactions={preference?.interactions ?? false} token={value}
-      changed />)
+    return page(
+      <EmailPreferences recap={false} interactions={preference?.interactions ?? false} token={value} changed />,
+    )
   })
 
   app.post('/account/recap-emails/unsubscribe', async c => {
@@ -500,7 +505,8 @@ export function registerAccountRoutes(app: Hono) {
       || !SANS_SERIF_FONT_CHOICES.some(font => font.value === selectedSansSerif)
       || !PRIMARY_FONT_CHOICES.includes(selectedPrimary)
       || !FONT_SIZE_CHOICES.some(size => size.value === selectedSize)
-      || !DENSITY_CHOICES.includes(selectedDensity) || !CORNER_CHOICES.includes(selectedCorners)) {
+      || !DENSITY_CHOICES.includes(selectedDensity) || !CORNER_CHOICES.includes(selectedCorners))
+    {
       return page(
         <ChangeAppearance user={user} selected={appearance(c.req.raw)} selectedFont={fontChoice(c.req.raw)}
           selectedSansSerifFont={sansSerifFontChoice(c.req.raw)} selectedPrimaryFont={primaryFontChoice(c.req.raw)}

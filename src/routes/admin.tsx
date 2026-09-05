@@ -3,8 +3,8 @@ import {
   AdminConfirm,
   AdminDashboard,
   AdminEmail,
-  AdminPush,
   AdminPostModeration,
+  AdminPush,
   AdminTags,
   AdminTranslate,
   AdminUser,
@@ -16,16 +16,16 @@ import {
 import { currentPage, form, page, paginationRedirect, redirect } from './shared'
 
 import type { Hono } from 'hono'
+import { LogsPage } from '../components/logs'
 import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
 import { sendAdminEmail, sendReportDecision } from '../email'
 import { deleteImagesAfterCommit } from '../image-storage'
+import { openLogStream, registerLogConnectionCloser } from '../log-stream'
 import { sendPushToAll, sendPushToUser } from '../push'
 import { cacheBlockedIp, flushIpRequests } from '../request-ip-blocks'
 import { isTranslationLanguage, translateText } from '../translation'
 import { currentUser } from '../utils'
-import { LogsPage } from '../components/logs'
-import { openLogStream, registerLogConnectionCloser } from '../log-stream'
 
 export function registerAdminRoutes(app: Hono) {
   app.get('/admin/logs', c => {
@@ -58,12 +58,15 @@ export function registerAdminRoutes(app: Hono) {
           if (closed) return
           closed = true
           cleanup()
-          try { controller.close() }
+          try {
+            controller.close()
+          }
           catch {}
         }
-        const send = (entry: { id: number; text: string }) => controller.enqueue(encoder.encode(
-          `id: ${entry.id}\ndata: ${JSON.stringify(entry.text)}\n\n`,
-        ))
+        const send = (entry: { id: number; text: string }) =>
+          controller.enqueue(encoder.encode(
+            `id: ${entry.id}\ndata: ${JSON.stringify(entry.text)}\n\n`,
+          ))
         const lastEventId = Number(c.req.header('last-event-id'))
         const stream = openLogStream(send, Number.isSafeInteger(lastEventId) && lastEventId > 0 ? lastEventId : 0)
         close = stream.close

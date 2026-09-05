@@ -156,11 +156,13 @@ describe('public API', () => {
     registerApiRoutes(app, null, undefined, service, request => apiUser(request, database))
 
     for (const kind of ['latest', 'new', 'hot'] as const) {
-      const web = await executeDatabaseDomain(database, kind === 'latest' ? 'feeds.latestPage'
-        : kind === 'new' ? 'feeds.newPage' : 'feeds.hotPage',
-        kind === 'latest'
-          ? { viewerId: -1, page: 1, pageSize: 20, markRead: false }
-          : { viewerId: -1, page: 1, pageSize: 20 })
+      const web = await executeDatabaseDomain(database, kind === 'latest'
+        ? 'feeds.latestPage'
+        : kind === 'new'
+        ? 'feeds.newPage'
+        : 'feeds.hotPage', kind === 'latest'
+        ? { viewerId: -1, page: 1, pageSize: 20, markRead: false }
+        : { viewerId: -1, page: 1, pageSize: 20 })
       const response = await request(app, `/api/v1/feeds/${kind}/conversations?limit=20`)
       const payload = await response.json() as any
       const apiPosts = payload.data.flatMap((conversation: any) => conversation.posts)

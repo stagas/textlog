@@ -37,7 +37,9 @@ export function EmailPreferences({ user, recap, interactions, token, returnPath,
                       <small>Occasional updates about new features and popular notes</small>
                     </span>
                     <input type="checkbox" name="recap" value="1" defaultChecked={recap} />
-                    <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                    <span className="notification-toggle-track" aria-hidden="true">
+                      <span />
+                    </span>
                   </label>
                   <label className="notification-toggle">
                     <span>
@@ -45,10 +47,14 @@ export function EmailPreferences({ user, recap, interactions, token, returnPath,
                       <small>When people have interacted with you.</small>
                     </span>
                     <input type="checkbox" name="interactions" value="1" defaultChecked={interactions} />
-                    <span className="notification-toggle-track" aria-hidden="true"><span /></span>
+                    <span className="notification-toggle-track" aria-hidden="true">
+                      <span />
+                    </span>
                   </label>
                 </fieldset>
-                <div className="composefoot"><button className="button">save preferences</button></div>
+                <div className="composefoot">
+                  <button className="button">save preferences</button>
+                </div>
               </form>
             </>
           )}

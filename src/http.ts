@@ -260,9 +260,7 @@ export function pendingPollCookie(postId: number, optionId: number, maxAge = 20 
   appUrl: string | undefined = Bun.env.APP_URL)
 {
   const value = Buffer.from(JSON.stringify({ postId, optionId })).toString('base64url')
-  return `${PENDING_POLL_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${
-    secureCookie(appUrl)
-  }`
+  return `${PENDING_POLL_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
 export function clearPendingPollCookie(appUrl: string | undefined = Bun.env.APP_URL) {

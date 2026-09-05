@@ -33,16 +33,17 @@ export function measuredDatabase(database: Database) {
     }
   }
 
-  const wrapStatement = (statement: object, sql: string) => new Proxy(statement, {
-    get(target, property) {
-      const value = Reflect.get(target, property, target)
-      if (typeof value !== 'function') return value
-      if (property === 'all' || property === 'get' || property === 'run' || property === 'values') {
-        return (...parameters: unknown[]) => record(sql, () => Reflect.apply(value, target, parameters))
-      }
-      return value.bind(target)
-    },
-  })
+  const wrapStatement = (statement: object, sql: string) =>
+    new Proxy(statement, {
+      get(target, property) {
+        const value = Reflect.get(target, property, target)
+        if (typeof value !== 'function') return value
+        if (property === 'all' || property === 'get' || property === 'run' || property === 'values') {
+          return (...parameters: unknown[]) => record(sql, () => Reflect.apply(value, target, parameters))
+        }
+        return value.bind(target)
+      },
+    })
 
   const measured = new Proxy(database, {
     get(target, property) {
@@ -66,13 +67,13 @@ export function measuredDatabase(database: Database) {
   return { database: measured, metrics }
 }
 
-export function formatQueryMetrics(operation: string, metrics: Map<string, QueryMetric>, minimumMs = 1,
-  limit = 10)
-{
+export function formatQueryMetrics(operation: string, metrics: Map<string, QueryMetric>, minimumMs = 1, limit = 10) {
   return [...metrics.values()]
     .filter(metric => metric.totalMs >= minimumMs)
     .sort((left, right) => right.totalMs - left.totalMs)
     .slice(0, limit)
-    .map((metric, index) => `feed_query operation=${operation} rank=${index + 1} count=${metric.count}`
-      + ` total_ms=${metric.totalMs.toFixed(1)} max_ms=${metric.maxMs.toFixed(1)} sql=${JSON.stringify(metric.sql)}`)
+    .map((metric, index) =>
+      `feed_query operation=${operation} rank=${index + 1} count=${metric.count}`
+      + ` total_ms=${metric.totalMs.toFixed(1)} max_ms=${metric.maxMs.toFixed(1)} sql=${JSON.stringify(metric.sql)}`
+    )
 }

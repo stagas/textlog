@@ -1,9 +1,9 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from './render'
 import { PeoplePicker, shouldShowPeoplePicker, shuffledPeople } from './components/people-picker'
 import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
+import { renderToStaticMarkup } from './render'
 import type { User } from './types'
 
 const user = {

@@ -46,12 +46,12 @@ import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEngl
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
 
 import React from 'preact/compat'
-import { renderToStaticMarkup } from './render'
 import { maskEmail } from './components/auth'
 import { HotFeed } from './components/hot-feed'
 import { Layout } from './components/layout'
 import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
+import { renderToStaticMarkup } from './render'
 import { withAppearance } from './theme'
 
 test('mobile account navigation uses an in-flow details menu', () => {
@@ -148,14 +148,16 @@ test('admin navigation is the first child in the handle menu', () => {
 })
 
 test('account menu lists linked accounts immediately before logout for one-click switching', () => {
-  const html = withAppearance(new Request('https://textlog.test/latest?page=2'), () =>
-    renderToStaticMarkup(React.createElement(Layout, {
-      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
-        linked_accounts: [{ id: 2, handle: 'another', mood: '🌞', handle_chosen_at: '2026-02-01' }] },
-      children: React.createElement('p', null, 'Hello'),
-    })))
+  const html = withAppearance(new Request('https://textlog.test/latest?page=2'),
+    () =>
+      renderToStaticMarkup(React.createElement(Layout, {
+        user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+          linked_accounts: [{ id: 2, handle: 'another', mood: '🌞', handle_chosen_at: '2026-02-01' }] },
+        children: React.createElement('p', null, 'Hello'),
+      })))
 
-  const switchForm = '<form method="post" action="/account/accounts/select"><input type="hidden" name="accountId" value="2"/>'
+  const switchForm =
+    '<form method="post" action="/account/accounts/select"><input type="hidden" name="accountId" value="2"/>'
     + '<input type="hidden" name="next" value="/latest?page=2"/>'
     + '<button class="account-menu-account" type="submit"><span>@another</span><span class="nav-mood">🌞</span></button></form>'
   expect(html).toContain(switchForm)
@@ -168,15 +170,16 @@ test('account menu lists linked accounts immediately before logout for one-click
 })
 
 test('account navigation marks linked accounts with unread activity', () => {
-  const html = withAppearance(new Request('https://textlog.test/explore'), () =>
-    renderToStaticMarkup(React.createElement(Layout, {
-      user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
-        linked_accounts: [
-          { id: 2, handle: 'waiting', handle_chosen_at: '2026-02-01', has_unread: true },
-          { id: 3, handle: 'quiet', handle_chosen_at: '2026-02-02', has_unread: false },
-        ] },
-      children: React.createElement('p', null, 'Hello'),
-    })))
+  const html = withAppearance(new Request('https://textlog.test/explore'),
+    () =>
+      renderToStaticMarkup(React.createElement(Layout, {
+        user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+          linked_accounts: [
+            { id: 2, handle: 'waiting', handle_chosen_at: '2026-02-01', has_unread: true },
+            { id: 3, handle: 'quiet', handle_chosen_at: '2026-02-02', has_unread: false },
+          ] },
+        children: React.createElement('p', null, 'Hello'),
+      })))
 
   expect(html).toContain('<span class="unread-dot" aria-label="unread account activity"></span>@reader')
   expect(html).toContain('<span class="unread-dot" aria-label="unread activity"></span><span>@waiting</span>')
@@ -1923,7 +1926,7 @@ test('appearance misc tab hides page size and forces 100', () => {
   expect(html).toContain('Show moderated content')
   expect(html).not.toContain('name="showModeratedContent" checked=""')
   expect(html).toContain('name="includePeopleFollowActivity" value="yes"')
-  expect(html).toContain("Include people's follow activity in My Feed")
+  expect(html).toContain('Include people\'s follow activity in My Feed')
   expect(html).toContain('name="includeHashtagFollowActivity" value="yes"')
   expect(html).toContain('Include hashtag follow activity in My Feed')
   expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
@@ -2025,11 +2028,11 @@ test('account settings link to a single email preference page', () => {
 
   expect(subscribed).toContain('class="account-danger-zone" id="email-preferences"')
   expect(subscribed).toContain('href="/account/email-preferences">manage emails</a>')
-  expect(subscribed).toContain("Choose which emails you'll receive.")
+  expect(subscribed).toContain('Choose which emails you\'ll receive.')
   expect(preferences).toContain('class="static-page notifications-page"')
   expect(preferences).toContain('<h1>emails</h1>')
   expect(preferences).toContain('action="/account/email-preferences"')
-  expect(preferences).toContain("Choose which emails you'll receive.")
+  expect(preferences).toContain('Choose which emails you\'ll receive.')
   expect(preferences).toContain('name="back" value="/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences"')
   expect(preferences).toContain('name="recap" value="1"')
   expect(preferences).toContain('name="interactions" checked="" value="1"')
@@ -2073,7 +2076,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('notify @reader about')
   expect(notifications).toContain('Only notes addressed to you')
   expect(notifications).toContain('name="peopleFollowActivity"')
-  expect(notifications).toContain("include people's follow activity")
+  expect(notifications).toContain('include people\'s follow activity')
   expect(notifications).toContain('name="hashtagFollowActivity"')
   expect(notifications).toContain('name="broadcasts" checked=""')
   expect(notifications).toContain('Announcements sent by the administrators')
@@ -2649,7 +2652,7 @@ test('Not found page gives visitors useful ways back into the site', () => {
 
   expect(html).toContain('<title>page not found · textlog</title>')
   expect(html).toContain('aria-hidden="true">404</p>')
-  expect(html).toContain("This page doesn't exist.")
+  expect(html).toContain('This page doesn\'t exist.')
   expect(html).toContain('class="action-pair not-found-actions status-page-actions"')
   expect(html).toContain('class="button" href="/">browse notes</a>')
   expect(html).toContain('<span class="action-separator">or</span><a href="/explore">explore</a>')
@@ -2665,7 +2668,7 @@ test('Error pages explain client and server failures without exposing details', 
   }))
 
   expect(client).toContain('aria-hidden="true">4xx</p>')
-  expect(client).toContain("We couldn't process that request.")
+  expect(client).toContain('We couldn\'t process that request.')
   expect(server).toContain('aria-hidden="true">5xx</p>')
   expect(server).toContain('Something went wrong.')
   expect(server).not.toContain('Intentional server error')
@@ -2689,7 +2692,7 @@ describe('About', () => {
       const guestNav = html.slice(html.indexOf('<nav class="guest-nav"'), html.indexOf('</nav>'))
       expect(guestNav.indexOf('href="/about"')).toBeLessThan(guestNav.indexOf('href="/explore"'))
       expect(html).toContain('anonymous-write-compose')
-      expect(html).toContain("placeholder=\"What's on your mind?\"")
+      expect(html).toContain('placeholder="What\'s on your mind?"')
       expect(html).not.toMatch(/<textarea[^>]*name="body"[^>]*required/)
       expect(html).toContain('title="Show more writing actions and help"')
       expect(html).not.toContain('placeholder="What’s on your mind, @')
@@ -2713,8 +2716,9 @@ describe('About', () => {
 
   test('API documentation lists root feed aliases', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    for (const alias of ['/all.json', '/all.rss', '/all.atom', '/new.json', '/new.rss', '/new.atom',
-      '/hot.json', '/hot.rss', '/hot.atom']) {
+    for (const alias of ['/all.json', '/all.rss', '/all.atom', '/new.json', '/new.rss', '/new.atom', '/hot.json',
+      '/hot.rss', '/hot.atom'])
+    {
       expect(html).toContain(alias)
     }
   })
@@ -2740,7 +2744,7 @@ describe('About', () => {
     for (const html of [guestHot, guestLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('anonymous-write-compose')
-      expect(html).toContain("placeholder=\"What's on your mind?\"")
+      expect(html).toContain('placeholder="What\'s on your mind?"')
       expect(html).toContain(
         'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
       )
@@ -3118,7 +3122,9 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="download-data"'))
   expect(html.indexOf('id="invite-friends"')).toBeLessThan(html.indexOf('class="profile-presence-section"'))
-  expect(html).toContain('<hr class="account-settings-separator"/><div class="account-danger-zone" id="invite-friends">')
+  expect(html).toContain(
+    '<hr class="account-settings-separator"/><div class="account-danger-zone" id="invite-friends">',
+  )
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('You can change your handle up to two times per month.')
   expect(html).toContain('Mood can be any emoji character.')
@@ -3558,7 +3564,7 @@ test('Compact column pagination shows three page boxes at either edge', () => {
 
   const first = render(1)
   for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
-    expect(first).toMatch(/name="page"[^>]*value="1"/)
+  expect(first).toMatch(/name="page"[^>]*value="1"/)
   expect(first).not.toContain('>4</')
 
   const last = render(17)
@@ -3577,7 +3583,7 @@ test('Standard pagination uses the same three-page window as compact columns', (
 
   const first = render(1)
   for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
-    expect(first).toMatch(/name="page"[^>]*value="1"/)
+  expect(first).toMatch(/name="page"[^>]*value="1"/)
   expect(first).not.toContain('>4</')
 
   const middle = render(9)
@@ -4760,8 +4766,7 @@ test('post moderation review offers manual moderation, automatic unmarking, and 
   const html = renderToStaticMarkup(React.createElement(AdminPostModeration, {
     user: { id: 1, handle: 'admin', email: 'GSTAGAS@gmail.com', bio: '' },
     post: { id: 2, user_id: 2, parent_id: null, body: 'Sensitive note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null, moderation_category: 'violence',
-      moderation_score: 0.91 },
+      created_at: '2026-08-03 12:00:00', deleted_at: null, moderation_category: 'violence', moderation_score: 0.91 },
     returnTo: '/post/2',
   }))
 

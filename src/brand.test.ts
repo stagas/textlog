@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import React from 'preact/compat'
-import { renderToStaticMarkup } from './render'
 import { appHost, appHostname, appIdentifier, appName, appOrigin, clientIpHeaderName, sessionCookieName } from './brand'
 import { Layout } from './components/layout'
 import { sessionCookie } from './http'
+import { renderToStaticMarkup } from './render'
 import { withAppearance } from './theme'
 import { sessionToken } from './utils'
 

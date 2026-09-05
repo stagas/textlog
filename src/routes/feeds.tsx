@@ -259,8 +259,7 @@ export function registerFeedsRoutes(app: Hono) {
         : c.req.query('4chan') !== undefined
         ? '4chan'
         : null
-      return redirect('/hot' + new URL(c.req.url).search,
-        campaign ? campaignAttributionCookie(campaign) : undefined)
+      return redirect('/hot' + new URL(c.req.url).search, campaign ? campaignAttributionCookie(campaign) : undefined)
     }
     const preferredFeed = feedPreference(c.req.raw)
     const path = preferredFeed === 'new'
@@ -315,8 +314,7 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
-        viewerCacheVersion(12, user, notificationBanner), false,
-        renderForCache, async () => {
+        viewerCacheVersion(12, user, notificationBanner), false, renderForCache, async () => {
         return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
           toMe: false }) > 0
       })
@@ -451,16 +449,14 @@ export function registerFeedsRoutes(app: Hono) {
     const renderForCache = async () => {
       const feed = await data()
       return page(
-        <Feed user={user}
-          data={personalizedFeedAfterVisibleReads(feed, true)} title="@" path="/@" toMe
+        <Feed user={user} data={personalizedFeedAfterVisibleReads(feed, true)} title="@" path="/@" toMe
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
     const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
-        viewerCacheVersion(0, user, notificationBanner), false,
-        renderForCache)
+        viewerCacheVersion(0, user, notificationBanner), false, renderForCache)
       : await render()
     return rememberFeed(response, 'activity')
   })

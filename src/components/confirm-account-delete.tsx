@@ -57,9 +57,11 @@ export function ConfirmAccountDelete(
                 </p>
               )}
             {invalid
-              ? <a className="button" href={user ? '/account/edit#delete-account' : '/'}>
-                {user ? 'back to account' : 'go home'}
-              </a>
+              ? (
+                <a className="button" href={user ? '/account/edit#delete-account' : '/'}>
+                  {user ? 'back to account' : 'go home'}
+                </a>
+              )
               : (
                 <form className="account-delete-form" method="post" action="/account/delete">
                   <FormMessage error={error} />
