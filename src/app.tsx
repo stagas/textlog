@@ -388,7 +388,7 @@ app.use('*', async (c, next) => {
       })
     }
     const campaign = campaignAttribution(c.req.raw)
-    if (campaign === 'reddit' || campaign === '4chan') {
+    if (campaign === 'reddit' || campaign === '4chan' || campaign === 'hn') {
       const campaignVisitorHash = campaignIpPseudonym(address, campaign)
       if (campaignVisitorHash !== '-') {
         await databaseService().call('stats.recordCampaignVisitor', { campaign, visitorHash: campaignVisitorHash })
@@ -411,8 +411,8 @@ app.use('*', async (c, next) => {
     const path = url.pathname
     const address = c.req.header(clientIpHeaderName()) || '-'
     const attributedCampaign = campaignAttribution(c.req.raw)
-    const campaign = url.searchParams.has('reddit') || url.searchParams.has('4chan')
-      || attributedCampaign === 'reddit' || attributedCampaign === '4chan'
+    const campaign = url.searchParams.has('reddit') || url.searchParams.has('4chan') || url.searchParams.has('hn')
+      || attributedCampaign === 'reddit' || attributedCampaign === '4chan' || attributedCampaign === 'hn'
     if (shouldLogHttp(path, c.res.status, isCrawlerRequest(c.req.raw), Boolean(username), campaign,
       dailyVisitorAllowlist.has(address)))
     {

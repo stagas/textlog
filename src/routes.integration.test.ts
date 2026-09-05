@@ -293,6 +293,54 @@ test('/?4chan counts each IP once and attributes a completed signup', async () =
     .toEqual({ count: 1 })
 })
 
+test('/?hn counts each IP once and attributes a completed signup', async () => {
+  const landing = await request('/?hn', { ip: '203.0.113.86' })
+  expect(landing.status).toBe(303)
+  expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=hn')
+  const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
+  await request('/styles.css', { ip: '203.0.113.86', cookie: attributionCookie })
+  await request('/styles.css', { ip: '203.0.113.86', cookie: attributionCookie })
+
+  const email = 'hn-attributed@example.com'
+  expect((await request('/enter', {
+    method: 'POST',
+    cookie: attributionCookie,
+    form: { email },
+    ip: '203.0.113.86',
+  })).status).toBe(200)
+  const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
+  const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
+    cookie: attributionCookie,
+  })
+  const cookie = `${sessionCookie(magic)}; ${attributionCookie}`
+  const chosen = await request('/choose-handle', {
+    method: 'POST',
+    cookie,
+    form: { handle: 'hn_user', next: '/explore' },
+  })
+
+  expect(chosen.status).toBe(303)
+  expect(chosen.headers.get('set-cookie')).toContain('campaign_attribution=; Max-Age=0')
+  expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`).get())
+    .toEqual({ count: 1 })
+  expect(database.query(`SELECT count(*) count FROM campaign_signups WHERE campaign='hn'`).get())
+    .toEqual({ count: 1 })
+})
+
+test('/about?hn starts the hn campaign without redirecting', async () => {
+  const visitorsBefore = (database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`)
+    .get() as { count: number }).count
+  const landing = await request('/about?hn', { ip: '203.0.113.87', acceptHtml: true })
+  expect(landing.status).toBe(200)
+  expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=hn')
+  const campaignCookie = landing.headers.get('set-cookie')!.match(/campaign_attribution=hn/)![0]
+
+  await request('/styles.css', { ip: '203.0.113.87', cookie: campaignCookie })
+
+  expect(database.query(`SELECT count(*) count FROM campaign_visitors
+    WHERE campaign='hn' AND visitor_hash IS NOT NULL`).get()).toEqual({ count: visitorsBefore + 1 })
+})
+
 test('an anonymous feed note is published after signup chooses a handle', async () => {
   const body = 'A thought carried through signup'
   const ip = '203.0.113.84'

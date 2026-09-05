@@ -96,3 +96,16 @@ test('4chan visitor stat counts unique campaign visitors', () => {
   expect(dashboardStats(database).fourChanNewUsers).toBe(1)
   database.close()
 })
+
+test('hn visitor stat counts unique campaign visitors', () => {
+  const database = new Database(':memory:')
+  runMigrations(database)
+  database.run(`INSERT INTO campaign_visitors(campaign,visitor_hash) VALUES
+    ('hn','first'),('hn','second'),('another','first');
+    INSERT INTO users(id,handle,email,password) VALUES(10,'hn_user','hn@example.com','x');
+    INSERT INTO campaign_signups(campaign,user_id) VALUES('hn',10)`)
+
+  expect(dashboardStats(database).hnVisitors).toBe(2)
+  expect(dashboardStats(database).hnNewUsers).toBe(1)
+  database.close()
+})

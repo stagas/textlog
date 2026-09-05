@@ -258,6 +258,8 @@ export function registerFeedsRoutes(app: Hono) {
         ? 'reddit'
         : c.req.query('4chan') !== undefined
         ? '4chan'
+        : c.req.query('hn') !== undefined
+        ? 'hn'
         : null
       return redirect('/hot' + new URL(c.req.url).search, campaign ? campaignAttributionCookie(campaign) : undefined)
     }
@@ -583,8 +585,13 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.get('/about', async c => {
     const user = currentUser(c.req.raw)
-    if (user) return page(<About user={user} />)
-    return await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () => page(<About user={null} />))
+    const response = user
+      ? page(<About user={user} />)
+      : await rpcMaterializedFeedPage(c.req.raw, 'about', -1, async () => page(<About user={null} />))
+    if (!user && c.req.query('hn') !== undefined) {
+      response.headers.append('set-cookie', campaignAttributionCookie('hn'))
+    }
+    return response
   })
   app.get('/install', c =>
     page(

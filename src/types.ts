@@ -294,6 +294,8 @@ export type DashboardStats = {
   redditNewUsers: number
   fourChanVisitors: number
   fourChanNewUsers: number
+  hnVisitors: number
+  hnNewUsers: number
 }
 
 export type AdminReportView = {

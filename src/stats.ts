@@ -71,7 +71,9 @@ export function dashboardStats(database: Database): DashboardStats {
     (SELECT count(*) FROM campaign_visitors WHERE campaign='reddit') redditVisitors,
     (SELECT count(*) FROM campaign_signups WHERE campaign='reddit') redditNewUsers,
     (SELECT count(*) FROM campaign_visitors WHERE campaign='4chan') fourChanVisitors,
-    (SELECT count(*) FROM campaign_signups WHERE campaign='4chan') fourChanNewUsers`)
+    (SELECT count(*) FROM campaign_signups WHERE campaign='4chan') fourChanNewUsers,
+    (SELECT count(*) FROM campaign_visitors WHERE campaign='hn') hnVisitors,
+    (SELECT count(*) FROM campaign_signups WHERE campaign='hn') hnNewUsers`)
 
   return {
     ...(stats.get() as Omit<DashboardStats,
