@@ -956,7 +956,7 @@ export function Post({
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref
-        || bookmarkAction || showOwnerActions && user?.id === p.user_id)
+        || bookmarkAction || showOwnerActions && !!user)
         && (
           <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
             {showReplyAction && !p.thread_locked && (
@@ -975,7 +975,7 @@ export function Post({
                   </a>
                 )
             )}
-            {(canModerate || reportHref || bookmarkAction || showOwnerActions && user?.id === p.user_id) && (
+            {(canModerate || reportHref || bookmarkAction || showOwnerActions && !!user) && (
               <span className="post-actions">
                 {canModerate && (
                   <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -987,7 +987,7 @@ export function Post({
                     report
                   </a>
                 )}
-                {showOwnerActions && user?.id === p.user_id && (
+                {showOwnerActions && user && (
                   <form method="post" action={`/post/${p.id}/mute`}>
                     <input type="hidden" name="from" value={detailPath} />
                     <button className="quiet bookmark-link" type="submit"
@@ -1123,7 +1123,7 @@ export function Post({
         </blockquote>
       )}
       {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction
-        || showOwnerActions && user?.id === p.user_id) && (
+        || showOwnerActions && !!user) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {resolvedContinuationHref && (
             continuationLabel === '…'
@@ -1134,7 +1134,7 @@ export function Post({
                 </a>
               )
           )}
-          {(canModerate || reportHref || bookmarkAction || showOwnerActions && user?.id === p.user_id) && (
+          {(canModerate || reportHref || bookmarkAction || showOwnerActions && !!user) && (
             <span className="post-actions">
               {canModerate && (
                 <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -1144,7 +1144,7 @@ export function Post({
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
               )}
-              {showOwnerActions && user?.id === p.user_id && (
+              {showOwnerActions && user && (
                 <form method="post" action={`/post/${p.id}/mute`}>
                   <input type="hidden" name="from" value={detailPath} />
                   <button className="quiet bookmark-link" type="submit"

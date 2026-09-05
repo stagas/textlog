@@ -7,6 +7,7 @@ import { isDevelopment } from './environment'
 import { logError, logInfo } from './log'
 import { markdownPlainText } from './markdown'
 import { moderatedContentDescription } from './moderation'
+import { mutedThreadForViewer } from './post-mute'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
 
@@ -241,7 +242,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
   const directSubscriptions = database
     ? database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id,
       recipient.handle recipient_handle,
-      (ps.user_id!=? AND (EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+      (ps.user_id!=? AND NOT ${mutedThreadForViewer('ps.user_id', postId)} AND
+        (EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
         WHERE child.id=? AND parent.user_id=ps.user_id)
         OR ${whisperThreadTargetsViewer('ps.user_id', postId)})) is_reply,
       (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
@@ -252,6 +254,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
+    AND (NOT ${mutedThreadForViewer('ps.user_id', postId)} OR EXISTS (
+      SELECT 1 FROM post_mentions muted_mention WHERE muted_mention.post_id=? AND muted_mention.user_id=ps.user_id))
     AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
       OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
@@ -270,7 +274,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-      .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, postId,
+      .all(actorId, postId, actorId, postId, actorId, actorId, postId, postId, actorId, actorId, actorId, postId, postId,
         postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
           user_id: number
           is_reply: number

@@ -358,8 +358,7 @@ export function registerPostsRoutes(app: Hono) {
       return page(
         <Reply user={user} post={post} replies={replies} showForm autoFocus={c.req.query('reply') === '1'}
           replyTo={replyTo} backTargetId={backTargetId} returnPath={returnPath} topHref={topHref} flatHref={flatHref}
-          treeHref={treeHref} flat={flat} showReport={c.req.query('report') === '1'}
-          reported={c.req.query('reported') === '1'} social={social} />,
+          treeHref={treeHref} flat={flat} social={social} />,
       )
     }
     const rendered = page(

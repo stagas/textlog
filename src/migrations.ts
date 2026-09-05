@@ -3360,6 +3360,36 @@ export const migrations: Migration[] = [
       END;`)
     },
   },
+  {
+    version: 196,
+    name: 'muted_post_explicit_mentions',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_mentions'").get()) return
+      database.run(`CREATE TRIGGER IF NOT EXISTS muted_post_mentions_unread AFTER INSERT ON post_mentions BEGIN
+        DELETE FROM for_you_reads WHERE user_id=NEW.user_id
+          AND event_key='post:' || printf('%020d',NEW.post_id)
+          AND EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.post_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+            WHERE muted.user_id=NEW.user_id);
+        DELETE FROM to_me_reads WHERE user_id=NEW.user_id
+          AND event_key='post:' || printf('%020d',NEW.post_id)
+          AND EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.post_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+            WHERE muted.user_id=NEW.user_id);
+        DELETE FROM activity_reads WHERE user_id=NEW.user_id AND event_key='post:' || NEW.post_id
+          AND EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.post_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+            WHERE muted.user_id=NEW.user_id);
+      END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

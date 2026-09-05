@@ -38,6 +38,7 @@ import {
   postTitle,
   Profile,
   PublicThread,
+  ReportPost,
   Reply,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle, postAnchorId,
@@ -4668,6 +4669,21 @@ test('Post detail places report in the footer', () => {
   expect(footer).not.toContain('post-reply-link')
   expect(footer).toContain('class="quiet report-link" href="/post/2?report=1"')
   expect(html.slice(0, html.indexOf('<div class="postfoot">'))).not.toContain('class="quiet report-link"')
+})
+
+test('Report form renders as a dedicated page with no preselected reason', () => {
+  const html = renderToStaticMarkup(React.createElement(ReportPost, {
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
+    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+  }))
+
+  expect(html).toContain('<h1>Report this post?</h1>')
+  expect(html).toContain('panel-wide')
+  expect(html).toContain('class="reference-menu-trigger postauthor" href="/u/writer')
+  expect(html).toContain('>@writer</a>')
+  expect(html).toContain('<option value="" disabled="" selected="">choose a reason</option>')
+  expect(html).toContain('action="/post/2/report"')
 })
 
 test('stored post translations render in the note', () => {

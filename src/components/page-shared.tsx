@@ -1106,48 +1106,6 @@ export function ConnectionPeople(
   )
 }
 
-export function ReportPanel({ post, showForm, reported, reason = '', error }: {
-  post: PostView
-  showForm: boolean
-  reported: boolean
-  reason?: string
-  error?: string
-}) {
-  if (reported) {
-    return (
-      <div className="report-status" role="status">
-        <span>Report received. Thank you.</span>
-        <form method="post" action={`/block/${post.handle}`}>
-          <button className="quiet danger" aria-label={`block @${post.handle}`}>block @{post.handle}</button>
-        </form>
-      </div>
-    )
-  }
-  if (!showForm) return null
-  return (
-    <Panel className="report-panel">
-      <form method="post" action={`/post/${post.id}/report`}>
-        <FormMessage error={error} />
-        <label className="form-label">
-          reason
-          <select className="form-control form-select" name="reason" required defaultValue={reason}>
-            <option value="" disabled>choose a reason</option>
-            {reason && !['harassment', 'spam', 'impersonation', 'bot', 'other'].includes(reason)
-              && <option value={reason} hidden>{reason}</option>}
-            <option value="harassment">harassment</option>
-            <option value="spam">spam</option>
-            <option value="impersonation">impersonation</option>
-            <option value="bot">bot</option>
-            <option value="other">other</option>
-          </select>
-        </label>
-        <FormActions secondary={<a className="secondary-action cancel-action" href={`/post/${post.id}`}>cancel</a>}
-          primary={<button className="button button-danger">submit report</button>} />
-      </form>
-    </Panel>
-  )
-}
-
 export function GlobalFeedEmpty({ user }: { user: User | null }) {
   return (
     <div className="empty empty-actions">

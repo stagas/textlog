@@ -12,7 +12,6 @@ import {
   PostingSuggestionResults,
   type PostingSuggestionSearch,
   postTitle,
-  ReportPanel,
   VerificationRequired,
 } from './page-shared'
 import { Panel } from './panel'
@@ -152,17 +151,13 @@ export function HiddenRepliesNotice() {
 }
 
 export function Reply(
-  { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
-    reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
+  { user, post, replies = [], showForm, error, body = '', social, preview = false, returnPath, topHref, flatHref,
+    treeHref, flat = false, suggestionSearch,
     draftId, previewExecutionOutput, previewLocation, autoFocus = true, replyTo, backTargetId }: {
       user: User
       post: PostView
       replies?: PostView[]
       showForm: boolean
-      showReport?: boolean
-      reported?: boolean
-      reportReason?: string
-      reportError?: string
       error?: string
       social?: { title?: string; description: string; image: string; url: string }
       body?: string
@@ -203,14 +198,10 @@ export function Reply(
           <Post p={post} user={user} showReplyAction={showForm && !!replyTo} showOwnerActions showModerateAction
             tappableParent bookmarkAction suppressContentWarning={showForm} returnPath={returnPath}
             backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref} treeHref={treeHref}
-            reportHref={user.id !== post.user_id && !showReport && !reported
-              ? `/post/${post.id}?report=1${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
+            reportHref={user.id !== post.user_id
+              ? `/post/${post.id}/report${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />
         </div>
-        {user.id !== post.user_id && (
-          <ReportPanel post={post} showForm={showReport} reported={reported} reason={reportReason}
-            error={reportError} />
-        )}
         {preview && !replyTo && (
           <ReplyPreview parent={replyParent} user={user} body={body} executionOutput={previewExecutionOutput}
             location={previewLocation} />

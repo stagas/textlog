@@ -42,6 +42,7 @@ import { EXPLORE_TAG_PAGE_SIZE } from './pagination'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
   recordFailedPassword } from './password-login-captcha'
 import { consumePasswordLoginNonce, issuePasswordLoginNonce } from './password-login-nonce'
+import { mutedThreadForViewer } from './post-mute'
 import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION, personalizedUnreadCount } from './personalized-feed'
 import { voteInPoll } from './polls'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
@@ -3018,7 +3019,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!row) return { post: null, subscriptions: [] } as DatabaseDomainOutput<K>
       const subscriptions = database.query(`SELECT ps.endpoint,ps.p256dh,ps.auth,ps.user_id userId,
         recipient.handle recipientHandle,
-        (ps.user_id!=? AND (EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
+        (ps.user_id!=? AND NOT ${mutedThreadForViewer('ps.user_id', postId)} AND
+          (EXISTS(SELECT 1 FROM posts child JOIN posts parent ON parent.id=child.parent_id
           WHERE child.id=? AND parent.user_id=ps.user_id)
           OR ${whisperThreadTargetsViewer('ps.user_id', postId)})) isReply,
         (ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
@@ -3029,11 +3031,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=ps.user_id)
-        AND NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
-          SELECT id,parent_id FROM posts WHERE id=? UNION ALL
-          SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
-        ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
-          WHERE muted.user_id=ps.user_id)
+        AND (NOT ${mutedThreadForViewer('ps.user_id', postId)} OR EXISTS (
+          SELECT 1 FROM post_mentions muted_mention WHERE muted_mention.post_id=?
+            AND muted_mention.user_id=ps.user_id))
         AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
           OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
@@ -3905,7 +3905,6 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(postId) as { user_id: number } | null
       if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
-      if (post.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       const existing = database.query('SELECT 1 FROM muted_posts WHERE user_id=? AND post_id=?').get(userId, postId)
       if (existing) database.query('DELETE FROM muted_posts WHERE user_id=? AND post_id=?').run(userId, postId)
       else database.query('INSERT INTO muted_posts(user_id,post_id) VALUES(?,?)').run(userId, postId)

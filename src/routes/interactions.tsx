@@ -4,7 +4,7 @@ import type { Hono } from 'hono'
 import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 import {
   Explore,
-  Reply,
+  ReportPost,
 } from '../components/pages'
 import { isValidHashtag, normalizeHashtag, normalizeHashtagSpelling } from '../content'
 import { databaseService } from '../database-service'
@@ -102,7 +102,6 @@ export function registerInteractionsRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const result = await databaseService().call('interactions.togglePostMute', { userId: user.id, postId })
     if (result.status === 'not_found') return c.text('Not found', 404)
-    if (result.status === 'forbidden') return c.text('Forbidden', 403)
     clearAnonymousPostPageCache()
     return redirect(instantScrollPath(f.from
       ? safeNext(f.from)
@@ -144,11 +143,25 @@ export function registerInteractionsRoutes(app: Hono) {
     return redirect(safeRefererPath(c.req.header('referer'), c.req.url, '/u/' + result.targetHandle))
   })
 
+  app.get('/post/:id/report', async c => {
+    const user = currentUser(c.req.raw)
+    const postId = Number(c.req.param('id'))
+    const path = `/post/${c.req.param('id')}/report${new URL(c.req.url).search}`
+    if (!user) return redirect('/enter?next=' + encodeURIComponent(path))
+    const result = await databaseService().call('interactions.reportPost', { userId: user.id, postId, reason: null })
+    if (result.status === 'not_found') return c.text('Not found', 404)
+    if (result.status === 'own_post') return redirect(`/post/${postId}`)
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<ReportPost user={user} post={result.post!} reported={c.req.query('reported') === '1'}
+      returnPath={returnPath} />)
+  })
+
   app.post('/post/:id/report', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const postId = Number(c.req.param('id'))
     const f = await form(c.req.raw)
+    const returnPath = f.from ? safeNext(f.from) : undefined
     const validReason = ['harassment', 'spam', 'impersonation', 'bot', 'other'].includes(f.reason)
     const result = await databaseService().call('interactions.reportPost', {
       userId: user.id,
@@ -158,16 +171,10 @@ export function registerInteractionsRoutes(app: Hono) {
     if (result.status === 'not_found') return c.text('Not found', 404)
     if (result.status === 'own_post') return c.text('You cannot report your own post', 400)
     if (!validReason) {
-      return page(
-        <Reply user={user} post={result.post!} replies={await databaseService().call('posts.threadReplies', {
-          parentId: result.post!.id,
-          viewerId: user.id,
-        })} showForm={false} showReport reportReason={f.reason || ''}
-          reportError="Choose a valid reason for the report." />,
-        400,
-      )
+      return page(<ReportPost user={user} post={result.post!} reason={f.reason || ''}
+        error="Choose a valid reason for the report." returnPath={returnPath} />, 400)
     }
-    return redirect(`/post/${postId}?reported=1`)
+    return redirect(`/post/${postId}/report?reported=1${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`)
   })
 
   app.post('/tag-follow/:tag', async c => {

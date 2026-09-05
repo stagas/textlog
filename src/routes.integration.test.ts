@@ -2305,6 +2305,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(activitySecondBody).toContain('activity cursor reply 81')
   expect(activitySecondBody).not.toContain('← prev')
   expect(activitySecondBody).toContain('newer activity after cursor')
+  const reportPage = await request(`/post/${post.id}/report`, { cookie: bobCookie })
+  expect(reportPage.status).toBe(200)
+  expect(await reportPage.text()).toContain('<h1>Report this post?</h1>')
   const invalidReport = await request(`/post/${post.id}/report`, {
     method: 'POST',
     cookie: bobCookie,
@@ -2320,7 +2323,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     form: { reason: 'bot' },
   })
   expect(report.status).toBe(303)
-  expect(report.headers.get('location')).toBe(`/post/${post.id}?reported=1`)
+  expect(report.headers.get('location')).toBe(`/post/${post.id}/report?reported=1`)
+  const reportedPage = await request(report.headers.get('location')!, { cookie: bobCookie })
+  expect(await reportedPage.text()).toContain('<h1>Report received</h1>')
   const reportRow = database.query('SELECT id,status,reason FROM reports WHERE reporter_id=? AND post_id=?')
     .get(bob.id, post.id) as { id: number; status: string; reason: string }
   expect(reportRow).toMatchObject({ status: 'open', reason: 'bot' })

@@ -2696,11 +2696,11 @@ body.corners-round a.button {
   margin-left: auto;
 }
 
-.post-actions .quiet:not(.danger):not(.report-link) {
+.post-actions .quiet:not(.danger) {
   color: var(--accent);
 }
 
-.post-actions .quiet:not(.danger):not(.report-link):hover {
+.post-actions .quiet:not(.danger):hover {
   color: var(--accent-dark);
 }
 
@@ -2712,6 +2712,11 @@ body.corners-round a.button {
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
+.report-post-preview {
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--soft);
+}
+
 .danger {
   color: var(--error-ink);
   border-bottom: var(--hairline) solid var(--link-border);
@@ -2721,16 +2726,8 @@ body.corners-round a.button {
   color: var(--danger-link-hover);
 }
 
-.report-link {
-  color: var(--report-ink);
-}
-
 .postfoot .report-link {
   margin-left: auto;
-}
-
-.report-link:hover {
-  color: var(--report-hover);
 }
 
 .postdate {
@@ -3394,6 +3391,10 @@ body.corners-round a.button {
   width: min(100%, 440px);
   margin: 0;
   padding: clamp(26px, 6vw, 42px);
+}
+
+.report-post-panel {
+  width: min(100%, 620px);
 }
 
 .magic-sent-panel {
