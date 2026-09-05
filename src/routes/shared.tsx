@@ -11,11 +11,31 @@ import { clientIpHeaderName } from '../brand'
 import { AccountSecurity, ErrorPage } from '../components/pages'
 import { databaseService } from '../database-service'
 import { sendEmailVerification } from '../email'
+import { logInfo } from '../log'
 import { rateLimitMessage } from '../request-rate-limit'
 import { sessionHash } from '../sessions'
 
 export function page(node: React.ReactNode, status = 200) {
-  return new Response('<!doctype html>' + renderToStaticMarkup(node), { status,
+  const measureRender = Bun.env.REACT_RENDER_METRICS === 'true'
+  const startedAt = measureRender ? performance.now() : 0
+  const markup = renderToStaticMarkup(node)
+  if (measureRender) {
+    const durationMs = performance.now() - startedAt
+    const minimumMs = Math.max(0, Number(Bun.env.REACT_RENDER_METRICS_MIN_MS || 1))
+    if (durationMs >= minimumMs) {
+      const component = React.isValidElement(node)
+        ? typeof node.type === 'string'
+          ? node.type
+          : node.type === React.Fragment
+          ? 'Fragment'
+          : (node.type as { displayName?: string; name?: string }).displayName
+            || (node.type as { name?: string }).name || 'Anonymous'
+        : 'Unknown'
+      logInfo(`react_render component=${component} status=${status} duration_ms=${durationMs.toFixed(1)}`
+        + ` html_chars=${markup.length}`)
+    }
+  }
+  return new Response('<!doctype html>' + markup, { status,
     headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' } })
 }
 export function notFoundPage(req: Request) {

@@ -98,9 +98,11 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false,
   renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => boolean | void | Promise<boolean | void>)
 {
-  // Query profiling is used to diagnose materialization itself. Keep the cache active for that explicit development
-  // mode; ordinary hot-reload development still bypasses it so direct fixture/database edits remain visible.
-  if (Bun.env.DEV_RELOAD === 'true' && Bun.env.FEED_QUERY_METRICS !== 'true') return await render()
+  // Feed profiling is used to diagnose materialization itself. Keep the cache active for those explicit development
+  // modes; ordinary hot-reload development still bypasses it so direct fixture/database edits remain visible.
+  const profilingMaterialization = Bun.env.FEED_QUERY_METRICS === 'true'
+    || Bun.env.REACT_RENDER_METRICS === 'true'
+  if (Bun.env.DEV_RELOAD === 'true' && !profilingMaterialization) return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
   const key = `${kind}\0${viewerId}\0${variant}`
