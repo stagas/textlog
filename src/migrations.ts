@@ -3238,6 +3238,32 @@ export const migrations: Migration[] = [
         END;`)
     },
   },
+  {
+    version: 191,
+    name: 'preserve_hidden_replies_tag',
+    up(database) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()) {
+        database.run("INSERT OR IGNORE INTO tag_invariants(tag) VALUES('hiddenreplies')")
+      }
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
+        database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+          SELECT post_id,'hiddenreplies' FROM post_hashtags WHERE tag IN ('hiddenreply','hiddenreplie');
+          DELETE FROM post_hashtags WHERE tag IN ('hiddenreply','hiddenreplie');`)
+      }
+      for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
+        database.run(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+          SELECT user_id,'hiddenreplies',created_at FROM ${table} WHERE tag IN ('hiddenreply','hiddenreplie');
+          DELETE FROM ${table} WHERE tag IN ('hiddenreply','hiddenreplie');`)
+      }
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_display_names\'').get()) {
+        database.run(`INSERT OR IGNORE INTO tag_display_names(tag,display_name)
+          SELECT 'hiddenreplies',display_name FROM tag_display_names
+          WHERE tag IN ('hiddenreply','hiddenreplie') ORDER BY tag LIMIT 1;
+          DELETE FROM tag_display_names WHERE tag IN ('hiddenreply','hiddenreplie');`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

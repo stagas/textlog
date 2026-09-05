@@ -1607,6 +1607,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
         : null
       const post = enrichPosts(database, [found], viewerId)[0]
+      if (post.hidden_by_reply_gate) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
         post.viewer_bookmarked = !!database.query('SELECT 1 FROM post_bookmarks WHERE user_id=? AND post_id=?')
           .get(viewerId, id)

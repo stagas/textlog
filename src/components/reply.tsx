@@ -139,6 +139,18 @@ export function ReplyComposer(
   )
 }
 
+export function HiddenRepliesNotice() {
+  return (
+    <div className="reply-branch hidden-replies-notice">
+      <div className="reply-node">
+        <article className="post">
+          <div className="post-body quiet">(replies are hidden until you reply)</div>
+        </article>
+      </div>
+    </div>
+  )
+}
+
 export function Reply(
   { user, post, replies = [], showForm, showReport = false, reported = false, error, body = '', reportReason = '',
     reportError, social, preview = false, returnPath, topHref, flatHref, treeHref, flat = false, suggestionSearch,
@@ -204,6 +216,7 @@ export function Reply(
             location={previewLocation} />
         )}
         {showForm && !post.thread_locked && !replyTo && replyComposer}
+        {post.replies_hidden && <HiddenRepliesNotice />}
         <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply || backTargetId ? returnPath : undefined} backTargetId={backTargetId} replyOnPage
           suppressReplyActionId={replyTo?.id} activeReplyReturnPath={activeReplyReturnPath}

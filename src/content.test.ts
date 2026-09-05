@@ -48,6 +48,10 @@ describe('content metadata extraction', () => {
     ])
   })
 
+  test('keeps the #HiddenReplies modifier plural', () => {
+    expect(extractHashtags('#HiddenReplies')).toEqual(['hiddenreplies'])
+  })
+
   test('ignores escaped hashtags', () => {
     expect(extractHashtags('plain \\#notatag and #actual')).toEqual(['actual'])
     expect(splitSpoilerBody('visible\n\\#spoiler\nstill visible')).toEqual({

@@ -4,7 +4,7 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import { GuestCommunityActions, postTitle } from './page-shared'
-import { ReplyComposer } from './reply'
+import { HiddenRepliesNotice, ReplyComposer } from './reply'
 
 export function PublicThread(
   { post, replies = [], social, returnPath, topHref, flatHref, treeHref, flat = false, showForm = true, replyTo }: {
@@ -32,6 +32,7 @@ export function PublicThread(
         {showForm && !post.thread_locked && !replyTo && (
           <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath} />
         )}
+        {post.replies_hidden && <HiddenRepliesNotice />}
         <ThreadReplies parentId={post.id} replies={replies} user={null} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply ? returnPath : undefined} replyOnPage suppressReplyActionId={replyTo?.id}
           afterReply={(reply, depth) =>

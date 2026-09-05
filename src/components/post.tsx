@@ -1,16 +1,23 @@
-import React from 'preact/compat'
-import { isAdmin } from '../admin'
-import { displayedExecutionOutput } from '../code-execution'
-import { containsAsciiArt, containsSpoilerTag, extractAuthoredHashtags, extractHashtags, extractMentions,
-  normalizeHashtagSpelling } from '../content'
-import { collapsedConversationPreview } from '../latest-conversation'
+import {
+  containsAsciiArt,
+  containsSpoilerTag,
+  extractAuthoredHashtags,
+  extractHashtags,
+  extractMentions,
+  normalizeHashtagSpelling,
+} from '../content'
 import { parsePoll, pollDisplayBody } from '../polls'
-import { renderToStaticMarkup } from '../render'
 import { parseTodo, todoDisplayBody } from '../todos'
-import type { User } from '../types'
 import type { BioReferenceData, ParentPost, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmtFull, linkify, referenceFormId } from '../utils'
 import { enterHref, pendingFollowHref } from './auth-links'
+
+import React from 'preact/compat'
+import { isAdmin } from '../admin'
+import { displayedExecutionOutput } from '../code-execution'
+import { collapsedConversationPreview } from '../latest-conversation'
+import { renderToStaticMarkup } from '../render'
+import type { User } from '../types'
 import { MetaRow } from './meta'
 
 function maskedContent(body: string) {
@@ -1142,6 +1149,21 @@ function FeedPost(props: FeedPostProps) {
   return <Post {...props} />
 }
 
+function HiddenRepliesNotice({ href }: { href?: string }) {
+  const content = (
+    <>
+      <div className="reply-node">
+        <article className="post">
+          <div className="post-body quiet">(replies are hidden until you reply)</div>
+        </article>
+      </div>
+    </>
+  )
+  return href
+    ? <a className="reply-branch hidden-replies-notice" href={href}>{content}</a>
+    : <div className="reply-branch hidden-replies-notice">{content}</div>
+}
+
 export function ThreadReplies(
   { parentId, replies, user, returnPath, excludePostId, flat = false, showMissingContinuations = false,
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
@@ -1175,6 +1197,7 @@ export function ThreadReplies(
       collapseWithoutPreviews?: boolean
     },
 ) {
+  replies = replies.filter(reply => !reply.hidden_by_reply_gate)
   if (!replies.length) return null
   const children = new Map<number, PostView[]>()
   for (const reply of replies) {
@@ -1425,6 +1448,7 @@ export function ThreadReplies(
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
           hideTopMeta={hideTopMeta} />
         {afterReply?.(reply, canonicalDepth(reply.id))}
+        {reply.replies_hidden && <HiddenRepliesNotice href={postReturnPath} />}
         {childBranch}
       </div>
     )
@@ -1510,7 +1534,7 @@ export function FeedThreads(
     while (ancestor.parent) ancestor = ancestor.parent
     return ancestor.parent_id === null && !!ancestor.deleted_at
   }
-  const feedPosts = posts.filter(post => !belongsToDeletedTopLevel(post))
+  const feedPosts = posts.filter(post => !belongsToDeletedTopLevel(post) && !post.hidden_by_reply_gate)
   if (!feedPosts.length) return null
   const treePosts = [...feedPosts]
   const ids = new Set(feedPosts.map(post => post.id))
@@ -1692,6 +1716,9 @@ export function FeedThreads(
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
                 : undefined} continuationLabel="…" />
             </div>
+            {post.replies_hidden && (
+              <HiddenRepliesNotice href={`/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`} />
+            )}
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
               anchorReplyNavigation replyOnPage replyReturnPath={returnPath} showMissingContinuations
               continuationLabel="…" continuationReturnPath={collapsed || canCollapse && expandedRootId === post.id

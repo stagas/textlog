@@ -381,6 +381,17 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
             </small>
           </dt>
         </div>
+        <div>
+          <dd>
+            <code>
+              Answer before reading <b>#HiddenReplies</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Hidden replies</span>
+            <small>Hides all replies until you reply.</small>
+          </dt>
+        </div>
       </dl>
       <div className="posting-help-search-panel posting-help-tab-panel">
         <div className="posting-help-searches">

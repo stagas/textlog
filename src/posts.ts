@@ -22,6 +22,43 @@ function moderatorViewer(database: Database, viewerId: number) {
   return !!viewer && isAdminEmail(viewer.email)
 }
 
+function hiddenReplyGateState(database: Database, postIds: number[], viewerId: number, moderator: boolean) {
+  const hiddenRoots = new Set<number>()
+  const hiddenDescendants = new Set<number>()
+  if (!postIds.length || moderator) return { hiddenRoots, hiddenDescendants }
+  const rows = database.query(`WITH RECURSIVE ancestors(start_id,id,user_id,parent_id,depth) AS (
+    SELECT id,id,user_id,parent_id,0 FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
+    UNION ALL
+    SELECT ancestors.start_id,parent.id,parent.user_id,parent.parent_id,ancestors.depth+1
+      FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+  ), gates AS (
+    SELECT ancestors.start_id,ancestors.id root_id,ancestors.user_id root_user_id,ancestors.depth
+      FROM ancestors JOIN post_hashtags ph ON ph.post_id=ancestors.id
+      WHERE ph.tag IN ('hiddenreplies','hiddenreply','hiddenreplie')
+  ) SELECT gates.start_id,gates.root_id,gates.depth FROM gates
+    WHERE NOT EXISTS (
+      WITH RECURSIVE descendants(id) AS (
+        SELECT id FROM posts WHERE parent_id=gates.root_id
+        UNION ALL SELECT child.id FROM posts child JOIN descendants ON child.parent_id=descendants.id
+      ) SELECT 1 FROM descendants JOIN posts participant ON participant.id=descendants.id
+        WHERE participant.user_id=? AND participant.deleted_at IS NULL
+    ) ORDER BY gates.start_id,gates.depth`)
+    .all(...postIds, viewerId) as Array<{
+      start_id: number
+      root_id: number
+      depth: number
+    }>
+  for (const row of rows) {
+    if (row.start_id === row.root_id) hiddenRoots.add(row.start_id)
+    else hiddenDescendants.add(row.start_id)
+  }
+  return { hiddenRoots, hiddenDescendants }
+}
+
+export function hiddenReplyGates(database: Database, postIds: number[], viewerId = -1) {
+  return hiddenReplyGateState(database, postIds, viewerId, moderatorViewer(database, viewerId))
+}
+
 type WordNetNormalizations = ReadonlyMap<string, string>
 
 export function loadWordNetNormalizations(database: Database, bodies: string[]): WordNetNormalizations {
@@ -344,6 +381,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'',
   ).get()
   const ids = posts.map(post => post.id)
+  const replyGates = hiddenReplyGateState(database, ids, viewerId, moderator)
   const viewerContextByPostId = new Map<number, 'reply' | 'mention'>()
   if (viewerId >= 0) {
     const contextRows = database.query(`SELECT p.id,
@@ -766,11 +804,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     bio_reference: bioReference(post.user_id),
     link_previews: previewsByPost.get(post.id),
     location: locationsByPost.get(post.id),
-    reply_count: countById.get(post.id) || 0,
-    direct_reply_count: directCountById.get(post.id) || 0,
+    reply_count: replyGates.hiddenRoots.has(post.id) ? 0 : countById.get(post.id) || 0,
+    direct_reply_count: replyGates.hiddenRoots.has(post.id) ? 0 : directCountById.get(post.id) || 0,
     parent: post.parent_id ? parents.get(post.parent_id) || null : null,
     poll: polls.get(post.id),
     thread_locked: lockedPostIds.has(post.id),
+    replies_hidden: replyGates.hiddenRoots.has(post.id),
+    hidden_by_reply_gate: replyGates.hiddenDescendants.has(post.id),
   }))
 }
 
@@ -804,6 +844,8 @@ export function rewireVisibleAncestorGaps(database: Database, posts: PostView[])
 
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
   const moderator = moderatorViewer(database, viewerId)
+  const gate = hiddenReplyGateState(database, [parentId], viewerId, moderator)
+  if (gate.hiddenRoots.has(parentId)) return []
   const blockViewerId = moderator ? -1 : viewerId
   const metaVisibility = moderator ? '1' : metaThreadVisibleToViewer(viewerId)
   const supportsExecutionOutput = !!database.query(
@@ -835,5 +877,6 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
   },handle,depth
       FROM thread ORDER BY created_at ASC,id ASC`).all(parentId, blockViewerId, blockViewerId, blockViewerId, viewerId,
     viewerId, blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId) as (PostView & { depth: number })[]
-  return enrichPosts(database, rows, viewerId) as Array<PostView & { depth: number }>
+  return enrichPosts(database, rows, viewerId)
+    .filter(reply => !reply.hidden_by_reply_gate) as Array<PostView & { depth: number }>
 }

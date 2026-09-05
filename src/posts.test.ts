@@ -699,6 +699,35 @@ describe('post persistence', () => {
     expect(isThreadLocked(db, 4)).toBe(false)
   })
 
+  test('hides a gated thread without revealing its reply count until the viewer replies', () => {
+    const db = database()
+    db.run(`INSERT INTO users(id,handle) VALUES(3,'other');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'answer first #HiddenReplies','2026-08-03 10:00:00'),
+        (2,3,1,'secret answer','2026-08-03 11:00:00'),
+        (3,3,2,'nested secret','2026-08-03 12:00:00');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'hiddenreply');`)
+    const root = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+      .get() as PostView
+    const secret = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=2')
+      .get() as PostView
+
+    expect(enrichPosts(db, [root], 2)[0]).toMatchObject({
+      replies_hidden: true,
+      reply_count: 0,
+      direct_reply_count: 0,
+    })
+    expect(enrichPosts(db, [secret], 2)[0].hidden_by_reply_gate).toBe(true)
+    expect(loadThreadReplies(db, 1, 2)).toEqual([])
+
+    db.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(4,2,1,'my answer')")
+    expect(enrichPosts(db, [root], 2)[0]).toMatchObject({ replies_hidden: false, reply_count: 3 })
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
+    expect(loadThreadReplies(db, 1, 1)).toEqual([])
+    db.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(5,1,1,'author answer')")
+    expect(loadThreadReplies(db, 1, 1).map(post => post.id)).toEqual([2, 3, 4, 5])
+  })
+
   test('classifies replies and mentions addressed to the viewer', () => {
     const db = database()
     db.run(`INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
