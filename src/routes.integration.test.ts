@@ -177,6 +177,39 @@ test('install guide is tailored to the mobile browser', async () => {
   expect(await chrome.text()).toContain('Install and create shortcut')
 })
 
+test('new anonymous pages render a randomized appearance but only stylesheet visitors qualify for counting', async () => {
+  const ip = '203.0.113.79'
+  const initial = await request('/about', { ip, acceptHtml: true })
+  const initialHtml = await initial.text()
+  const setCookies = initial.headers.get('set-cookie') || ''
+  expect(setCookies).toContain('appearance_experiment=')
+  expect(setCookies).toContain('appearance=')
+  expect(setCookies).toContain('primary-font=')
+  expect(setCookies).toContain('corners=')
+  const appearance = setCookies.match(/(?:^|,\s*)appearance=([^;]+)/)?.[1]
+  expect(initialHtml).toContain(`/favicon-theme.svg?v=${appearance}`)
+
+  const cookies = [...setCookies.matchAll(/(?:^|,\s*)([\w-]+=[^;,]*)/g)].map(match => match[1]).join('; ')
+  expect((database.query('SELECT count(*) count FROM appearance_experiment_assignments').get() as { count: number })
+    .count).toBe(1)
+  expect(database.query('SELECT page_visits pageVisits FROM appearance_experiment_assignments').get())
+    .toEqual({ pageVisits: 0 })
+
+  await request('/styles.css', { ip, cookie: cookies })
+  expect(database.query('SELECT page_visits pageVisits FROM appearance_experiment_assignments').get())
+    .toEqual({ pageVisits: 1 })
+  await request('/about', { ip, cookie: cookies, acceptHtml: true })
+  expect(database.query('SELECT page_visits pageVisits FROM appearance_experiment_assignments').get())
+    .toEqual({ pageVisits: 2 })
+  expect((database.query('SELECT count(*) count FROM appearance_experiment_assignments').get() as { count: number })
+    .count).toBe(1)
+
+  const freshSession = await request('/about', { ip, acceptHtml: true })
+  expect(freshSession.headers.get('set-cookie')).toContain('appearance_experiment=')
+  expect((database.query('SELECT count(*) count FROM appearance_experiment_assignments').get() as { count: number })
+    .count).toBe(2)
+})
+
 test('/?reddit counts each IP once', async () => {
   const attributed = await request('/?reddit', { ip: '203.0.113.80' })
   expect(attributed.status).toBe(303)
@@ -196,20 +229,22 @@ test('/?reddit counts each IP once', async () => {
 })
 
 test('/?reddit attributes a completed signup', async () => {
-  const landing = await request('/?reddit', { ip: '203.0.113.83' })
-  const attributionCookie = landing.headers.get('set-cookie')!.split(';', 1)[0]
+  const landing = await request('/?reddit', { ip: '203.0.113.83', acceptHtml: true })
+  const visitorCookies = [...(landing.headers.get('set-cookie') || '')
+    .matchAll(/(?:^|,\s*)([\w-]+=[^;,]*)/g)].map(match => match[1]).join('; ')
+  await request('/styles.css', { ip: '203.0.113.83', cookie: visitorCookies })
   const email = 'reddit-attributed@example.com'
   expect((await request('/enter', {
     method: 'POST',
-    cookie: attributionCookie,
+    cookie: visitorCookies,
     form: { email },
     ip: '203.0.113.83',
   })).status).toBe(200)
   const emailMessage = capturedEmails().filter(message => message.to === email).at(-1)!
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(emailMessage))}`, {
-    cookie: attributionCookie,
+    cookie: visitorCookies,
   })
-  const cookie = `${sessionCookie(magic)}; ${attributionCookie}`
+  const cookie = `${sessionCookie(magic)}; ${visitorCookies}`
   const chosen = await request('/choose-handle', {
     method: 'POST',
     cookie,
@@ -219,6 +254,8 @@ test('/?reddit attributes a completed signup', async () => {
   expect(chosen.status).toBe(303)
   expect(chosen.headers.get('set-cookie')).toContain('campaign_attribution=; Max-Age=0')
   expect(database.query(`SELECT count(*) count FROM campaign_signups WHERE campaign='reddit'`).get())
+    .toEqual({ count: 1 })
+  expect(database.query('SELECT count(*) count FROM appearance_experiment_conversions').get())
     .toEqual({ count: 1 })
 })
 

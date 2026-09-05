@@ -1,6 +1,7 @@
 import { isAdmin, isAdminEmail } from '../admin'
 import {
   AdminConfirm,
+  AdminAppearanceExperiment,
   AdminDashboard,
   AdminEmail,
   AdminPostModeration,
@@ -28,6 +29,14 @@ import { isTranslationLanguage, translateText } from '../translation'
 import { currentUser } from '../utils'
 
 export function registerAdminRoutes(app: Hono) {
+  app.get('/admin/appearance-experiment', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const ranking = await databaseService().call('stats.appearanceExperimentRanking', {})
+    return page(<AdminAppearanceExperiment user={signedIn} ranking={ranking} />)
+  })
+
   app.get('/admin/logs', c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))

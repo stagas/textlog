@@ -34,6 +34,7 @@ export function AdminDashboard(
         title="admin dashboard"
         action={
           <span className="admin-header-actions">
+            <a className="profile-edit-link" href="/admin/appearance-experiment">appearance</a>
             <a className="profile-edit-link" href="/admin/logs">logs</a>
             <a className="profile-edit-link" href="/admin/tags">tags</a>
             <a className="profile-edit-link" href="/admin/push">send push</a>

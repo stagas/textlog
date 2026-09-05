@@ -54,6 +54,7 @@ import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } 
 import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
 import { dashboardStats } from './stats'
+import { FONT_CHOICES, SANS_SERIF_FONT_CHOICES } from './theme'
 import type { PostFeedPage, User } from './types'
 import type { PostView } from './types'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
@@ -1560,6 +1561,77 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = database.query(`INSERT OR IGNORE INTO campaign_signups(campaign,user_id) VALUES(?,?)`)
         .run(campaign, userId)
       return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
+    case 'stats.assignAppearanceExperiment': {
+      const choice = input as DatabaseDomainInput<'stats.assignAppearanceExperiment'>
+      database.query(`INSERT INTO appearance_experiment_assignments
+        (token,visitor_hash,theme,accent,primary_font,font,sans_serif_font,corners) VALUES(?,?,?,?,?,?,?,?)`)
+        .run(choice.token, choice.visitorHash, choice.theme, choice.accent, choice.primaryFont, choice.font,
+          choice.sansSerifFont, choice.corners)
+      return database.query(`SELECT token,theme,accent,primary_font primaryFont,font,
+        sans_serif_font sansSerifFont,corners FROM appearance_experiment_assignments WHERE token=?`)
+        .get(choice.token) as DatabaseDomainOutput<K>
+    }
+    case 'stats.recordAppearanceExperimentVisit': {
+      const { token, visitorHash } = input as DatabaseDomainInput<'stats.recordAppearanceExperimentVisit'>
+      const result = database.query(`UPDATE appearance_experiment_assignments SET page_visits=page_visits+1,
+        last_visited_at=CURRENT_TIMESTAMP WHERE token=? AND visitor_hash=? AND qualified_at IS NOT NULL`)
+        .run(token, visitorHash)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
+    case 'stats.qualifyAppearanceExperiment': {
+      const { token, visitorHash } = input as DatabaseDomainInput<'stats.qualifyAppearanceExperiment'>
+      const result = database.query(`UPDATE appearance_experiment_assignments SET qualified_at=CURRENT_TIMESTAMP,
+        page_visits=page_visits+1,last_visited_at=CURRENT_TIMESTAMP
+        WHERE token=? AND visitor_hash=? AND qualified_at IS NULL`).run(token, visitorHash)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
+    case 'stats.recordAppearanceExperimentConversion': {
+      const { token, userId } = input as DatabaseDomainInput<'stats.recordAppearanceExperimentConversion'>
+      const result = database.query(`INSERT OR IGNORE INTO appearance_experiment_conversions(assignment_token,user_id)
+        SELECT token,? FROM appearance_experiment_assignments WHERE token=?`).run(userId, token)
+      return Boolean(result.changes) as DatabaseDomainOutput<K>
+    }
+    case 'stats.appearanceExperimentRanking': {
+      const rows = database.query(`SELECT theme,accent,primary_font primaryFont,font,sans_serif_font sansSerifFont,
+        corners,page_visits pageVisits,EXISTS(SELECT 1 FROM appearance_experiment_conversions c
+          WHERE c.assignment_token=a.token) converted FROM appearance_experiment_assignments a
+          WHERE qualified_at IS NOT NULL`).all() as Array<{
+            theme: string; accent: string; primaryFont: string; font: string; sansSerifFont: string; corners: string;
+            pageVisits: number; converted: number
+          }>
+      const labels = new Map<string, string>(
+        [...FONT_CHOICES, ...SANS_SERIF_FONT_CHOICES].map(font => [font.value, font.label]),
+      )
+      const totals = new Map<string, { category: 'theme' | 'accent' | 'font' | 'corners'; value: string; label: string;
+        pageVisits: number; medianPageVisits: number; averagePageVisits: number; users: number; visits: number[] }>()
+      for (const row of rows) {
+        const values = [
+          ['theme', row.theme, row.theme], ['accent', row.accent, row.accent],
+          ['font', row.primaryFont === 'monospace' ? row.font : row.sansSerifFont,
+            labels.get(row.primaryFont === 'monospace' ? row.font : row.sansSerifFont) || row.primaryFont],
+          ['corners', row.corners, row.corners],
+        ] as const
+        for (const [category, value, label] of values) {
+          const key = `${category}:${value}`
+          const total = totals.get(key) || { category, value, label, pageVisits: 0, medianPageVisits: 0,
+            averagePageVisits: 0, users: 0, visits: [] }
+          total.pageVisits += row.pageVisits
+          total.users += row.converted
+          total.visits.push(row.pageVisits)
+          totals.set(key, total)
+        }
+      }
+      const ranked = [...totals.values()].map(({ visits, ...total }) => {
+        visits.sort((a, b) => a - b)
+        const middle = Math.floor(visits.length / 2)
+        return {
+          ...total,
+          medianPageVisits: visits.length % 2 ? visits[middle]! : (visits[middle - 1]! + visits[middle]!) / 2,
+          averagePageVisits: total.pageVisits / visits.length,
+        }
+      }).sort((a, b) => b.pageVisits - a.pageVisits || b.users - a.users)
+      return ranked as unknown as DatabaseDomainOutput<K>
     }
     case 'seo.sitemapIndex': {
       const { requestUrl, appUrl } = input as DatabaseDomainInput<'seo.sitemapIndex'>

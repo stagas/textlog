@@ -24,6 +24,8 @@ export function runBoundedCleanup(database: Database, now = Date.now()) {
     apiRateLimits: deleteBatch(database, 'api_rate_limit_buckets', 'bucket_start<?', now - 2 * 60 * 1000),
     visitors: deleteBatch(database, 'daily_visitors', 'day<date(?,\'-6 days\')', new Date(now).toISOString()),
     ipRequests: deleteBatch(database, 'daily_ip_requests', 'day<date(?,\'-6 days\')', new Date(now).toISOString()),
+    appearanceExperiments: deleteBatch(database, 'appearance_experiment_assignments',
+      'created_at<datetime(?,\'-1 year\')', new Date(now).toISOString()),
   }))()
 }
 

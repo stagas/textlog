@@ -5,6 +5,8 @@ import { applyHtmlCachePolicy, campaignAttribution, canonicalizeCrawlerLinks, cr
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
+import { appearanceExperimentCandidate, appearanceExperimentCookie, appearanceExperimentToken,
+  appearanceExperimentVisitorHash, newAppearanceExperimentToken, randomAppearanceExperimentChoice } from './appearance-experiment'
 import { appName, clientIpHeaderName } from './brand'
 import { BlogBuildingWithoutJavascript } from './components/blog-building-without-javascript'
 import { BlogRecap } from './components/blog-recap'
@@ -53,7 +55,8 @@ import { registerStatsRoutes } from './routes/stats'
 import { registerTagsRoutes } from './routes/tags'
 import { DatabaseUnavailableError } from './runtime-worker-client'
 import { loadStylesAsset, stylesResponse } from './styles'
-import { themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
+import { appearanceCookie, cornerCookie, fontCookie, primaryFontCookie, sansSerifFontCookie, themeLogoSvg, themeStyles,
+  versionedAppearance, withAppearance } from './theme'
 import { withTimezone } from './timezone'
 import { apiUser, currentUser } from './utils'
 import { DailyVisitorAllowlist, shouldRecordVisitor, VISITOR_FLUSH_BATCH_SIZE, visitorHash } from './visitors'
@@ -94,7 +97,49 @@ app.use('*', async (c, next) => {
     c.header('set-cookie', 'textlog_scroll=; Max-Age=0; HttpOnly; Path=/; SameSite=Lax', { append: true })
   }
 })
-app.use('*', (c, next) => withAppearance(c.req.raw, next))
+
+app.use('*', async (c, next) => {
+  await next()
+  if (c.req.method !== 'GET' || c.res.status >= 400 || !c.res.headers.get('content-type')?.includes('text/html')) return
+  if (currentUser(c.req.raw) || isCrawlerRequest(c.req.raw)) return
+  const assignmentToken = appearanceExperimentToken(c.req.raw)
+  if (!assignmentToken) return
+  const address = c.req.header(clientIpHeaderName()) || '-'
+  const visitorHash = appearanceExperimentVisitorHash(address)
+  if (visitorHash === '-') return
+  try {
+    await databaseService().call('stats.recordAppearanceExperimentVisit', { token: assignmentToken, visitorHash })
+  }
+  catch (error) {
+    logError('appearance experiment visit failed', error)
+  }
+})
+app.use('*', async (c, next) => {
+  const request = c.req.raw
+  const address = c.req.header(clientIpHeaderName()) || '-'
+  const wantsHtml = c.req.method === 'GET' && Boolean(c.req.header('accept')?.includes('text/html'))
+  if (!wantsHtml || address === '-' || currentUser(request) || isCrawlerRequest(request)
+    || !appearanceExperimentCandidate(request)) return withAppearance(request, next)
+
+  const assigned = await databaseService().call('stats.assignAppearanceExperiment', {
+    token: newAppearanceExperimentToken(), visitorHash: appearanceExperimentVisitorHash(address),
+    ...randomAppearanceExperimentChoice(),
+  })
+  const cookieAppUrl = Bun.env.APP_URL || c.req.url
+  const cookies = [
+    appearanceExperimentCookie(assigned.token, cookieAppUrl),
+    appearanceCookie({ theme: assigned.theme, accent: assigned.accent }, cookieAppUrl),
+    fontCookie(assigned.font, cookieAppUrl),
+    sansSerifFontCookie(assigned.sansSerifFont, cookieAppUrl),
+    primaryFontCookie(assigned.primaryFont, cookieAppUrl),
+    cornerCookie(assigned.corners, cookieAppUrl),
+  ]
+  const headers = new Headers(request.headers)
+  headers.set('cookie', `${request.headers.get('cookie') || ''}; ${cookies.map(cookie => cookie.split(';', 1)[0]).join('; ')}`)
+  const experimentRequest = new Request(request, { headers })
+  await withAppearance(experimentRequest, next)
+  for (const cookie of cookies) c.header('set-cookie', cookie, { append: true })
+})
 app.use('*', (c, next) => {
   const user = currentUser(c.req.raw)
   return withTimezone(user?.timezone || undefined, next)
@@ -334,6 +379,14 @@ app.use('*', async (c, next) => {
     const address = c.req.header(clientIpHeaderName()) || '-'
     dailyVisitorAllowlist.add(address, visitedAt)
     recordVisitor(address, visitedAt, !currentUser(c.req.raw))
+    const experimentToken = appearanceExperimentToken(c.req.raw)
+    const experimentVisitorHash = appearanceExperimentVisitorHash(address)
+    if (experimentToken && experimentVisitorHash !== '-') {
+      await databaseService().call('stats.qualifyAppearanceExperiment', {
+        token: experimentToken,
+        visitorHash: experimentVisitorHash,
+      })
+    }
     const campaign = campaignAttribution(c.req.raw)
     if (campaign === 'reddit' || campaign === '4chan') {
       const campaignVisitorHash = campaignIpPseudonym(address, campaign)

@@ -3264,6 +3264,62 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 192,
+    name: 'anonymous_appearance_experiment',
+    up(database) {
+      database.run(`CREATE TABLE IF NOT EXISTS appearance_experiment_assignments (
+        token TEXT PRIMARY KEY,visitor_hash TEXT NOT NULL UNIQUE,theme TEXT NOT NULL,accent TEXT NOT NULL,
+        primary_font TEXT NOT NULL,font TEXT NOT NULL,sans_serif_font TEXT NOT NULL,corners TEXT NOT NULL,
+        page_visits INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_visited_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+        CREATE TABLE IF NOT EXISTS appearance_experiment_conversions (
+          assignment_token TEXT NOT NULL,user_id INTEGER NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY(assignment_token,user_id),
+          FOREIGN KEY(assignment_token) REFERENCES appearance_experiment_assignments(token) ON DELETE CASCADE,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
+        CREATE INDEX IF NOT EXISTS appearance_experiment_assignments_visits
+          ON appearance_experiment_assignments(page_visits DESC);`)
+    },
+  },
+  {
+    version: 193,
+    name: 'allow_multiple_appearance_assignments_per_ip',
+    transaction: false,
+    up(database) {
+      database.run('ALTER TABLE appearance_experiment_conversions RENAME TO appearance_experiment_conversions_old')
+      database.run('ALTER TABLE appearance_experiment_assignments RENAME TO appearance_experiment_assignments_old')
+      database.run(`CREATE TABLE appearance_experiment_assignments (
+        token TEXT PRIMARY KEY,visitor_hash TEXT NOT NULL,theme TEXT NOT NULL,accent TEXT NOT NULL,
+        primary_font TEXT NOT NULL,font TEXT NOT NULL,sans_serif_font TEXT NOT NULL,corners TEXT NOT NULL,
+        page_visits INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_visited_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`)
+      database.run(`INSERT INTO appearance_experiment_assignments
+        (token,visitor_hash,theme,accent,primary_font,font,sans_serif_font,corners,page_visits,created_at,last_visited_at)
+        SELECT token,visitor_hash,theme,accent,primary_font,font,sans_serif_font,corners,page_visits,created_at,last_visited_at
+        FROM appearance_experiment_assignments_old`)
+      database.run(`CREATE TABLE appearance_experiment_conversions_new (
+          assignment_token TEXT NOT NULL,user_id INTEGER NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY(assignment_token,user_id),
+          FOREIGN KEY(assignment_token) REFERENCES appearance_experiment_assignments(token) ON DELETE CASCADE,
+          FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)`)
+      database.run('INSERT INTO appearance_experiment_conversions_new SELECT * FROM appearance_experiment_conversions_old')
+      database.run('DROP TABLE appearance_experiment_conversions_old')
+      database.run('DROP TABLE appearance_experiment_assignments_old')
+      database.run('ALTER TABLE appearance_experiment_conversions_new RENAME TO appearance_experiment_conversions')
+      database.run(`CREATE INDEX appearance_experiment_assignments_visits
+        ON appearance_experiment_assignments(page_visits DESC)`)
+    },
+  },
+  {
+    version: 194,
+    name: 'qualify_appearance_experiment_visitors_by_stylesheet',
+    up(database) {
+      addColumn(database, 'appearance_experiment_assignments', 'qualified_at', 'TEXT')
+      database.run(`UPDATE appearance_experiment_assignments SET qualified_at=created_at
+        WHERE qualified_at IS NULL AND page_visits>0`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
@@ -3281,7 +3337,10 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
     if (migration.version <= current) continue
     if (migration.transaction === false) {
       const foreignKeys = (database.query('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys
+      const legacyAlterTable = (database.query('PRAGMA legacy_alter_table').get() as { legacy_alter_table: number })
+        .legacy_alter_table
       if (foreignKeys) database.run('PRAGMA foreign_keys=OFF')
+      database.run('PRAGMA legacy_alter_table=ON')
       try {
         database.transaction(() => {
           migration.up(database)
@@ -3290,6 +3349,7 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
       }
       finally {
         if (foreignKeys) database.run('PRAGMA foreign_keys=ON')
+        if (!legacyAlterTable) database.run('PRAGMA legacy_alter_table=OFF')
       }
     }
     else {

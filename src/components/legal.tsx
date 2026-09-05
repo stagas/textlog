@@ -156,8 +156,9 @@ export function Legal({ user }: { user: User | null }) {
         <h3>Retention</h3>
         <p>
           Session records expire after 365 days of inactivity; password-reset, magic-link and email-change records after
-          one hour; appearance cookies after one year; daily visitor pseudonyms after seven days; and application HTTP
-          logs after at most 14 days. Recap and interaction-email preferences, unsubscribe tokens, and campaign delivery
+          one hour; appearance cookies and appearance-experiment pseudonyms after one year; daily visitor pseudonyms
+          after seven days; and application HTTP logs after at most 14 days. Recap and interaction-email preferences,
+          unsubscribe tokens, and campaign delivery
           records are retained as needed to honor opt-outs and prevent duplicate delivery. Public account and content
           data, connections, followed hashtags and blocks are held until you remove them or delete your account.
           Deletion anonymizes the account and content, while limited moderation, resolved report and audit records are
@@ -206,11 +207,13 @@ export function Legal({ user }: { user: User | null }) {
           </a>. We do not sell personal information.
         </p>
         <p>
-          For security and aggregate visitor counts, network addresses are converted immediately into keyed pseudonyms;
+          For security, aggregate visitor counts, and anonymous appearance experiments, network addresses are converted
+          immediately into keyed pseudonyms;
           raw addresses are not written to application HTTP logs or visitor-count storage. The key is combined with the
-          UTC date so identifiers rotate daily, and separate keys are derived for logging and analytics. HTTP logs show
-          only the first five characters of the daily pseudonym. Visitor-count records are kept for seven days.
-          Application HTTP logs have a maximum retention of 14 days.
+          UTC date for logging and visitor counts so those identifiers rotate daily. The appearance experiment uses a
+          separate one-year pseudonym to measure page visits and completed signups without retaining the address. HTTP
+          logs show only the first five characters of the daily pseudonym. Visitor-count records are kept for seven
+          days. Application HTTP logs have a maximum retention of 14 days.
         </p>
 
         <h2>Changes</h2>
