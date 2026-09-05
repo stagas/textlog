@@ -1140,31 +1140,9 @@ export function Post({
 }
 
 type FeedPostProps = React.ComponentProps<typeof Post>
-type FeedPostFragment = { className: string; id: string; innerHtml: string }
-const feedPostFragments = new Map<string, FeedPostFragment>()
-const MAX_FEED_POST_FRAGMENTS = 1_024
-const FEED_POST_FRAGMENT_VERSION = 4
 
 function FeedPost(props: FeedPostProps) {
-  const key = JSON.stringify([FEED_POST_FRAGMENT_VERSION, props])
-  let fragment = feedPostFragments.get(key)
-  if (fragment) {
-    feedPostFragments.delete(key)
-    feedPostFragments.set(key, fragment)
-  }
-  else {
-    const rendered = renderToStaticMarkup(<Post {...props} />)
-    const match = rendered.match(/^<article class="([^"]*)" id="([^"]*)">([\s\S]*)<\/article>$/)
-    if (!match) return <Post {...props} />
-    fragment = { className: match[1], id: match[2], innerHtml: match[3] }
-    feedPostFragments.set(key, fragment)
-    while (feedPostFragments.size > MAX_FEED_POST_FRAGMENTS) {
-      feedPostFragments.delete(feedPostFragments.keys().next().value!)
-    }
-  }
-  return (
-    <article className={fragment.className} id={fragment.id} dangerouslySetInnerHTML={{ __html: fragment.innerHtml }} />
-  )
+  return <Post {...props} />
 }
 
 export function ThreadReplies(

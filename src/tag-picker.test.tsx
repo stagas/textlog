@@ -31,7 +31,7 @@ test('tag prompt renders popular tags as a multi-select and can be dismissed', (
   expect(html).not.toContain('12 notes')
   expect(html).toContain('class="visually-hidden">Popular hashtags</legend>')
   expect(html).toContain('action="/pick-tags/dismiss"')
-  expect(html).toContain('I&#x27;ll do it later, thanks')
+  expect(html).toContain("I'll do it later, thanks")
 })
 
 test('loads the most-used tags and follows all selected tags when completed', async () => {

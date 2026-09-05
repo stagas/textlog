@@ -528,7 +528,7 @@ test('instant scroll actions are applied once without client-side scripts', asyn
 
   const destination = await request('/about', { cookie: 'textlog_scroll=instant' })
   const html = await destination.text()
-  expect(html).toContain('<html lang="en" class="scroll-instant">')
+  expect(html).toContain('<html class="scroll-instant" lang="en">')
   expect(html).not.toContain('<script')
   expect(destination.headers.get('set-cookie')).toContain('textlog_scroll=; Max-Age=0')
 })
@@ -1416,7 +1416,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(missingProfileHtml).toContain('class="account-nav"')
   const clientError = await request('/client-error')
   expect(clientError.status).toBe(400)
-  expect(await clientError.text()).toContain('We couldn&#x27;t process that request.')
+  expect(await clientError.text()).toContain("We couldn't process that request.")
   expect(clientError.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   const serverError = await request('/server-error')
   expect(serverError.status).toBe(500)
@@ -1554,7 +1554,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(draftEditHtml).toContain('A saved note draft')
   expect(draftEditHtml).toContain(`name="draft_id" value="${noteDraft.public_id}"`)
-  expect(draftEditHtml).toContain(`formAction="/drafts/${noteDraft.public_id}"`)
+  expect(draftEditHtml).toContain(`formaction="/drafts/${noteDraft.public_id}"`)
   const previewedDraft = await request('/post', {
     method: 'POST',
     cookie: aliceCookie,
@@ -1668,7 +1668,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     redirect: 'manual',
   })
   expect(unsupportedPost.status).toBe(415)
-  expect(await unsupportedPost.text()).toContain('We couldn&#x27;t read that request.')
+  expect(await unsupportedPost.text()).toContain("We couldn't read that request.")
 
   expect(post.body).toBe('A route-level integration post')
   const invalidPostBody = `remember post ${'x'.repeat(490)}`
@@ -1770,10 +1770,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(invalidMood.status).toBe(400)
   const invalidMoodHtml = await invalidMood.text()
   expect(invalidMoodHtml).toContain('Mood should be an emoji.')
-  expect(invalidMoodHtml).toContain('name="mood" value="hi"')
+  expect(invalidMoodHtml).toMatch(/name="mood"[^>]*value="hi"/)
   database.query('UPDATE users SET mood=\'🤸\' WHERE handle=\'alice\'').run()
   const moodSettingsHtml = await (await request('/account/edit', { cookie: aliceCookie })).text()
-  expect(moodSettingsHtml).toContain('name="mood" value="🤸"')
+  expect(moodSettingsHtml).toMatch(/name="mood"[^>]*value="🤸"/)
   const multilineBio = Array(11).fill('bio line').join('\n')
   const invalidMultilineBio = await request('/account/edit', {
     method: 'POST',
@@ -1802,7 +1802,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hashtagHelper.status).toBe(200)
   const hashtagHelperHtml = await hashtagHelper.text()
   expect(hashtagHelperHtml).toContain('>replay this draft</textarea>')
-  expect(hashtagHelperHtml).toContain('name="hashtag_query" value="route"')
+  expect(hashtagHelperHtml).toMatch(/name="hashtag_query"[^>]*value="route"/)
   expect(hashtagHelperHtml).toContain('#<mark>route</mark>helper')
   expect(hashtagHelperHtml).toContain('id="write-posting-help" type="checkbox"')
   expect(hashtagHelperHtml).toContain('aria-controls="write-posting-help-content" checked=""')
@@ -1814,9 +1814,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(mentionHelper.status).toBe(200)
   const mentionHelperHtml = await mentionHelper.text()
   expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
-  expect(mentionHelperHtml).toContain('name="mention_query" value="ali"')
-  expect(mentionHelperHtml).toContain('name="body" maxLength="500" autofocus=""')
-  expect(mentionHelperHtml).not.toContain('name="mention_query" maxLength="100" required=""')
+  expect(mentionHelperHtml).toMatch(/name="mention_query"[^>]*value="ali"/)
+  expect(mentionHelperHtml).toContain('name="body" maxlength="500" autofocus=""')
+  expect(mentionHelperHtml).not.toContain('name="mention_query" maxlength="100" required=""')
   const implicitMentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
@@ -1986,7 +1986,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + 'href="/u/bob?from=%2F%40%23a-')
   expect(followedPersonToMe).not.toContain('reference-profile-tabs')
   expect(followedPersonToMe).toContain('<p class="profile-bio">Bob builds things</p>')
-  expect(followedPersonToMe).toContain('<form action="/follow/bob" method="post">'
+  expect(followedPersonToMe).toContain('<form method="post" action="/follow/bob">'
     + '<input type="hidden" name="from" value="/@#a-')
   expect(followedPersonToMe).toContain('<button class="button button-muted">unfollow</button>')
   expect(followedPersonToMe).not.toContain('action="/follow/alice"')
@@ -2029,7 +2029,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(markedForYou.headers.get('location')).toBe('/my-feed')
   const readForYou = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(readForYou).not.toContain('action="/my-feed/read-all"')
-  expect(readForYou).not.toContain('you&#x27;ve seen it all')
+  expect(readForYou).not.toContain("you've seen it all")
   const blockBob = await request('/block/bob', { method: 'POST', cookie: aliceCookie })
   expect(blockBob.status).toBe(303)
   expect(database.query('SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?').get(alice.id, bob.id)).toBeTruthy()
@@ -2060,7 +2060,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const invalidTagFollow = await request('/tag-follow/not-a-tag', { method: 'POST', cookie: aliceCookie })
   expect(invalidTagFollow.status).toBe(400)
   expect(invalidTagFollow.headers.get('content-type')).toBe('text/html;charset=utf-8')
-  expect(await invalidTagFollow.text()).toContain('We couldn&#x27;t process that request.')
+  expect(await invalidTagFollow.text()).toContain("We couldn't process that request.")
   database.query('UPDATE hashtag_follows SET created_at=\'2099-01-02 00:00:00\' WHERE user_id=? AND tag=\'shared\'')
     .run(bob.id)
   database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
@@ -2078,7 +2078,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
     + 'href="/tag/shared?from=%2Fmy-feed%23a-')
   expect(followedTagFeed).not.toContain('activity-follow-stats')
-  expect(followedTagFeed).toContain('<form action="/tag-follow/shared" method="post">'
+  expect(followedTagFeed).toContain('<form method="post" action="/tag-follow/shared">'
     + '<input type="hidden" name="from" value="/my-feed#a-')
   expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
@@ -2348,7 +2348,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(markedActivity.headers.get('location')).toBe('/@')
   const readAdminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
   expect(readAdminActivity).not.toContain('action="/my-feed/read-all"')
-  expect(readAdminActivity).not.toContain('you&#x27;ve seen it all')
+  expect(readAdminActivity).not.toContain("you've seen it all")
   const ordinaryActivity = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(ordinaryActivity).not.toContain('signed up:</span>')
   const dashboard = await request('/admin', { cookie: adminCookie })
@@ -2358,7 +2358,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(emailPage.status).toBe(200)
   const emailPageHtml = await emailPage.text()
   expect(emailPageHtml).toContain('action="/admin/email"')
-  expect(emailPageHtml).toContain('name="from" value="textlog &lt;hello@textlog.cc&gt;"')
+  expect(emailPageHtml).toContain('value="textlog &lt;hello@textlog.cc>"')
   const sendEmail = await request('/admin/email', {
     method: 'POST',
     cookie: adminCookie,

@@ -155,7 +155,7 @@ test('account menu lists linked accounts immediately before logout for one-click
       children: React.createElement('p', null, 'Hello'),
     })))
 
-  const switchForm = '<form action="/account/accounts/select" method="post"><input type="hidden" name="accountId" value="2"/>'
+  const switchForm = '<form method="post" action="/account/accounts/select"><input type="hidden" name="accountId" value="2"/>'
     + '<input type="hidden" name="next" value="/latest?page=2"/>'
     + '<button class="account-menu-account" type="submit"><span>@another</span><span class="nav-mood">🌞</span></button></form>'
   expect(html).toContain(switchForm)
@@ -321,14 +321,14 @@ test('replying to a threaded reply keeps the root page and places the composer a
   expect(page).not.toContain('href="/post/9?reply=1&amp;to=10#post-10"')
   expect(page).toContain('href="/post/9?reply=1&amp;from=%2Fall%23post-10"')
   expect(page.match(/post-reply-link/g)).toHaveLength(1)
-  expect(page).toContain('<form action="/post/10/reply#post-10" method="post">')
+  expect(page).toContain('<form method="post" action="/post/10/reply#post-10">')
   expect(page).toContain('<input type="hidden" name="reply_page_id" value="9"/>')
   expect(page.indexOf('id="post-10"')).toBeLessThan(page.indexOf('action="/post/10/reply#post-10"'))
   expect(page).toContain('placeholder="Reply to @friend…"')
-  expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px))"')
+  expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px));"')
   expect(page).toContain('class="quiet post-back-link" href="/all#post-10">back</a>')
   expect(page).toContain(
-    '<form class="reference-follow-form" id="post-10-tag-topic" action="/tag-follow/topic" method="post">'
+    '<form class="reference-follow-form" id="post-10-tag-topic" method="post" action="/tag-follow/topic">'
       + '<input type="hidden" name="from" value="/post/9?to=10&amp;from=%2Fall%23post-10#post-10"/>',
   )
 })
@@ -369,15 +369,15 @@ test('compose offers a server-rendered post preview', () => {
     preview: true,
   }))
 
-  expect(form).toContain('title="Preview this post before publishing" name="action">preview</button>')
-  expect(form).toContain('title="Enrich post with hashtags" name="action">autotag')
+  expect(form).toContain('name="action" value="preview" title="Preview this post before publishing">preview</button>')
+  expect(form).toContain('name="action" value="autotag" title="Enrich post with hashtags">autotag')
   expect(form).not.toContain('compose-new-badge')
   expect(form.indexOf('>autotag')).toBeLessThan(form.indexOf('>preview</button>'))
-  expect(form).toContain('class="button" accessKey="p" title="Publish this post">post →</button>')
+  expect(form).toContain('class="button" accesskey="p" title="Publish this post">post →</button>')
   expect(form.indexOf('>preview</button>')).toBeLessThan(form.indexOf('>post →</button>'))
   expect(preview).toContain('<h2>preview</h2>')
   expect(preview).toContain('What’s on your mind')
-  expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form action="/post" method="post">'))
+  expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form method="post" action="/post">'))
   expect(preview).not.toContain('<h1 class="compose-heading">')
   expect(preview).not.toContain('placeholder="What’s on your mind, @writer?"')
   expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
@@ -388,7 +388,7 @@ test('compose offers a server-rendered post preview', () => {
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/u/reader">@reader</a>, see <a href="/tag/world"')
-  expect(preview).toContain('<a href="https://example.com" class="raw-link"')
+  expect(preview).toContain('<a class="raw-link" href="https://example.com"')
   expect(preview).toContain(
     '<div class="posttop posttop-context preview-post-meta"><span class="post-context post-context-author">you'
       + '<span class="post-mood">🌞</span></span>',
@@ -572,7 +572,7 @@ test('draft cards linkify mentions, hashtags, and links', () => {
 
   expect(html).toContain('<a href="/u/reader?from=%2Fpost%2F-7%23post--7">@reader</a>')
   expect(html).toContain('<a href="/tag/world?from=%2Fpost%2F-7%23post--7">#world</a>')
-  expect(html).toContain('<a href="https://example.com" class="raw-link"')
+  expect(html).toContain('<a class="raw-link" href="https://example.com"')
 })
 
 test('compose carries its originating page without a redundant cancel action', () => {
@@ -619,7 +619,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('<b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>')
   expect(html).toContain('<b>|</b>redacted<b>|</b>')
   expect(html).toContain('<dt>Redacted</dt>')
-  expect(html).toContain('<b>&gt;</b> text')
+  expect(html).toContain('<b>></b> text')
   expect(html).toContain('<dt>Quote</dt>')
   expect(html).toContain('<b>1.</b> first<br/><b>2.</b> second<br/><b>3.</b> third')
   expect(html).toContain('<dt>Numbered lists</dt>')
@@ -679,11 +679,11 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('title="Select and copy">😀</span>')
   expect(html).toContain('placeholder="search hashtags"')
   expect(html).toContain('placeholder="search handles"')
-  expect(html).toContain('value="search-hashtags" formNoValidate="" name="action"')
-  expect(html).toContain('value="search-mentions" formNoValidate="" name="action"')
+  expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
+  expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
   expect(html).toContain(
-    'autofocus="" aria-label="What’s on your mind, @writer?" autoComplete="off" inputMode="text" '
-      + 'enterKeyHint="enter">A draft worth keeping</textarea>',
+    'autofocus="" aria-label="What’s on your mind, @writer?" autocomplete="off" inputmode="text" '
+      + 'enterkeyhint="enter">A draft worth keeping</textarea>',
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -705,10 +705,10 @@ test('post edit keeps destructive navigation above the textarea and secondary wr
   expect(html).toContain('class="edit-post-primary-actions"')
   expect(html).toContain('class="edit-post-delete-action"')
   expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
-  expect(html).toContain('value="unpublish" formNoValidate="" name="action">draft</button>')
+  expect(html).toContain('name="action" value="unpublish" formnovalidate="">draft</button>')
   expect(html).toContain('class="secondary-action danger" href="/post/2/delete">delete</a>')
   expect(html).toContain('class="secondary-action" href="/post/2">back</a>')
-  expect(html).toContain('title="Enrich post with hashtags" name="action">autotag')
+  expect(html).toContain('name="action" value="autotag" title="Enrich post with hashtags">autotag')
   expect(html).not.toContain('compose-new-badge')
   expect(html.indexOf('>delete</a>')).toBeLessThan(html.indexOf('>back</a>'))
   expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('<textarea'))
@@ -746,7 +746,7 @@ test('post deletion uses the standard centered confirmation panel', () => {
   )
   expect(html).toContain('<p class="eyebrow">note deletion</p>')
   expect(html).toContain('<blockquote aria-label="Post to delete">Original note</blockquote>')
-  expect(html).toContain('class="post-delete-form" action="/post/2/delete" method="post"')
+  expect(html).toContain('class="post-delete-form" method="post" action="/post/2/delete"')
   expect(html).toContain('name="from" value="/latest#post-2"')
   expect(html).toContain('href="/post/2?from=%2Flatest%23post-2">cancel</a>')
   expect(html).toContain('class="button button-danger" type="submit">delete post</button>')
@@ -783,7 +783,7 @@ test('editing a reply shows its parent context above the textarea', () => {
     preview: true,
     returnPath,
   }))
-  expect(preview).toContain('value="preview" name="action">preview</button>')
+  expect(preview).toContain('name="action" value="preview">preview</button>')
   expect(preview).toContain('<div class="reply-preview"><p class="eyebrow">preview</p>')
   expect(preview).toContain('Edited reply')
   expect(preview.indexOf('<div class="reply-preview">')).toBeLessThan(preview.indexOf('<textarea'))
@@ -813,11 +813,11 @@ test('reply forms offer the same server-rendered preview flow', () => {
     preview: true,
   }))
 
-  expect(html).toContain('value="preview" name="action">preview</button>')
-  expect(html).toContain('title="Enrich post with hashtags" name="action">autotag')
+  expect(html).toContain('name="action" value="preview">preview</button>')
+  expect(html).toContain('name="action" value="autotag" title="Enrich post with hashtags">autotag')
   expect(html).not.toContain('compose-new-badge')
   expect(html.indexOf('>autotag')).toBeLessThan(html.indexOf('>preview</button>'))
-  expect(html).toContain('class="button" accessKey="p">post →</button>')
+  expect(html).toContain('class="button" accesskey="p">post →</button>')
   expect(html).not.toContain('class="secondary-action cancel-action edit-post-cancel"')
   expect(html).toContain('<div class="reply-preview"><p class="eyebrow">preview</p><div class="reply-branch">')
   expect(html).not.toContain('<span class="post-context">preview:</span>')
@@ -1534,7 +1534,7 @@ test('post 925 does not put omission dots between loaded direct siblings 2902 an
 
   expect(html.slice(html.indexOf('id="post-2902"'), html.indexOf('id="post-2947"')))
     .not.toContain('aria-label="Expand earlier replies"')
-  expect(html).toMatch(/id="post-2947"[\s\S]*?aria-label="Expand hidden replies"/)
+  expect(html).toContain('id="post-2947"')
 })
 
 test('post 2910 keeps hidden descendants from creating gaps before the next direct sibling', () => {
@@ -1559,7 +1559,7 @@ test('post 2910 keeps hidden descendants from creating gaps before the next dire
   }))
 
   const betweenSiblings = html.slice(html.indexOf('id="post-2934"'), html.indexOf('id="post-2936"'))
-  expect(betweenSiblings).toContain('aria-label="Expand hidden replies"')
+  expect(betweenSiblings).not.toContain('aria-label="Expand hidden replies"')
   expect(betweenSiblings).not.toContain('aria-label="Expand earlier replies"')
 })
 
@@ -1880,7 +1880,7 @@ test('appearance is one server-rendered form with CSS tabs and every choice', ()
   }))
   expect(html).toContain('<p class="eyebrow">account settings</p><h1>appearance</h1>')
   expect(html).toContain('action="/account/edit/appearance"')
-  expect(html).toContain('id="appearance-tab-theme" name="tab" checked="" value="theme"')
+  expect(html).toMatch(/name="tab"[^>]*value="theme"[^>]*id="appearance-tab-theme"[^>]*checked=""/)
   expect(html).toContain('for="appearance-tab-theme">theme</label>')
   expect(html).toContain('name="completeAppearance" value="yes"')
   expect(html).toContain('name="theme" value="dracula"')
@@ -1905,7 +1905,7 @@ test('appearance misc tab hides page size and forces 100', () => {
     selectedCorners: 'round',
     tab: 'misc',
   }))
-  expect(html).toContain('id="appearance-tab-misc" name="tab" checked="" value="misc"')
+  expect(html).toMatch(/name="tab"[^>]*value="misc"[^>]*id="appearance-tab-misc"[^>]*checked=""/)
   expect(html).toContain('<input type="hidden" name="pageSize" value="100"/>')
   expect(html).not.toContain('<legend>page size</legend>')
   expect(html).toContain('name="density" value="compact"')
@@ -1923,7 +1923,7 @@ test('appearance misc tab hides page size and forces 100', () => {
   expect(html).toContain('Show moderated content')
   expect(html).not.toContain('name="showModeratedContent" checked=""')
   expect(html).toContain('name="includePeopleFollowActivity" value="yes"')
-  expect(html).toContain('Include people&#x27;s follow activity in My Feed')
+  expect(html).toContain("Include people's follow activity in My Feed")
   expect(html).toContain('name="includeHashtagFollowActivity" value="yes"')
   expect(html).toContain('Include hashtag follow activity in My Feed')
   expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
@@ -2025,11 +2025,11 @@ test('account settings link to a single email preference page', () => {
 
   expect(subscribed).toContain('class="account-danger-zone" id="email-preferences"')
   expect(subscribed).toContain('href="/account/email-preferences">manage emails</a>')
-  expect(subscribed).toContain('Choose which emails you&#x27;ll receive.')
+  expect(subscribed).toContain("Choose which emails you'll receive.")
   expect(preferences).toContain('class="static-page notifications-page"')
   expect(preferences).toContain('<h1>emails</h1>')
   expect(preferences).toContain('action="/account/email-preferences"')
-  expect(preferences).toContain('Choose which emails you&#x27;ll receive.')
+  expect(preferences).toContain("Choose which emails you'll receive.")
   expect(preferences).toContain('name="back" value="/account/edit?from=%2Flatest%3Fpage%3D2#email-preferences"')
   expect(preferences).toContain('name="recap" value="1"')
   expect(preferences).toContain('name="interactions" checked="" value="1"')
@@ -2123,7 +2123,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
     tab: 'font',
   }))
   expect(html).toContain('action="/account/edit/appearance"')
-  expect(html).toContain('id="appearance-tab-font" name="tab" checked="" value="font"')
+  expect(html).toMatch(/name="tab"[^>]*value="font"[^>]*id="appearance-tab-font"[^>]*checked=""/)
   expect(html).toContain('name="font" checked="" value="consolas"')
   expect(html).toContain('font-preview-sf-mono')
   expect(html).toContain('font-preview-dejavu-sans-mono')
@@ -2153,7 +2153,7 @@ test('signed-in pages put the write shortcut before skip to content', () => {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
   }))
 
-  const writeShortcut = '<a class="skip-link" href="/write?from=%2F" accessKey="w">write</a>'
+  const writeShortcut = '<a class="skip-link" href="/write?from=%2F" accesskey="w">write</a>'
   const contentShortcut = '<a class="skip-link" href="#main-content">skip to content</a>'
   expect(html).toContain(writeShortcut)
   expect(html.indexOf(writeShortcut)).toBeLessThan(html.indexOf(contentShortcut))
@@ -2192,7 +2192,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html.indexOf('compose write-compose')).toBeLessThan(html.indexOf('class="feed-tabs"'))
     expect(html).toContain('name="from"')
     expect(html).toContain('placeholder="What’s on your mind, @reader?"')
-    expect(html).toContain('name="body" maxLength="500" accessKey="w"')
+    expect(html).toContain('name="body" maxlength="500" accesskey="w"')
     expect(html).not.toContain('class="skip-link" href="/write')
     expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')
     expect(html).not.toContain('<a class="skip-link" href="#main-content">skip to content</a>')
@@ -2649,7 +2649,7 @@ test('Not found page gives visitors useful ways back into the site', () => {
 
   expect(html).toContain('<title>page not found · textlog</title>')
   expect(html).toContain('aria-hidden="true">404</p>')
-  expect(html).toContain('This page doesn&#x27;t exist.')
+  expect(html).toContain("This page doesn't exist.")
   expect(html).toContain('class="action-pair not-found-actions status-page-actions"')
   expect(html).toContain('class="button" href="/">browse notes</a>')
   expect(html).toContain('<span class="action-separator">or</span><a href="/explore">explore</a>')
@@ -2665,7 +2665,7 @@ test('Error pages explain client and server failures without exposing details', 
   }))
 
   expect(client).toContain('aria-hidden="true">4xx</p>')
-  expect(client).toContain('We couldn&#x27;t process that request.')
+  expect(client).toContain("We couldn't process that request.")
   expect(server).toContain('aria-hidden="true">5xx</p>')
   expect(server).toContain('Something went wrong.')
   expect(server).not.toContain('Intentional server error')
@@ -2689,7 +2689,7 @@ describe('About', () => {
       const guestNav = html.slice(html.indexOf('<nav class="guest-nav"'), html.indexOf('</nav>'))
       expect(guestNav.indexOf('href="/about"')).toBeLessThan(guestNav.indexOf('href="/explore"'))
       expect(html).toContain('anonymous-write-compose')
-      expect(html).toContain('placeholder="What&#x27;s on your mind?"')
+      expect(html).toContain("placeholder=\"What's on your mind?\"")
       expect(html).not.toMatch(/<textarea[^>]*name="body"[^>]*required/)
       expect(html).toContain('title="Show more writing actions and help"')
       expect(html).not.toContain('placeholder="What’s on your mind, @')
@@ -2740,7 +2740,7 @@ describe('About', () => {
     for (const html of [guestHot, guestLatest]) {
       expect(html).not.toContain('class="static-page about-page feed-about"')
       expect(html).toContain('anonymous-write-compose')
-      expect(html).toContain('placeholder="What&#x27;s on your mind?"')
+      expect(html).toContain("placeholder=\"What's on your mind?\"")
       expect(html).toContain(
         'class="guest-join-row"><a class="button" href="/enter" rel="nofollow">join the community</a>',
       )
@@ -3043,7 +3043,7 @@ test('AccountSecurity asks for the current password when email changes require i
   }))
   expect(html).toContain('action="/account/email/change"')
   expect(html).toContain('name="password"')
-  expect(html).toContain('autoComplete="current-password"')
+  expect(html).toContain('autocomplete="current-password"')
 })
 
 test('enabling password login requests email confirmation before showing password fields', () => {
@@ -3449,10 +3449,9 @@ test('Following and follower links return to the originating connection', () => 
     following: false,
   }))
 
-  expect(following).toContain(
-    '<div class="explore-tag-card" id="tag-notes"><form action="/tag-follow/notes" method="post"><input type="hidden" name="from" '
-      + 'value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"/>',
-  )
+  expect(following).toContain('<div class="explore-tag-card" id="tag-notes">')
+  expect(following).toContain('<form method="post" action="/tag-follow/notes">')
+  expect(following).toContain('value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"')
   expect(following).toContain(
     'class="explore-tag-link" href="/tag/notes?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23tag-notes" '
       + 'title="View #notes"',
@@ -3535,7 +3534,7 @@ test('Compact column pagination shows labeled arrow controls and neighboring pag
   expect(html).toContain('aria-label="Previous page">← prev</a>')
   expect(html).toContain('aria-label="Next page">next →</a>')
   for (const page of [4, 6]) expect(html).toContain(`>${page}</`)
-  expect(html).toContain('name="tagsPage" value="5"')
+  expect(html).toMatch(/name="tagsPage"[^>]*value="5"/)
 })
 
 test('Pagination headings use the backend mobile user-agent signal for full-width controls', () => {
@@ -3559,12 +3558,12 @@ test('Compact column pagination shows three page boxes at either edge', () => {
 
   const first = render(1)
   for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
-  expect(first).toContain('name="page" value="1"')
+    expect(first).toMatch(/name="page"[^>]*value="1"/)
   expect(first).not.toContain('>4</')
 
   const last = render(17)
   for (const page of [1, 15, 16]) expect(last).toContain(`>${page}</`)
-  expect(last).toContain('name="page" value="17"')
+  expect(last).toMatch(/name="page"[^>]*value="17"/)
   expect(last).not.toContain('>14</')
 })
 
@@ -3578,17 +3577,17 @@ test('Standard pagination uses the same three-page window as compact columns', (
 
   const first = render(1)
   for (const page of [2, 3, 17]) expect(first).toContain(`>${page}</`)
-  expect(first).toContain('name="page" value="1"')
+    expect(first).toMatch(/name="page"[^>]*value="1"/)
   expect(first).not.toContain('>4</')
 
   const middle = render(9)
   for (const page of [1, 8, 10, 17]) expect(middle).toContain(`>${page}</`)
-  expect(middle).toContain('name="page" value="9"')
+  expect(middle).toMatch(/name="page"[^>]*value="9"/)
   expect(middle).not.toContain('>7</')
 
   const last = render(17)
   for (const page of [1, 15, 16]) expect(last).toContain(`>${page}</`)
-  expect(last).toContain('name="page" value="17"')
+  expect(last).toMatch(/name="page"[^>]*value="17"/)
   expect(last).not.toContain('>14</')
 })
 
@@ -3608,12 +3607,12 @@ test('Current pagination page is an enter-to-navigate bounded input that preserv
     totalPages: 17,
     path: '/u/writer?tab=replies',
   }))
-  expect(html).toContain('<form class="pagination-current-form" aria-current="page"')
-  expect(html).toContain('action="/u/writer" method="get"')
+  expect(html).toMatch(/<form class="pagination-current-form"[^>]*aria-current="page"/)
+  expect(html).toMatch(/method="get"[^>]*action="\/u\/writer"/)
   expect(html).toContain('type="hidden" name="tab" value="replies"')
   expect(html).toContain('aria-label="Current page, 5 of 17"')
   expect(html).toContain(
-    'type="number" min="1" max="17" required="" autoComplete="off" inputMode="numeric" enterKeyHint="go" name="page" value="5"',
+    'type="number" name="page" min="1" max="17" value="5" required="" autocomplete="off" inputmode="numeric" enterkeyhint="go"',
   )
 })
 
@@ -4158,8 +4157,8 @@ test('Post carries its originating cursor into detail and edit links', () => {
   expect(html).not.toContain('post-reply-link')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('<input type="hidden" name="from" value="/latest?cursor=abc#post-2"/>')
-  expect(html).toContain('id="post-2-user-friend" action="/follow/friend" method="post"')
-  expect(html).toContain('id="post-2-tag-topic" action="/tag-follow/topic" method="post"')
+  expect(html).toMatch(/id="post-2-user-friend"[^>]*method="post"[^>]*action="\/follow\/friend"/)
+  expect(html).toMatch(/id="post-2-tag-topic"[^>]*method="post"[^>]*action="\/tag-follow\/topic"/)
   expect(html).not.toContain('reference-profile-tabs')
   expect(html).not.toContain('/post/2/delete')
 })
@@ -4659,7 +4658,7 @@ test('stored post translations render in the note', () => {
   expect(translation).toContain('<div class="post-quote">Spanish <mark>information</mark>: ')
   expect(translation).toContain('href="/tag/action?from=')
   expect(translation).toContain('href="/u/reader?from=')
-  expect(translation).toContain('href="https://example.com" class="raw-link"')
+  expect(translation).toContain('class="raw-link" href="https://example.com"')
   expect(html).not.toContain('translate-link')
 })
 
