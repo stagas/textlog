@@ -238,7 +238,15 @@ export function materializedFeedTemplate(html: string) {
       new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
       `$1{{${name}-count}}$2`,
     )
-  return token(token(token(html, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all', 'latest')
+  const accountTokens = html.replace(
+    /(<form\b[^>]*action="\/account\/accounts\/select"[^>]*>[\s\S]*?<input\b[^>]*name="accountId"\s+value="(\d+)"[^>]*>[\s\S]*?<button\b[^>]*class="account-menu-account"[^>]*>)(?:<span class="unread-dot"\s+aria-label="unread activity"><\/span>)?/g,
+    (_match, prefix: string, accountId: string) => `${prefix}{{account-${accountId}-unread}}`,
+  ).replace(
+    /(<(?:summary|a)\b[^>]*class="account-menu-handle"[^>]*>)(?:\s*<span class="unread-dot"\s+aria-label="unread account activity"><\/span>)?/,
+    '$1{{linked-account-unread}}',
+  )
+  return token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all',
+    'latest')
     .replace(/<a href="\/drafts">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
       '{{drafts-link}}')
 }
@@ -374,7 +382,7 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
     totalPages: approximatePages }
 }
 
-function hydrateMaterializedFeed(html: string, database: Database, viewerId: number) {
+export function hydrateMaterializedFeed(html: string, database: Database, viewerId: number) {
   if (viewerId < 0 || !html.includes('{{')) return html
   const forYou = personalizedUnreadCount(database, viewerId, false)
   const toMe = personalizedUnreadCount(database, viewerId, true)
@@ -382,7 +390,20 @@ function hydrateMaterializedFeed(html: string, database: Database, viewerId: num
   const drafts = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(viewerId) as {
     count: number
   }).count
-  return hydrateMaterializedFeedCounts(html, { forYou, toMe, latest, drafts })
+  const accountUnread = new Map<number, boolean>()
+  for (const match of html.matchAll(/\{\{account-(\d+)-unread\}\}/g)) {
+    const accountId = Number(match[1])
+    if (!accountUnread.has(accountId)) {
+      accountUnread.set(accountId, hasUnreadForYou(accountId, database) || hasUnreadToMe(accountId, database))
+    }
+  }
+  const unreadDot = '<span class="unread-dot" aria-label="unread activity"></span>'
+  const hydrated = hydrateMaterializedFeedCounts(html, { forYou, toMe, latest, drafts })
+    .replace(/\{\{account-(\d+)-unread\}\}/g,
+      (_match, accountId: string) => accountUnread.get(Number(accountId)) ? unreadDot : '')
+  return hydrated.replace('{{linked-account-unread}}', [...accountUnread.values()].some(Boolean)
+    ? '<span class="unread-dot" aria-label="unread account activity"></span>'
+    : '')
 }
 
 function hasPostPushJobs(database: Database) {

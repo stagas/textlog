@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { accountChoices, accountForEmail, createAccountGroup, detachAccountFromGroup, isPrimaryAccount,
   selectAccount } from './account-groups'
-import { executeDatabaseDomain } from './database-domain'
+import { executeDatabaseDomain, hydrateMaterializedFeed, materializedFeedTemplate } from './database-domain'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead } from './for-you-state'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
@@ -61,6 +61,13 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
   expect(before.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: true }),
   ])
+  const cachedMenu = materializedFeedTemplate(`<a class="account-menu-handle" href="/u/primary">
+    <span class="unread-dot" aria-label="unread account activity"></span>@primary</a>
+    <form method="post" action="/account/accounts/select"><input type="hidden" name="accountId"
+    value="${persona.id}"/><button class="account-menu-account" type="submit"><span class="unread-dot"
+    aria-label="unread activity"></span><span>@persona</span></button></form>`)
+  expect(hydrateMaterializedFeed(cachedMenu, database, primary.id))
+    .toContain('aria-label="unread account activity"')
 
   await executeDatabaseDomain(database, 'account.select', {
     userId: primary.id, targetId: persona.id, sessionHash: sessionHash(token),
@@ -85,6 +92,9 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
   expect(afterReading.sessionUser?.linked_accounts).toEqual([
     expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
+  expect(hydrateMaterializedFeed(cachedMenu, database, primary.id)).not.toContain('aria-label="unread activity"')
+  expect(hydrateMaterializedFeed(cachedMenu, database, primary.id))
+    .not.toContain('aria-label="unread account activity"')
 
   database.query(`INSERT INTO follows(follower_id,following_id,created_at)
     VALUES(?,?,datetime('now','+1 second'))`).run(actor.id, persona.id)

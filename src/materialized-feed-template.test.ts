@@ -41,6 +41,22 @@ test('materialized feed templates add a drafts link when a first draft is create
     .toContain('<a href="/drafts">drafts</a>')
 })
 
+test('materialized feed templates refresh linked-account unread dots', () => {
+  const html = '<a class="account-menu-handle" href="/u/primary">'
+    + '<span class="unread-dot" aria-label="unread account activity"></span>@primary</a>'
+    + '<form method="post" action="/account/accounts/select">'
+    + '<input type="hidden" name="accountId" value="2"/><input type="hidden" name="next" value="/my-feed"/>'
+    + '<button class="account-menu-account" type="submit">'
+    + '<span class="unread-dot" aria-label="unread activity"></span><span>@persona</span></button></form>'
+
+  for (const template of [materializedFeedTemplate(html), materializedBody(html, 1)]) {
+    expect(template).toContain('{{linked-account-unread}}')
+    expect(template).toContain('{{account-2-unread}}')
+    expect(template).not.toContain('aria-label="unread activity"')
+    expect(template).not.toContain('aria-label="unread account activity"')
+  }
+})
+
 test('materialized feed templates replace capped counters', () => {
   const html = '<a href="/@">@<span class="to-me-count">99+</span></a>'
     + '<a href="/my-feed">my feed<span class="to-me-count">99+</span></a>'
