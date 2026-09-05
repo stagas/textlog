@@ -2554,6 +2554,8 @@ test('API documentation is linked from the footer and describes the firehose', (
   expect(html).toContain('data-method="GET" data-auth="true"><span class="api-auth-dot"')
   expect(html).toContain('class="api-path">/activities/my-feed</span>')
   expect(html).toContain('class="api-path">/feeds/all/conversations</span>')
+  expect(html).toContain('class="api-path">/feeds/new</span>')
+  expect(html).toContain('class="api-path">/feeds/new/conversations</span>')
   expect(html).toContain('class="api-path">/feeds/hot/conversations</span>')
   expect(html).toContain('class="api-path">/activities/my-feed/conversations</span>')
   expect(html).toContain('class="api-path">/activities/@/conversations</span>')

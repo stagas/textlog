@@ -85,6 +85,8 @@ const endpoints: ReadonlyArray<readonly [string, string, ReactNode, boolean?]> =
   ['GET', '/feeds/all/conversations', 'Get the all feed grouped and classified like the web app.'],
   ['POST', '/feeds/all/read', 'Mark selected all-feed posts as read using post_ids.', true],
   ['POST', '/feeds/all/read-all', 'Mark every visible all-feed post as read.', true],
+  ['GET', '/feeds/new', 'Get the newest top-level public posts.'],
+  ['GET', '/feeds/new/conversations', 'Get the new feed grouped and classified like the web app.'],
   ['GET', '/feeds/hot', 'Get posts ranked by recent activity and replies.'],
   ['GET', '/feeds/hot/conversations', 'Get the hot feed grouped and classified like the web app.'],
   ['GET', '/activities/my-feed', 'Get activity from followed people and tags, plus activity directed to you.', true],
