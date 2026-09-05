@@ -172,6 +172,23 @@ test('admin invariants preserve tags that must not be singularized', async () =>
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'status' })).toBe('status')
 })
 
+test('adding an invariant restores existing tags from their authored spelling', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  const post = createPost(database, 1, '#emacs', null, false)
+  expect('id' in post).toBeTrue()
+  if (!('id' in post)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'emac' })
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'emacs' })
+
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'emacs' })
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'emacs' })).toBe('emacs')
+})
+
 test('admin invariants bypass WordNet normalization', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')

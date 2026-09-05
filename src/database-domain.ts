@@ -222,7 +222,9 @@ function reindexPostHashtags(database: Database) {
   const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
   database.run('DELETE FROM post_hashtags')
   for (const post of posts) {
-    for (const tag of extractHashtags(post.body)) insert.run(post.id, canonicalTag(database, tag))
+    for (const { authored } of extractAuthoredHashtags(post.body)) {
+      insert.run(post.id, canonicalTag(database, authored))
+    }
   }
 }
 
