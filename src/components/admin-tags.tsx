@@ -40,7 +40,9 @@ export function AdminTags({ user, groups, displayNames, invariants, error }: {
             invariant tag
             <input className="form-control" name="tag" required maxLength={280} placeholder="news" autoComplete="off" />
           </label>
-          <small>Tags listed here keep their trailing s and are never singularized.</small>
+          <small className="admin-tag-display-hint">
+            Tags listed here keep their trailing s and are never singularized.
+          </small>
           <FormActions primary={<button className="button">add invariant →</button>} />
         </form>
         <div className="admin-tag-display-list">
