@@ -56,15 +56,17 @@ test('keeps appearance variants separate without storing the full cookie', async
   const { primary, cache } = databases()
   let renders = 0
   const render = () => new Response(`<p>${++renders}</p>`)
-  const light = new Request('https://textlog.test/latest', { headers: { cookie: 'appearance=light.sage; feed=hot' } })
+  const light = new Request('https://textlog.test/latest', {
+    headers: { cookie: 'appearance=light.sage; corners=round; feed=hot' },
+  })
   const dark = new Request('https://textlog.test/latest', { headers: { cookie: 'appearance=dark.purple; feed=hot' } })
 
   await materializedFeedPage(primary, light, 'latest', 7, render, cache)
   await materializedFeedPage(primary, dark, 'latest', 7, render, cache)
   expect(renders).toBe(2)
   expect(cache.query('SELECT variant FROM materialized_feed_pages_v2 ORDER BY variant').all()).toEqual([
-    { variant: '3|dark.purple|||||' },
-    { variant: '3|light.sage|||||' },
+    { variant: '3|dark.purple||||||' },
+    { variant: '3|light.sage|||||round|' },
   ])
 })
 

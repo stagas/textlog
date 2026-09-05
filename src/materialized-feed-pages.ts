@@ -1,10 +1,12 @@
 import type { Database } from 'bun:sqlite'
+import { activeRequest } from './theme'
 
 export const MAX_MATERIALIZED_PAGES = 1_024
 
 function appearanceVariant(request: Request) {
+  request = activeRequest(request)
   const cookie = request.headers.get('cookie') || ''
-  const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'notification_device']
+  const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'corners', 'notification_device']
   return names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
 }
 
