@@ -40,6 +40,8 @@
     "nodemailer": "^9.0.5",
     "preact": "^10.27.2",
     "preact-render-to-string": "^6.6.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "react-icons": "^5.7.0",
     "sanitize-html": "^2.17.7",
     "svg-captcha": "^1.4.0",
@@ -49,6 +51,8 @@
     "wordnet-db": "^3.1.14"
   },
   "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@types/nodemailer": "^8.0.1",
     "@types/sanitize-html": "^2.16.1",
     "@types/web-push": "^3.6.4",

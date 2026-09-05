@@ -6,6 +6,9 @@ import {
   FaWhatsapp,
   FaXTwitter,
 } from 'react-icons/fa6'
+import React from 'react'
+import type { IconType } from 'react-icons'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 const shareUrl = 'https://textlog.cc'
 const shareMessage = 'Come join me on textlog — a quieter place to write, share, and connect.'
@@ -22,6 +25,10 @@ const socialShares = [
   { name: 'X', Icon: FaXTwitter, href: `https://x.com/intent/post?text=${encodedMessage}&url=${encodedUrl}` },
 ]
 
+function renderedIcon(Icon: IconType) {
+  return { __html: renderToStaticMarkup(React.createElement(Icon, { 'aria-hidden': 'true' })) }
+}
+
 export function InviteShare() {
   return (
     <section className="invite-share" aria-labelledby="invite-share-heading">
@@ -31,7 +38,8 @@ export function InviteShare() {
           <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Share textlog on ${name}`} title={name}
             key={name}
           >
-            <Icon aria-hidden="true" />
+            <span className="invite-share-icon" aria-hidden="true"
+              dangerouslySetInnerHTML={renderedIcon(Icon)} />
           </a>
         ))}
       </div>

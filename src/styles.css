@@ -5996,7 +5996,13 @@ form.report-panel {
   text-decoration: none;
 }
 .invite-share-links > a:hover { color: var(--accent); border-color: var(--accent); }
-.invite-share-links svg { width: 1.15rem; height: 1.15rem; }
+.invite-share-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+.invite-share-links svg { display: block; width: 1.15rem; height: 1.15rem; }
 .invite-share-copy {
   margin: var(--space-1) 0 0;
   padding: var(--space-2);

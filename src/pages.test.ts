@@ -3118,6 +3118,7 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/edit/appearance?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('change appearance')
   expect(html).toContain('<span class="emoji" aria-hidden="true">👋</span> invite friends')
+  expect(html.match(/class="invite-share-icon"[^>]*><svg/g)?.length).toBe(6)
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="download-data"'))
