@@ -94,6 +94,21 @@ export function registerInteractionsRoutes(app: Hono) {
       : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${postId}`)))
   })
 
+  app.post('/post/:id/mute', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const postId = Number(c.req.param('id'))
+    if (!Number.isInteger(postId) || postId < 1) return c.text('Not found', 404)
+    const f = await form(c.req.raw)
+    const result = await databaseService().call('interactions.togglePostMute', { userId: user.id, postId })
+    if (result.status === 'not_found') return c.text('Not found', 404)
+    if (result.status === 'forbidden') return c.text('Forbidden', 403)
+    clearAnonymousPostPageCache()
+    return redirect(instantScrollPath(f.from
+      ? safeNext(f.from)
+      : safeRefererPath(c.req.header('referer'), c.req.url, `/post/${postId}`)))
+  })
+
   app.post('/follow/:handle', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')

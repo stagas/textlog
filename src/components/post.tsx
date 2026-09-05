@@ -956,7 +956,7 @@ export function Post({
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref
-        || bookmarkAction)
+        || bookmarkAction || showOwnerActions && user?.id === p.user_id)
         && (
           <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
             {showReplyAction && !p.thread_locked && (
@@ -975,7 +975,7 @@ export function Post({
                   </a>
                 )
             )}
-            {(canModerate || reportHref || bookmarkAction) && (
+            {(canModerate || reportHref || bookmarkAction || showOwnerActions && user?.id === p.user_id) && (
               <span className="post-actions">
                 {canModerate && (
                   <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -986,6 +986,15 @@ export function Post({
                   <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>
                     report
                   </a>
+                )}
+                {showOwnerActions && user?.id === p.user_id && (
+                  <form method="post" action={`/post/${p.id}/mute`}>
+                    <input type="hidden" name="from" value={detailPath} />
+                    <button className="quiet bookmark-link" type="submit"
+                      aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}>
+                      {p.viewer_muted ? 'unmute' : 'mute'}
+                    </button>
+                  </form>
                 )}
                 {bookmarkAction && (
                   <form method="post" action={`/post/${p.id}/bookmark`}>
@@ -1113,7 +1122,8 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction) && (
+      {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction
+        || showOwnerActions && user?.id === p.user_id) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {resolvedContinuationHref && (
             continuationLabel === '…'
@@ -1124,7 +1134,7 @@ export function Post({
                 </a>
               )
           )}
-          {(canModerate || reportHref || bookmarkAction) && (
+          {(canModerate || reportHref || bookmarkAction || showOwnerActions && user?.id === p.user_id) && (
             <span className="post-actions">
               {canModerate && (
                 <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -1133,6 +1143,15 @@ export function Post({
               )}
               {reportHref && (
                 <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
+              )}
+              {showOwnerActions && user?.id === p.user_id && (
+                <form method="post" action={`/post/${p.id}/mute`}>
+                  <input type="hidden" name="from" value={detailPath} />
+                  <button className="quiet bookmark-link" type="submit"
+                    aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}>
+                    {p.viewer_muted ? 'unmute' : 'mute'}
+                  </button>
+                </form>
               )}
               {bookmarkAction && (
                 <form method="post" action={`/post/${p.id}/bookmark`}>

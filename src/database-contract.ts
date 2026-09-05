@@ -570,6 +570,8 @@ export type DatabaseDomainOperations = {
     output: { targetHandle: string; blocked: boolean } | null }
   'interactions.toggleBookmark': { input: { userId: number; postId: number };
     output: { status: 'not_found' } | { status: 'ready'; bookmarked: boolean } }
+  'interactions.togglePostMute': { input: { userId: number; postId: number };
+    output: { status: 'not_found' | 'forbidden' } | { status: 'ready'; muted: boolean } }
   'interactions.setBookmark': { input: { userId: number; postId: number; bookmarked: boolean };
     output: { status: 'not_found' } | { status: 'ready'; bookmarked: boolean } }
   'interactions.reportPost': { input: { userId: number; postId: number; reason: string | null };

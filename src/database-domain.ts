@@ -1692,6 +1692,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (viewerId >= 0) {
         post.viewer_bookmarked = !!database.query('SELECT 1 FROM post_bookmarks WHERE user_id=? AND post_id=?')
           .get(viewerId, id)
+        post.viewer_muted = !!database.query('SELECT 1 FROM muted_posts WHERE user_id=? AND post_id=?')
+          .get(viewerId, id)
       }
       if (post.parent_id && !post.parent) {
         post.parent = { id: post.parent_id, body: '', translation: null, created_at: found.created_at, deleted_at: null,
@@ -3027,6 +3029,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=ps.user_id) OR (b.blocker_id=ps.user_id AND b.blocked_id=?))
         AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=? AND bh.user_id=ps.user_id)
+        AND NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+          SELECT id,parent_id FROM posts WHERE id=? UNION ALL
+          SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+        ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+          WHERE muted.user_id=ps.user_id)
         AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
           OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
@@ -3045,7 +3052,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(SELECT 1 FROM post_mentions pm
             WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
         ORDER BY ps.endpoint,isReply DESC,isMention DESC,ps.user_id`)
-        .all(actorId, postId, actorId, postId, actorId, actorId, postId, actorId, actorId, actorId, postId, postId,
+        .all(actorId, postId, actorId, postId, actorId, actorId, postId, postId, actorId, actorId, actorId, postId, postId,
           postId, actorId, postId, actorId, postId)
       return { post: row, subscriptions } as DatabaseDomainOutput<K>
     }
@@ -3892,6 +3899,17 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (existing) database.query('DELETE FROM post_bookmarks WHERE user_id=? AND post_id=?').run(userId, postId)
       else database.query('INSERT INTO post_bookmarks(user_id,post_id) VALUES(?,?)').run(userId, postId)
       return { status: 'ready', bookmarked: !existing } as DatabaseDomainOutput<K>
+    }
+    case 'interactions.togglePostMute': {
+      const { userId, postId } = input as DatabaseDomainInput<'interactions.togglePostMute'>
+      const post = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
+        .get(postId) as { user_id: number } | null
+      if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (post.user_id !== userId) return { status: 'forbidden' } as DatabaseDomainOutput<K>
+      const existing = database.query('SELECT 1 FROM muted_posts WHERE user_id=? AND post_id=?').get(userId, postId)
+      if (existing) database.query('DELETE FROM muted_posts WHERE user_id=? AND post_id=?').run(userId, postId)
+      else database.query('INSERT INTO muted_posts(user_id,post_id) VALUES(?,?)').run(userId, postId)
+      return { status: 'ready', muted: !existing } as DatabaseDomainOutput<K>
     }
     case 'interactions.setBookmark': {
       const { userId, postId, bookmarked } = input as DatabaseDomainInput<'interactions.setBookmark'>

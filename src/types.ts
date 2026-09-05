@@ -127,6 +127,7 @@ export type PostView = PostRow & {
   feed_branch_root?: boolean
   feed_collapsed_preview?: boolean
   viewer_bookmarked?: boolean
+  viewer_muted?: boolean
   /** This post gates its replies until the viewer participates in the thread. */
   replies_hidden?: boolean
   /** This post is a reply concealed by an ancestor's #HiddenReplies gate. */

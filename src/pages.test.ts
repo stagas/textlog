@@ -4123,10 +4123,16 @@ test('Post only renders owner actions when requested by the detail view', () => 
     },
   }
   const feedHtml = renderToStaticMarkup(React.createElement(Post, props))
-  const detailHtml = renderToStaticMarkup(React.createElement(Post, { ...props, showOwnerActions: true }))
+  const detailHtml = renderToStaticMarkup(React.createElement(Post, {
+    ...props, showOwnerActions: true, bookmarkAction: true,
+  }))
 
   expect(feedHtml).not.toContain('/post/2/edit')
+  expect(feedHtml).not.toContain('/post/2/mute')
   expect(feedHtml).not.toContain('/post/2/delete')
+  expect(detailHtml).toContain('class="postfoot"')
+  expect(detailHtml).toContain('class="quiet bookmark-link" type="submit" aria-label="mute replies to this post"')
+  expect(detailHtml.indexOf('action="/post/2/mute"')).toBeLessThan(detailHtml.indexOf('action="/post/2/bookmark"'))
   expect(detailHtml).toContain('/post/2/edit')
   expect(detailHtml).not.toContain('/post/2/delete')
 })

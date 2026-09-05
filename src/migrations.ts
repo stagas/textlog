@@ -3320,6 +3320,46 @@ export const migrations: Migration[] = [
         WHERE qualified_at IS NULL AND page_visits>0`)
     },
   },
+  {
+    version: 195,
+    name: 'muted_post_replies',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS muted_posts (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      CREATE INDEX IF NOT EXISTS muted_posts_post ON muted_posts(post_id,user_id);
+      CREATE TRIGGER IF NOT EXISTS muted_post_replies_read AFTER INSERT ON posts WHEN NEW.parent_id IS NOT NULL BEGIN
+        INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+          SELECT muted.user_id,'post:' || printf('%020d',NEW.id) FROM muted_posts muted
+          WHERE muted.post_id IN (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT id FROM ancestors);
+        INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
+          SELECT muted.user_id,'post:' || printf('%020d',NEW.id) FROM muted_posts muted
+          WHERE muted.post_id IN (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT id FROM ancestors);
+        INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+          SELECT muted.user_id,'post:' || NEW.id FROM muted_posts muted
+          WHERE muted.post_id IN (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT id FROM ancestors);
+        INSERT OR IGNORE INTO latest_read_exceptions(user_id,post_id)
+          SELECT muted.user_id,NEW.id FROM muted_posts muted
+          WHERE muted.post_id IN (WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT id,parent_id FROM posts WHERE id=NEW.parent_id UNION ALL
+            SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT id FROM ancestors)
+          AND NEW.id>coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=muted.user_id),0);
+      END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
