@@ -492,14 +492,21 @@ export function registerAccountRoutes(app: Hono) {
     const tab = f.tab === 'font' || f.tab === 'misc' ? f.tab : 'theme'
     const query = `?tab=${tab}${returnPath ? '&from=' + encodeURIComponent(returnPath) : ''}`
     const completeAppearance = f.completeAppearance === 'yes'
-    const theme = (f.theme || appearance(c.req.raw).theme) as ThemeChoice
-    const accent = (f.accent || appearance(c.req.raw).accent) as AccentChoice
-    const selectedFont = (f.font || fontChoice(c.req.raw)) as FontChoice
-    const selectedSansSerif = (f.sansSerifFont || sansSerifFontChoice(c.req.raw)) as SansSerifFontChoice
-    const selectedPrimary = (f.primaryFont || primaryFontChoice(c.req.raw)) as PrimaryFontChoice
+    const randomize = f.randomize === 'yes'
+    const randomChoice = <T,>(choices: readonly T[]) => choices[Math.floor(Math.random() * choices.length)]!
+    const selectedPrimary = (randomize ? randomChoice(PRIMARY_FONT_CHOICES)
+      : f.primaryFont || primaryFontChoice(c.req.raw)) as PrimaryFontChoice
+    const theme = (randomize ? randomChoice(THEME_CHOICES) : f.theme || appearance(c.req.raw).theme) as ThemeChoice
+    const accent = (randomize ? randomChoice(ACCENT_CHOICES) : f.accent || appearance(c.req.raw).accent) as AccentChoice
+    const selectedFont = (randomize && selectedPrimary === 'monospace' ? randomChoice(FONT_CHOICES).value
+      : f.font || fontChoice(c.req.raw)) as FontChoice
+    const selectedSansSerif = (randomize && selectedPrimary === 'sans-serif'
+      ? randomChoice(SANS_SERIF_FONT_CHOICES).value
+      : f.sansSerifFont || sansSerifFontChoice(c.req.raw)) as SansSerifFontChoice
     const selectedSize = (f.fontSize || fontSizeChoice(c.req.raw)) as FontSizeChoice
     const selectedDensity = (f.density || resolvedDensity(c.req.raw)) as DensityChoice
-    const selectedCorners = (f.corners || cornerChoice(c.req.raw)) as CornerChoice
+    const selectedCorners = (randomize ? randomChoice(CORNER_CHOICES)
+      : f.corners || cornerChoice(c.req.raw)) as CornerChoice
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)
       || !FONT_CHOICES.some(font => font.value === selectedFont)
       || !SANS_SERIF_FONT_CHOICES.some(font => font.value === selectedSansSerif)

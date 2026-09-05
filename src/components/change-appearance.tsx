@@ -35,7 +35,13 @@ export function ChangeAppearance(
   return (
     <Layout user={user} title="change appearance">
       <section className="appearance-page">
-        <AccountSettingsHeader title="appearance" returnPath={returnPath} anchor="appearance" />
+        <AccountSettingsHeader title="appearance" returnPath={returnPath} anchor="appearance" titleAction={
+          <form method="post" action="/account/edit/appearance" className="appearance-randomize-form">
+            <input type="hidden" name="randomize" value="yes" />
+            {returnPath && <input type="hidden" name="from" value={returnPath} />}
+            <button className="profile-edit-link">randomize</button>
+          </form>
+        } />
         <form method="post" action="/account/edit/appearance" className="appearance-form">
           <input type="hidden" name="completeAppearance" value="yes" />
           {returnPath && <input type="hidden" name="from" value={returnPath} />}

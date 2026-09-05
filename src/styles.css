@@ -5961,7 +5961,16 @@ form.report-panel {
   font-size: var(--font-size-12);
   line-height: 1.7;
 }
+.account-settings-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.account-settings-title-row h1 { margin-top: var(--space-1); }
 .account-settings-heading > .profile-edit-link { margin-top: 0; }
+.appearance-randomize-form { margin: 0; }
+.appearance-randomize-form button { appearance: none; cursor: pointer; }
 
 .invite-form textarea { min-height: 9rem; resize: vertical; }
 

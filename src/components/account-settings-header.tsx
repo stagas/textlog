@@ -1,11 +1,12 @@
 import type { ReactNode } from 'preact/compat'
 
 export function PageHeading(
-  { eyebrow, title, description, action, className }: {
+  { eyebrow, title, description, action, titleAction, className }: {
     eyebrow: string
     title: string
     description?: ReactNode
     action?: ReactNode
+    titleAction?: ReactNode
     className?: string
   },
 ) {
@@ -13,7 +14,10 @@ export function PageHeading(
     <div className={`account-settings-heading${className ? ` ${className}` : ''}`}>
       <div>
         <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
+        <div className="account-settings-title-row">
+          <h1>{title}</h1>
+          {titleAction}
+        </div>
         {description && <p className="page-heading-description">{description}</p>}
       </div>
       {action}
@@ -21,10 +25,11 @@ export function PageHeading(
   )
 }
 
-export function AccountSettingsHeader({ title, returnPath, anchor }: {
+export function AccountSettingsHeader({ title, returnPath, anchor, titleAction }: {
   title: string
   returnPath?: string
   anchor?: string
+  titleAction?: ReactNode
 }) {
   const backHref = `${returnPath ? `/account/edit?from=${encodeURIComponent(returnPath)}` : '/account/edit'}${
     anchor ? `#${anchor}` : ''
@@ -33,6 +38,7 @@ export function AccountSettingsHeader({ title, returnPath, anchor }: {
     <PageHeading
       eyebrow="account settings"
       title={title}
+      titleAction={titleAction}
       action={<a className="profile-edit-link" href={backHref}>back</a>}
     />
   )

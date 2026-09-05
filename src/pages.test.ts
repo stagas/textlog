@@ -1881,7 +1881,10 @@ test('appearance is one server-rendered form with CSS tabs and every choice', ()
     selected: { theme: 'sepia', accent: 'amber' },
     selectedFont: 'system',
   }))
-  expect(html).toContain('<p class="eyebrow">account settings</p><h1>appearance</h1>')
+  expect(html).toContain('<p class="eyebrow">account settings</p><div class="account-settings-title-row"><h1>appearance</h1>')
+  expect(html).toContain('class="appearance-randomize-form"')
+  expect(html).toContain('name="randomize" value="yes"')
+  expect(html).toContain('>randomize</button>')
   expect(html).toContain('action="/account/edit/appearance"')
   expect(html).toMatch(/name="tab"[^>]*value="theme"[^>]*id="appearance-tab-theme"[^>]*checked=""/)
   expect(html).toContain('for="appearance-tab-theme">theme</label>')
