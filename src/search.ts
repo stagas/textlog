@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { excludesDroppedUsernameUsers } from './handles'
 import { PAGE_SIZE } from './pagination'
 import type { PostView } from './types'
 import type { PersonView, TagView } from './types'
@@ -18,7 +19,8 @@ export function searchTerms(query: string) {
   return query.match(/[\p{L}\p{N}_]+/gu) || []
 }
 
-const visibilityFilter = `p.deleted_at IS NULL AND u.deleted_at IS NULL
+const visibilityFilter = (database: Database) => `p.deleted_at IS NULL AND u.deleted_at IS NULL
+  AND ${excludesDroppedUsernameUsers(database)}
   AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
   AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
@@ -34,11 +36,11 @@ export function searchPosts(database: Database, query: string, viewerId = -1, pa
   const visible = visibilityParameters(viewerId)
   const total = (database.query(`SELECT count(*) count FROM post_search
     JOIN posts p ON p.id=post_search.rowid JOIN users u ON u.id=p.user_id
-    WHERE post_search MATCH ? AND ${visibilityFilter}`)
+    WHERE post_search MATCH ? AND ${visibilityFilter(database)}`)
     .get(expression, ...visible) as { count: number }).count
   const rows = database.query(`SELECT p.*,u.handle FROM post_search
     JOIN posts p ON p.id=post_search.rowid JOIN users u ON u.id=p.user_id
-    WHERE post_search MATCH ? AND ${visibilityFilter}
+    WHERE post_search MATCH ? AND ${visibilityFilter(database)}
     ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
     .all(expression, ...visible, pageSize, (page - 1) * pageSize) as PostView[]
   return { rows, total }
@@ -70,7 +72,7 @@ export function searchPeople(database: Database, query: string, viewerId = -1, p
 export function searchTags(database: Database, query: string, viewerId = -1, page = 1, { followedFirst = false } = {}) {
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as TagView[], total: 0 }
-  const visibility = `p.deleted_at IS NULL AND u.deleted_at IS NULL
+  const visibility = `p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
       (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
     AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=? AND bh.tag=ph.tag))`

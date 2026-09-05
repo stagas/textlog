@@ -17,6 +17,7 @@ function fixture(now?: () => number) {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT,suspended_at TEXT,
       email_verified_at TEXT,handle_chosen_at TEXT);
     CREATE TABLE handle_history (handle TEXT PRIMARY KEY COLLATE NOCASE,user_id INTEGER NOT NULL);
+    CREATE TABLE banned_usernames (username TEXT PRIMARY KEY,dropped_user_id INTEGER);
     CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,body TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,deleted_at TEXT);
     CREATE TABLE follows (follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL,created_at TEXT);
@@ -120,6 +121,17 @@ describe('public API', () => {
     })
     expect(JSON.stringify(payload)).not.toContain('alice@example.com')
     expect(JSON.stringify(payload)).not.toContain('user_id')
+  })
+
+  test('hides posts after an account username is dropped', async () => {
+    const { app, database } = fixture()
+    database.run(`UPDATE users SET handle='anon234234134abc',handle_chosen_at=NULL WHERE id=2;
+      INSERT INTO banned_usernames(username,dropped_user_id) VALUES('bob',2)`)
+
+    const latest = await (await request(app, '/api/v1/feeds/latest')).json() as any
+    const post = await request(app, '/api/v1/posts/2')
+    expect(latest.data.some((item: any) => item.id === 2)).toBeFalse()
+    expect(post.status).toBe(404)
   })
 
   test('serves canonical all and backward-compatible latest JSON feeds at root paths', async () => {

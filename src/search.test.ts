@@ -57,6 +57,15 @@ describe('post search', () => {
     expect(searchPosts(database, 'search', -1).rows.map(post => post.id)).toEqual([1])
   })
 
+  test('hides posts and tags from accounts whose username was dropped', () => {
+    const database = testDatabase()
+    database.run(`UPDATE users SET handle='anon234234134abc',handle_chosen_at=NULL WHERE id=2;
+      INSERT INTO banned_usernames(username,dropped_user_id,dropped_by) VALUES('bob',2,1);
+      INSERT INTO post_hashtags(post_id,tag) VALUES(2,'anonymous-topic');`)
+    expect(searchPosts(database, 'sqlite').total).toBe(0)
+    expect(searchTags(database, 'anonymous').total).toBe(0)
+  })
+
   test('searches people by handle and bio and keeps the index current', () => {
     const database = testDatabase()
     database.run('UPDATE users SET bio=\'Makes ceramic instruments\' WHERE id=2')

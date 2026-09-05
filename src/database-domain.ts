@@ -22,7 +22,7 @@ import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
-import { dropUsername, resolveHandle } from './handles'
+import { dropUsername, excludesDroppedUsernameUsers, resolveHandle } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion, refreshHotFeedProjection } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -316,11 +316,15 @@ function publicFeedProjection(database: Database) {
   const conversationIds = (database.query(`SELECT h.conversation_id FROM conversation_heads h
     WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
       WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+    AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+      JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
+      AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)})
     AND ${excludesMetaPosts('h.conversation_id')}
     ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
     .map(row => row.conversation_id)
   const newRootIds = (database.query(`SELECT p.id FROM posts p JOIN users u ON u.id=p.user_id
     WHERE p.deleted_at IS NULL AND p.parent_id IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+    AND ${excludesDroppedUsernameUsers(database)}
     AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
     ORDER BY p.created_at DESC,p.id DESC`).all() as Array<{ id: number }>).map(row => row.id)
   const projection = { generation, conversationIds, newRootIds, seededConversationIds: new Map() }
@@ -373,7 +377,7 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
         : database.query(`SELECT DISTINCT pc.conversation_id id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${placeholders}) AND p.deleted_at IS NULL
-          AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+          AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
               WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
@@ -1427,6 +1431,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (action === 'restore' && !target.suspended_at) return { status: 'not_suspended' } as DatabaseDomainOutput<K>
       if (action === 'drop-username') {
         const dropped = dropUsername(database, id, actorId, note)
+        if (dropped.status === 'ready') invalidatePostFeedCaches()
         return (dropped.status === 'ready' ? { status: 'ready', imageKeys: [] } : dropped) as DatabaseDomainOutput<K>
       }
       let imageKeys: string[] = []
@@ -1657,7 +1662,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.detail': {
       const { id, viewerId } = input as DatabaseDomainInput<'posts.detail'>
-      const found = database.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?')
+      const found = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE p.id=? AND ${excludesDroppedUsernameUsers(database)}`)
         .get(id) as PostView | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0 && !viewerIsModerator(database, viewerId)) {
@@ -1716,7 +1722,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'posts.ogData': {
       const { id } = input as DatabaseDomainInput<'posts.ogData'>
       return (database.query(`SELECT p.body,p.moderation_category,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-        WHERE p.id=? AND p.deleted_at IS NULL`).get(id) || null) as DatabaseDomainOutput<K>
+        WHERE p.id=? AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}`).get(id) || null) as DatabaseDomainOutput<K>
     }
     case 'posts.suggestions': {
       const { kind, query, viewerId } = input as DatabaseDomainInput<'posts.suggestions'>
@@ -1910,7 +1916,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             JOIN post_hashtags pin_tag ON pin_tag.post_id=pinned.id AND pin_tag.tag='pin'
             WHERE pinned.user_id=p.user_id AND pinned.deleted_at IS NULL ${pinnedKindFilter}) profile_pinned
           FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.user_id=? AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS
+          WHERE p.user_id=? AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+          AND (? < 0 OR NOT EXISTS
             (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
               WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
           ORDER BY profile_pinned DESC,p.id DESC`).all(profileId, viewerId, viewerId) as PostView[], pageSize)
@@ -3185,6 +3192,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? (() => {
           const filters = `NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+              JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
+              AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)})
             AND ${excludesMetaPosts('h.conversation_id')}`
           const totalItems = (database.query(`SELECT count(*) count FROM conversation_heads h WHERE ${filters}`)
             .get() as { count: number }).count
@@ -3226,7 +3236,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
-          AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+          AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+          AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
             SELECT p.user_id,p.parent_id
             UNION ALL
             SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
@@ -3337,6 +3348,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${snapshot.items.map(() => '?').join(',')})
           AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+          AND ${excludesDroppedUsernameUsers(database)}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
               WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
@@ -3422,7 +3434,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const conversationRows = conversationIds.length
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id
         FROM post_conversations pc JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
-        WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')}) AND ${visibility}
+        WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
+        AND ${excludesDroppedUsernameUsers(database)} AND ${visibility}
         AND ${excludesWhisperPosts('p.id')} ORDER BY p.id DESC`)
           .all(...conversationIds, ...visibilityParameters) as Array<PostView & { conversation_id: number }>
         : []
@@ -3757,14 +3770,17 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
         WHERE EXISTS (SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id
           AND COALESCE((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)=?)
-        AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       ).all(tag, viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[]
       const total = blocked ? 0 : (database.query(
         `SELECT count(DISTINCT ph.post_id) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
+        JOIN users u ON u.id=p.user_id
         WHERE COALESCE((SELECT primary_tag FROM tag_aliases WHERE alias=ph.tag),ph.tag)=?
-        AND p.deleted_at IS NULL AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
           (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))`,
       ).get(tag, viewerId, viewerId, viewerId) as { count: number }).count
       const followerTotal = (database.query(
@@ -3796,6 +3812,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const latest = (where = '', parameters: Array<string | number> = []) =>
         enrichPosts(database, database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
           ${where ? `WHERE ${where} AND` : 'WHERE'} p.deleted_at IS NULL AND u.deleted_at IS NULL
+          AND ${excludesDroppedUsernameUsers(database)}
           ORDER BY p.id DESC LIMIT ?`).all(...parameters, 5) as PostView[], -1)
       let result: import('./types').EmbedData | null
       if (request.kind === 'latest') {
@@ -3822,7 +3839,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         const row = Number.isInteger(request.id) && request.id > 0
           ? database.query(
             `SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL`,
+          WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}`,
           ).get(request.id) as PostView | null
           : null
         result = row

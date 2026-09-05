@@ -4,7 +4,7 @@ import { isAdmin } from './admin'
 import { databaseIdentity } from './database-identity'
 import { feedSnapshotPage } from './feed-snapshots'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
-import { resolveHandle } from './handles'
+import { excludesDroppedUsernameUsers, resolveHandle } from './handles'
 import { projectRecentConversation } from './latest-conversation'
 import { unreadLatestCount } from './latest-state'
 import { enrichPosts, loadBioReferenceData, loadWordNetNormalizations, visibleTagFollowerCounts,
@@ -122,7 +122,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ((NOT ${isWhisperThread()} AND
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+        AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
         (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at) OR ${descendsFromViewer}
@@ -147,7 +148,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND p.user_id!=$viewer
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+        AND p.user_id!=$viewer
         AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
         AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
           WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)

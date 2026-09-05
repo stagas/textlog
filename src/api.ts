@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { excludesDroppedUsernameUsers } from './handles'
 import { extractHashtags, extractMentions } from './content'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -103,6 +104,7 @@ function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(
   ) SELECT descendants.root_id,count(*) reply_count FROM descendants
     JOIN users u ON u.id=descendants.user_id
     WHERE descendants.id!=descendants.root_id AND descendants.deleted_at IS NULL AND u.deleted_at IS NULL
+      AND ${excludesDroppedUsernameUsers(database)}
     GROUP BY descendants.root_id`).all(...rows.map(row => row.id)) as { root_id: number; reply_count: number }[]
   const countById = new Map(counts.map(row => [row.root_id, row.reply_count]))
   return rows.map(row => ({ ...row, reply_count: countById.get(row.id) || 0 }))
@@ -226,7 +228,7 @@ function serializePostsWithParents(database: Database, rows: ApiPostRow[], origi
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
         WHERE ph.post_id=p.id AND bh.user_id=?)`
     const parentRows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
-      AND p.deleted_at IS NULL AND u.deleted_at IS NULL ${visibility}`)
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)} ${visibility}`)
       .all(...parentIds, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
     const enrichedParents = applyApiReplyGates(database, enrichApiRows(database, parentRows), viewerId)
     const parentExtras = apiExtras(database, enrichedParents.map(row => row.id), viewerId)
@@ -247,7 +249,7 @@ export function apiPostsByIds(database: Database, origin: string, ids: number[],
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`
   const rows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
-    AND p.deleted_at IS NULL AND u.deleted_at IS NULL ${visibility}`)
+    AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)} ${visibility}`)
     .all(...ids, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
   const serialized = serializePostsWithParents(database,
     applyApiReplyGates(database, enrichApiRows(database, rows), viewerId), origin, viewerId)
@@ -264,6 +266,7 @@ export function apiPost(database: Database, id: number, origin: string, viewerId
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`
   const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
+    AND ${excludesDroppedUsernameUsers(database)}
     ${visibility}`).get(id, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow | null
   if (!row) return null
   const gates = hiddenReplyGates(database, [row.id], viewerId)
@@ -284,7 +287,7 @@ export function apiPosts(database: Database, origin: string, options: {
   viewerId?: number
   excludeWhispers?: boolean
 }) {
-  const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL']
+  const filters = ['p.deleted_at IS NULL', 'u.deleted_at IS NULL', excludesDroppedUsernameUsers(database)]
   const parameters: Array<string | number> = []
   if ((options.viewerId ?? -1) >= 0) {
     filters.push(`NOT EXISTS (SELECT 1 FROM blocks b WHERE
