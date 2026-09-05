@@ -22,7 +22,23 @@ function moderatorViewer(database: Database, viewerId: number) {
   return !!viewer && isAdminEmail(viewer.email)
 }
 
-function canonicalTags(database: Database, tags: string[]) {
+type WordNetNormalizations = ReadonlyMap<string, string>
+
+export function loadWordNetNormalizations(database: Database, bodies: string[]): WordNetNormalizations {
+  const words = [...new Set(bodies.flatMap(body => extractAuthoredHashtags(body))
+    .map(({ authored }) => normalizeHashtagSpelling(authored)))]
+  if (!words.length || !database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
+  ).get()) return new Map()
+  const rows = database.query(`SELECT word,normalized_word FROM wordnet_normalizations
+    WHERE word IN (${words.map(() => '?').join(',')})`).all(...words) as Array<{
+      word: string
+      normalized_word: string
+    }>
+  return new Map(rows.map(row => [row.word, row.normalized_word]))
+}
+
+function canonicalTags(database: Database, tags: string[], wordNet?: WordNetNormalizations) {
   const unique = [...new Set(tags.map(normalizeHashtagSpelling))]
   const invariants = !unique.length || !database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'',
@@ -30,17 +46,19 @@ function canonicalTags(database: Database, tags: string[]) {
     ? new Set<string>()
     : new Set((database.query(`SELECT tag FROM tag_invariants WHERE tag IN
     (${unique.map(() => '?').join(',')})`).all(...unique) as { tag: string }[]).map(row => row.tag))
-  const hasWordNet = !!database.query(
+  const hasWordNet = wordNet !== undefined || !!database.query(
     'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
   ).get()
   const normalized = unique.map(tag => {
     if (invariants.has(tag)) return tag
-    const cached = hasWordNet
+    const cached = wordNet
+      ? wordNet.get(tag)
+      : hasWordNet
       ? database.query('SELECT normalized_word FROM wordnet_normalizations WHERE word=?').get(tag) as {
         normalized_word: string
       } | null
       : null
-    return cached?.normalized_word || normalizeHashtag(tag)
+    return (typeof cached === 'string' ? cached : cached?.normalized_word) || normalizeHashtag(tag)
   })
   const aliases = !unique.length || !database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
@@ -53,13 +71,13 @@ function canonicalTags(database: Database, tags: string[]) {
 }
 
 export function loadBioReferenceData(database: Database, bio: string, profileId: number,
-  viewerId = -1): BioReferenceData
+  viewerId = -1, wordNet?: WordNetNormalizations): BioReferenceData
 {
   const tags = extractAuthoredHashtags(bio).map(({ authored }) => normalizeHashtagSpelling(authored))
   const handles = extractMentions(bio)
   const hashtagCounts = visibleHashtagCounts(database, [bio], viewerId)
   const hashtagFollowerCounts = visibleTagFollowerCounts(database, tags, viewerId)
-  const canonicalByTag = canonicalTags(database, tags)
+  const canonicalByTag = canonicalTags(database, tags, wordNet)
   const hashtagTargets = Object.fromEntries(canonicalByTag)
   const canonical = [...new Set(canonicalByTag.values())]
   const followedTags = viewerId < 0 || !tags.length ? new Set<string>() : new Set(
@@ -112,11 +130,13 @@ export function loadBioReferenceData(database: Database, bio: string, profileId:
   }
 }
 
-export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1) {
+export function visibleHashtagCounts(database: Database, bodies: string[], viewerId = -1,
+  wordNet?: WordNetNormalizations)
+{
   const tags = [...new Set(bodies.flatMap(extractAuthoredHashtags)
     .map(({ authored }) => normalizeHashtagSpelling(authored)))]
   if (!tags.length) return {}
-  const canonicalByTag = canonicalTags(database, tags)
+  const canonicalByTag = canonicalTags(database, tags, wordNet)
   const canonical = [...new Set(canonicalByTag.values())]
   const placeholders = canonical.map(() => '?').join(',')
   const viewerFilter = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -153,10 +173,12 @@ export function visibleUserProfileStats(database: Database, userIds: number[], v
   return new Map(ids.map(id => [id, stats.get(id) || empty()]))
 }
 
-export function visibleTagFollowerCounts(database: Database, tags: string[], viewerId = -1) {
+export function visibleTagFollowerCounts(database: Database, tags: string[], viewerId = -1,
+  wordNet?: WordNetNormalizations)
+{
   const unique = [...new Set(tags)]
   if (!unique.length) return {} as Record<string, number>
-  const canonicalByTag = canonicalTags(database, unique)
+  const canonicalByTag = canonicalTags(database, unique, wordNet)
   const canonical = [...new Set(canonicalByTag.values())]
   const rows = database.query(`SELECT hf.tag,count(*) count FROM hashtag_follows hf
     JOIN users u ON u.id=hf.user_id WHERE hf.tag IN (${canonical.map(() => '?').join(',')})
@@ -639,9 +661,10 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       }
     }
   }
-  const hashtagCounts = visibleHashtagCounts(database, [...posts.flatMap(post => [post.body, post.translation || '']),
-    ...authors.map(author => author.bio), ...parentBodies, ...[...parents.values()].map(parent => parent.bio || '')],
-    viewerId)
+  const hashtagSources = [...posts.flatMap(post => [post.body, post.translation || '']),
+    ...authors.map(author => author.bio), ...parentBodies, ...[...parents.values()].map(parent => parent.bio || '')]
+  const wordNet = loadWordNetNormalizations(database, hashtagSources)
+  const hashtagCounts = visibleHashtagCounts(database, hashtagSources, viewerId, wordNet)
   const profileStats = visibleUserProfileStats(database, [...userIds,
     ...[...parents.values()].flatMap(parent => parent.user_id == null ? [] : [parent.user_id]),
     ...Object.values(mentionUserIds)], viewerId)
@@ -652,8 +675,8 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   const relevantUserIds = [...profileStats.keys()]
   const relevantTags = Object.keys(hashtagCounts)
-  const hashtagFollowerCounts = visibleTagFollowerCounts(database, relevantTags, viewerId)
-  const canonicalByTag = canonicalTags(database, relevantTags)
+  const hashtagFollowerCounts = visibleTagFollowerCounts(database, relevantTags, viewerId, wordNet)
+  const canonicalByTag = canonicalTags(database, relevantTags, wordNet)
   const canonicalRelevantTags = [...new Set(canonicalByTag.values())]
   const followedUserIds = viewerId < 0 || !relevantUserIds.length
     ? new Set<number>()

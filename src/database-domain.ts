@@ -256,7 +256,9 @@ export function materializedFeedTemplate(html: string) {
 export function hydrateMaterializedFeedCounts(html: string,
   counts: { forYou: number; toMe: number; latest: number; drafts?: number })
 {
-  const count = (value: number) => value ? `<span class="to-me-count">${value}</span>` : ''
+  const count = (value: number) => value
+    ? `<span class="to-me-count">${value >= 99 ? '99+' : value}</span>`
+    : ''
   return html.replaceAll('{{for-you-count}}', count(counts.forYou))
     .replaceAll('{{to-me-count}}', count(counts.toMe))
     .replaceAll('{{latest-count}}', count(counts.latest))

@@ -1,18 +1,21 @@
 import type { Database } from 'bun:sqlite'
 import { activityAnchor } from './activity-anchor'
 import { isAdmin } from './admin'
+import { databaseIdentity } from './database-identity'
 import { feedSnapshotPage } from './feed-snapshots'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { resolveHandle } from './handles'
 import { projectRecentConversation } from './latest-conversation'
 import { unreadLatestCount } from './latest-state'
-import { enrichPosts, loadBioReferenceData, visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
+import { enrichPosts, loadBioReferenceData, loadWordNetNormalizations, visibleTagFollowerCounts,
+  visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 40
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
+const snapshotUnreadCountProjections = new WeakMap<Database, Map<string, number>>()
 
 function rememberUnreadCount(key: string, count: number) {
   unreadCountProjection.delete(key)
@@ -55,10 +58,28 @@ export function personalizedUnreadCount(database: Database, userId: number, toMe
     return rememberUnreadCount(projectionKey,
       toMe ? unreadToMeCount(userId, database) : unreadForYouCount(userId, database))
   }
-  return (database.query(`SELECT count(DISTINCT json_extract(entry.value,'$.event_key')) count
+  const readCount = (database.query(`SELECT count(*) count FROM ${reads} WHERE user_id=?`).get(userId) as {
+    count: number
+  }).count
+  const projectionKey = `${reads}\0${userId}\0${snapshot.id}\0${readCount}`
+  const identity = databaseIdentity(database)
+  let projections = snapshotUnreadCountProjections.get(identity)
+  if (!projections) {
+    projections = new Map()
+    snapshotUnreadCountProjections.set(identity, projections)
+  }
+  const projected = projections.get(projectionKey)
+  if (projected !== undefined) return projected
+  const count = (database.query(`SELECT count(*) count FROM (
+    SELECT DISTINCT json_extract(entry.value,'$.event_key') event_key
     FROM feed_snapshot_items item,json_each(item.payload) entry
     LEFT JOIN ${reads} seen ON seen.user_id=? AND seen.event_key=json_extract(entry.value,'$.event_key')
-    WHERE item.snapshot_id=? AND seen.event_key IS NULL`).get(userId, snapshot.id) as { count: number }).count
+    WHERE item.snapshot_id=? AND seen.event_key IS NULL LIMIT 99)`).get(userId, snapshot.id) as {
+      count: number
+    }).count
+  projections.set(projectionKey, count)
+  while (projections.size > MAX_UNREAD_COUNT_PROJECTIONS) projections.delete(projections.keys().next().value!)
+  return count
 }
 
 const descendsFromViewer = `EXISTS (SELECT 1 FROM post_ancestors ancestry
@@ -336,12 +357,15 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     : new Set<number>()
   const tagCounts = visibleTagFollowerCounts(database, timeline.flatMap(row => row.target_tag ? [row.target_tag] : []),
     user.id)
-  const bioReferences = new Map(relevantIds.map(id => {
+  const relevantBios = relevantIds.map(id => {
     const row = timeline.find(candidate => candidate.actor_id === id)
-    const bio = row?.actor_bio
-      || timeline.find(candidate => targets.get(candidate.target_handle || '') === id)?.target_bio || ''
-    return [id, loadBioReferenceData(database, bio, id, user.id)] as const
-  }))
+    return row?.actor_bio || timeline.find(candidate => targets.get(candidate.target_handle || '') === id)?.target_bio
+      || ''
+  })
+  const wordNet = loadWordNetNormalizations(database, relevantBios)
+  const bioReferences = new Map(relevantIds.map((id, index) =>
+    [id, loadBioReferenceData(database, relevantBios[index], id, user.id, wordNet)] as const
+  ))
   const enriched = new Map(
     enrichPosts(database, timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)), user.id)
       .map(post => [post.id, post]),

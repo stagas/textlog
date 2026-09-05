@@ -3,6 +3,9 @@ import { isAdminEmail } from './admin'
 import { markLatestPostsRead } from './latest-state'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
+// Feed badges render 99 and above as "99+"; avoid scanning the rest of a large unread projection.
+const UNREAD_COUNT_LIMIT = 99
+
 const descendsFromViewer = `EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
   SELECT ancestor.id,ancestor.user_id,ancestor.parent_id FROM posts ancestor WHERE ancestor.id=p.parent_id
   UNION ALL
@@ -52,13 +55,53 @@ const projectedVisibleDescendant = `EXISTS (SELECT 1 FROM post_ancestors ancestr
     (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer))
   AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
+const projectedWhisperThread = `EXISTS (SELECT 1 FROM post_hashtags whisper_tag
+  WHERE whisper_tag.tag='whisper' AND (whisper_tag.post_id=p.id OR EXISTS
+    (SELECT 1 FROM post_ancestors whisper_ancestry
+      WHERE whisper_ancestry.post_id=p.id AND whisper_ancestry.ancestor_id=whisper_tag.post_id)))`
 
 function projectedEvents(sql: string, database: Database) {
-  if (!database.query(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_ancestors'`).get()) return sql
-  return sql.replaceAll(descendsFromViewer, projectedDescendsFromViewer)
+  const hasAncestorProjection = !!database.query(
+    `SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_ancestors'`,
+  ).get()
+  let projected = hasAncestorProjection
+    ? sql.replaceAll(descendsFromViewer, projectedDescendsFromViewer)
     .replaceAll(descendsFromFollowedUser, projectedDescendsFromFollowedUser)
     .replaceAll(descendsFromFollowedTag, projectedDescendsFromFollowedTag)
     .replaceAll(hasVisibleDescendantFromAnotherUser, projectedVisibleDescendant)
+    : sql
+  if (database.query(
+    `SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'`,
+  ).get()) {
+    projected = projected.replaceAll(
+      `FROM posts p
+    LEFT JOIN posts parent`,
+      `FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+    LEFT JOIN posts parent`,
+    ).replaceAll(
+      'WHERE p.deleted_at IS NULL',
+      'WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL',
+    )
+  }
+  // Recursive whisper ancestry dominates a full unread scan. When the instance has no whisper-tagged post, all
+  // three whisper predicates are provably false and can be removed before SQLite prepares the count query.
+  if (!database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()) {
+    projected = projected.replaceAll(whisperThreadRelevantToViewer(), '0')
+      .replaceAll(whisperThreadTargetsViewer(), '0')
+      .replaceAll(isWhisperThread(), '0')
+  }
+  else if (hasAncestorProjection) projected = projected.replaceAll(isWhisperThread(), projectedWhisperThread)
+  return projected
+}
+
+function unreadProjectedEvents(sql: string, reads: 'for_you_reads' | 'to_me_reads', database: Database) {
+  const projected = projectedEvents(sql, database)
+  const candidateFilter = 'candidate.viewer_id=$viewer AND p.deleted_at IS NULL'
+  if (!projected.includes(candidateFilter)) return projected
+  return projected.replaceAll(candidateFilter, `${candidateFilter}
+      AND NOT EXISTS (SELECT 1 FROM ${reads} candidate_seen
+        WHERE candidate_seen.user_id=$viewer
+          AND candidate_seen.event_key='post:' || printf('%020d',p.id))`)
 }
 
 const visibleEvents = `
@@ -167,8 +210,11 @@ export function hasUnreadForYou(userId: number, database: Database) {
 }
 
 export function unreadForYouCount(userId: number, database: Database) {
-  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${projectedEvents(visibleEvents, database)}) event WHERE NOT EXISTS
-    (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
+  return (database.query(`SELECT count(*) count FROM (
+    SELECT DISTINCT event_key FROM (${unreadProjectedEvents(visibleEvents, 'for_you_reads', database)}) event
+    WHERE NOT EXISTS
+      (SELECT 1 FROM for_you_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)
+    LIMIT ${UNREAD_COUNT_LIMIT})`)
     .get(stateParameters(userId, database)) as { count: number }).count
 }
 
@@ -179,8 +225,11 @@ export function hasUnreadToMe(userId: number, database: Database) {
 }
 
 export function unreadToMeCount(userId: number, database: Database) {
-  return (database.query(`SELECT count(DISTINCT event_key) count FROM (${projectedEvents(visibleToMeEvents, database)}) event WHERE NOT EXISTS
-    (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)`)
+  return (database.query(`SELECT count(*) count FROM (
+    SELECT DISTINCT event_key FROM (${unreadProjectedEvents(visibleToMeEvents, 'to_me_reads', database)}) event
+    WHERE NOT EXISTS
+      (SELECT 1 FROM to_me_reads seen WHERE seen.user_id=$viewer AND seen.event_key=event.event_key)
+    LIMIT ${UNREAD_COUNT_LIMIT})`)
     .get(stateParameters(userId, database)) as { count: number }).count
 }
 

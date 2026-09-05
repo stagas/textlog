@@ -68,6 +68,11 @@ test('materialized feed templates replace capped counters', () => {
   )
 })
 
+test('hydrated materialized counters preserve the 99+ display cap', () => {
+  expect(hydrateMaterializedFeedCounts('all{{latest-count}}', { forYou: 120, toMe: 100, latest: 99, drafts: 0 }))
+    .toBe('all<span class="to-me-count">99+</span>')
+})
+
 test('personalized cache entries detect stale read-all markup', () => {
   const count = '<a href="/my-feed">my feed<span class="to-me-count">99+</span></a>'
   expect(personalizedReadActionOutOfSync('for-you', count)).toBe(true)

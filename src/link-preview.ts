@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { databaseIdentity } from './database-identity'
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { appName, appOrigin } from './brand'
@@ -563,10 +564,17 @@ export async function deleteLinkPreviewImages(database: Database, postId: number
   await deleteImagesAfterCommit(keys)
 }
 
+const databasesWithBioLinkPreviews = new WeakSet<Database>()
+
 function bioLinkPreviewTableAvailable(database: Database) {
-  return Boolean(database.query(
+  const identity = databaseIdentity(database)
+  if (databasesWithBioLinkPreviews.has(identity)) return true
+  const available = Boolean(database.query(
     'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'user_bio_link_previews\'',
   ).get())
+  // Cache only successful probes so migrations and tests that create the table later remain correct.
+  if (available) databasesWithBioLinkPreviews.add(identity)
+  return available
 }
 
 function storedBioPreviewKeys(database: Database, userId: number) {

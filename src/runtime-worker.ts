@@ -1,6 +1,7 @@
 import './console-timestamps'
 import { cacheDb, clearCacheDatabase } from './cache-db'
 import { executeDatabaseDomain, normalizeExistingWordNetTags } from './database-domain'
+import { formatQueryMetrics, measuredDatabase } from './database-query-metrics'
 import { configureDatabaseService } from './database-service'
 import { db } from './db'
 import { logInfo } from './log'
@@ -40,8 +41,11 @@ async function drainQueue() {
     const message = foregroundQueue.shift() || backgroundQueue.shift()
     if (!message) return
     const started = performance.now()
+    const measureQueries = Bun.env.FEED_QUERY_METRICS === 'true'
+      && (message.operation === 'feeds.latestPage' || message.operation === 'feeds.personalizedPage')
+    const measurement = measureQueries ? measuredDatabase(db) : undefined
     try {
-      const result = await executeDatabaseDomain(db, message.operation, message.input)
+      const result = await executeDatabaseDomain(measurement?.database || db, message.operation, message.input)
       send({ type: 'domainResult', id: message.id, result })
     }
     catch (error) {
@@ -51,6 +55,13 @@ async function drainQueue() {
     const finished = performance.now()
     const durationMs = finished - started
     const queueMs = started - message.queuedAt
+    if (measurement) {
+      const minimumMs = Math.max(0, Number(Bun.env.FEED_QUERY_METRICS_MIN_MS || 1))
+      const limit = Math.max(1, Number(Bun.env.FEED_QUERY_METRICS_LIMIT || 10))
+      for (const metric of formatQueryMetrics(message.operation, measurement.metrics, minimumMs, limit)) {
+        logInfo(metric)
+      }
+    }
     const slowMs = Number(Bun.env.DATABASE_SLOW_OPERATION_MS || 250)
     if (Bun.env.DATABASE_LOG_SLOW_OPERATIONS === 'true' && (durationMs >= slowMs || queueMs >= slowMs)) {
       logInfo(
@@ -69,7 +80,6 @@ async function drainQueue() {
 // Every Worker generation owns and validates both connections before advertising readiness.
 db.query('SELECT 1').get()
 cacheDb.query('SELECT 1').get()
-db.query('DELETE FROM feed_snapshots').run()
 clearCacheDatabase(cacheDb)
 await normalizeExistingWordNetTags(db)
 

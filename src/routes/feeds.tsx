@@ -357,11 +357,7 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache, user
-        ? async () => {
-          await data()
-        }
-        : undefined)
+        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache)
       : await render()
     const remembered = rememberFeed(response, 'latest')
     return remembered
