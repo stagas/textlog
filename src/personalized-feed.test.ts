@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { apiActivities } from './api-activity'
+import { softDeletePost } from './admin'
 import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead } from './latest-state'
 import { runMigrations } from './migrations'
@@ -41,6 +42,30 @@ test('For You preserves moderation warnings in rendered posts', () => {
 
   expect(post?.moderation_category).toBe('self-harm/intent')
   expect(post?.moderation_score).toBe(0.42)
+})
+
+test('moderator deletion removes a reply from rebuilt My Feed conversation previews', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'viewer','viewer@example.com','!',''),
+      (2,'followed','followed@example.com','!',''),
+      (3,'replier','replier@example.com','!','');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-03 08:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (1,2,NULL,'followed root','2026-08-03 09:00:00'),
+      (2,3,1,'reply removed by moderator','2026-08-03 10:00:00');`)
+  const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
+
+  const before = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+  expect(before.timeline.map(row => row.id)).toContain(2)
+
+  softDeletePost(database, 2)
+  const after = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+
+  expect(after.timeline.map(row => row.id)).toContain(1)
+  expect(after.timeline.map(row => row.id)).not.toContain(2)
+  expect(after.timeline.map(row => row.renderedPost?.body)).not.toContain('reply removed by moderator')
 })
 
 test('For You consumes overlapping directed posts from Latest before rendering its counter', () => {

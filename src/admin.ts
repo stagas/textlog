@@ -28,6 +28,22 @@ export function recordAdminAction(database: Database, actorId: number, action: A
 export function softDeletePost(database: Database, postId: number) {
   database.query('UPDATE posts SET body=\'(deleted)\',deleted_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL')
     .run(postId)
+  const hasPersonalizedCandidates = database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='personalized_post_candidates'`).get()
+  const hasPersonalizedGenerations = database.query(`SELECT 1 FROM sqlite_master
+    WHERE type='table' AND name='personalized_feed_generations'`).get()
+  if (hasPersonalizedCandidates && hasPersonalizedGenerations) {
+    // The general post-update trigger covers authors and direct thread participants, but a deleted reply can also
+    // be embedded in snapshots belonging to followers of an ancestor author or hashtag. Advance every projected
+    // recipient so neither their durable snapshot nor the in-process unread projection can retain the reply.
+    database.query(`UPDATE personalized_feed_generations SET generation=generation+1
+      WHERE viewer_id IN (SELECT viewer_id FROM personalized_post_candidates WHERE post_id=?)`).run(postId)
+    if (database.query(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'`).get()) {
+      database.query(`DELETE FROM feed_snapshots WHERE viewer_id IN
+        (SELECT viewer_id FROM personalized_post_candidates WHERE post_id=?)
+        AND (kind LIKE 'for-you:%' OR kind LIKE 'to-me:%')`).run(postId)
+    }
+  }
   removeHotActivity(database, postId)
   database.query('DELETE FROM post_hashtags WHERE post_id=?').run(postId)
   database.query('DELETE FROM post_mentions WHERE post_id=?').run(postId)
