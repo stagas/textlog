@@ -306,6 +306,7 @@ export function Profile(
       {!editing && !hiddenByBlock
         && (
           <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'}
+            showHiddenRepliesNotices={false}
             className={`profile-feed-thread profile-${tab === 'replies' ? 'replies' : 'notes'}-feed-thread`} />
         )}
       {!editing && !hiddenByBlock && total === 0 && (

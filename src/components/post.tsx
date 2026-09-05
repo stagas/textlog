@@ -291,7 +291,11 @@ export function UserReference(
               </span>
             )
             : (
-              <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">follow</a>
+              <span className="reference-popover-actions">
+                <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">
+                  follow
+                </a>
+              </span>
             ))}
           {(bio?.trim() || ownUser) && (
             <span
@@ -374,7 +378,11 @@ export function TagReference(
                 </form>
               </span>
             )
-            : <a className="button" href={pendingFollowHref('tag', tag, followReturnPath)} rel="nofollow">follow</a>}
+            : (
+              <span className="reference-popover-actions">
+                <a className="button" href={pendingFollowHref('tag', tag, followReturnPath)} rel="nofollow">follow</a>
+              </span>
+            )}
         </span>
       )}
     </span>
@@ -1151,17 +1159,21 @@ function FeedPost(props: FeedPostProps) {
 
 function HiddenRepliesNotice({ href }: { href?: string }) {
   const content = (
-    <>
-      <div className="reply-node">
-        <article className="post">
-          <div className="post-body quiet">(replies are hidden until you reply)</div>
-        </article>
-      </div>
-    </>
+    <div className="reply-node">
+      <article className="post">
+        <div className="post-body quiet">(replies are hidden until you reply)</div>
+      </article>
+    </div>
   )
-  return href
-    ? <a className="reply-branch hidden-replies-notice" href={href}>{content}</a>
-    : <div className="reply-branch hidden-replies-notice">{content}</div>
+  return (
+    <div className="reply-branch hidden-replies-branch">
+      <div className="thread-branch-content">
+        {href
+          ? <a className="hidden-replies-notice" href={href}>{content}</a>
+          : <div className="hidden-replies-notice">{content}</div>}
+      </div>
+    </div>
+  )
 }
 
 export function ThreadReplies(
@@ -1169,7 +1181,7 @@ export function ThreadReplies(
     continuationLabel = 'more', continuationReturnPath, contextUnreadPostIds, contextDirectedUnreadPostIds,
     omissionHref, expansionControlId, highlightTerms = [], hideTopMeta = false, collapsedPreviewPostIds = [],
     anchorReplyNavigation = false, backHref, backTargetId, replyOnPage = false, replyReturnPath, afterReply,
-    suppressReplyActionId, activeReplyReturnPath, collapseWithoutPreviews = false }: {
+    suppressReplyActionId, activeReplyReturnPath, collapseWithoutPreviews = false, showHiddenRepliesNotices = true }: {
       parentId: number
       replies: PostView[]
       user: User | null
@@ -1195,6 +1207,7 @@ export function ThreadReplies(
       suppressReplyActionId?: number
       activeReplyReturnPath?: string
       collapseWithoutPreviews?: boolean
+      showHiddenRepliesNotices?: boolean
     },
 ) {
   replies = replies.filter(reply => !reply.hidden_by_reply_gate)
@@ -1448,7 +1461,7 @@ export function ThreadReplies(
           continuationHref={continuationHref} continuationLabel={continuationLabel} tappable
           hideTopMeta={hideTopMeta} />
         {afterReply?.(reply, canonicalDepth(reply.id))}
-        {reply.replies_hidden && <HiddenRepliesNotice href={postReturnPath} />}
+        {showHiddenRepliesNotices && reply.replies_hidden && <HiddenRepliesNotice href={postReturnPath} />}
         {childBranch}
       </div>
     )
@@ -1513,7 +1526,7 @@ export function ThreadReplies(
 export function FeedThreads(
   { posts, user, returnPath, contextUnreadPostIds, contextDirectedUnreadPostIds, highlightTerms = [],
     hideTopMeta = false, promoteAncestors = false, expandedRootId, expandedByDefault = false,
-    collapseWithoutPreviews = false, className }: {
+    collapseWithoutPreviews = false, showHiddenRepliesNotices = true, className }: {
       posts: PostView[]
       user: User | null
       returnPath: string
@@ -1525,6 +1538,7 @@ export function FeedThreads(
       expandedRootId?: number
       expandedByDefault?: boolean
       collapseWithoutPreviews?: boolean
+      showHiddenRepliesNotices?: boolean
       className?: string
     },
 ) {
@@ -1689,7 +1703,8 @@ export function FeedThreads(
         const visibleReplies = visibleReplyCount(post)
         const collapsedPreview = visibleReplies > 0 && !collapseWithoutPreviews ? collapsedPreviewPosts(post) : []
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
-        const canCollapse = visibleReplies > collapsedPreview.length
+        const canCollapse = collapseWithoutPreviews && !!post.replies_hidden
+          || visibleReplies > collapsedPreview.length
           || continuesElsewhere && collapsedPreview.length > 2
         const foldControlId = canCollapse ? `feed-thread-fold-${post.id}` : undefined
         const collapsed = canCollapse && !expandedByDefault && expandedRootId !== post.id
@@ -1716,7 +1731,7 @@ export function FeedThreads(
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`
                 : undefined} continuationLabel="…" />
             </div>
-            {post.replies_hidden && (
+            {showHiddenRepliesNotices && post.replies_hidden && (
               <HiddenRepliesNotice href={`/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`} />
             )}
             <ThreadReplies parentId={post.id} replies={treePosts} user={user} returnPath={anchoredReturnPath}
@@ -1728,6 +1743,7 @@ export function FeedThreads(
               expansionControlId={foldControlId} contextUnreadPostIds={contextUnreadPostIds}
               contextDirectedUnreadPostIds={contextDirectedUnreadPostIds} highlightTerms={highlightTerms}
               hideTopMeta={hideTopMeta} collapseWithoutPreviews={collapseWithoutPreviews}
+              showHiddenRepliesNotices={showHiddenRepliesNotices}
               collapsedPreviewPostIds={canCollapse ? collapsedPreview.map(reply => reply.id) : []} />
           </div>
         )

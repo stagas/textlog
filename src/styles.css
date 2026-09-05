@@ -2579,7 +2579,7 @@ body.corners-round a.button {
 
 .tappable-post .tappable-parent {
   position: relative;
-  z-index: 2;
+  z-index: auto;
 }
 
 .tappable-post .tappable-parent:has(.remote-link-menu:hover),
@@ -7901,6 +7901,7 @@ a.post-context:hover {
 }
 
 a.hidden-replies-notice {
+  display: block;
   color: inherit;
   border-bottom: 0;
 }

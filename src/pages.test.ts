@@ -3942,6 +3942,9 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
   expect(profileHtml).toContain('post-without-top-meta')
   expect(profileRepliesHtml).toContain('class="posttop')
   expect(profileRepliesHtml).not.toContain('post-without-top-meta')
+  expect(profileRepliesHtml).toContain(
+    '<span class="reference-popover-actions"><a class="button" href="/pending-follow/user/writer',
+  )
   expect(tagHtml).toContain('class="posttop')
 })
 

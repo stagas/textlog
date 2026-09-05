@@ -431,6 +431,8 @@ describe('post persistence', () => {
       formPrefix: 'post-1',
     })
     expect(html).toContain('<span class="reference-menu-popover">')
+    expect(html).toContain('<span class="reference-popover-actions"><a class="button" '
+      + 'href="/pending-follow/user/reader?from=%2F" rel="nofollow">follow</a></span>')
     expect(html).not.toContain('reference-popover-bio')
     expect(html).not.toContain('No bio yet.')
   })

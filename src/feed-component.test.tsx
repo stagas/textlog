@@ -3,6 +3,7 @@ import React from 'preact/compat'
 import { Feed, groupSimilarActivities } from './components/feed'
 import { HotFeed } from './components/hot-feed'
 import { FeedThreads, postAgeTitle } from './components/post'
+import { Profile } from './components/profile'
 import { PublicFeed } from './components/public-feed'
 import { renderToStaticMarkup } from './render'
 import type { ParentPost, PersonalizedTimelineRow } from './types'
@@ -344,6 +345,29 @@ test('standalone feed posts with replies omit redundant footer dots', () => {
 
   expect(html).not.toContain('post-continuation-marker')
   expect(html).not.toContain('feed-thread-fold-21')
+})
+
+test('new feed folds gated-replies notices with the conversation', () => {
+  const post = { id: 22, user_id: 2, parent_id: null, body: 'reply first', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 2, replies_hidden: true }
+  const feed = { posts: [post], page: 1, totalItems: 1, totalPages: 1 }
+  const collapsed = renderToStaticMarkup(<PublicFeed path="/new" feed={feed} />)
+  const expanded = renderToStaticMarkup(<PublicFeed path="/new" feed={feed} expandedRootId={post.id} />)
+
+  expect(collapsed).toContain('id="feed-thread-fold-22" checked=""')
+  expect(collapsed).toContain('(replies are hidden until you reply)')
+  expect(collapsed).toContain('class="reply-branch hidden-replies-branch"><div class="thread-branch-content">')
+  expect(expanded).toContain('id="feed-thread-fold-22"')
+  expect(expanded).not.toContain('id="feed-thread-fold-22" checked=""')
+})
+
+test('profile feeds omit gated-replies notices', () => {
+  const post = { id: 23, user_id: 2, parent_id: null, body: 'profile note', created_at: '2026-08-19 10:00:00',
+    deleted_at: null, handle: 'alice', reply_count: 2, replies_hidden: true }
+  const html = renderToStaticMarkup(<Profile user={null}
+    profile={{ id: 2, handle: 'alice', email: 'alice@example.com', bio: '' }} posts={[post]} following={false} />)
+
+  expect(html).not.toContain('(replies are hidden until you reply)')
 })
 
 test('to-me renders sibling reply activities as separate chronological entries', () => {

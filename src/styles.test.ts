@@ -113,6 +113,15 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.poll-results { pointer-events: none; }')
   })
 
+  test('keeps quoted-parent links above feed collapse expanders without raising the parent hit area', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.tappable-post .collapsed-post-expander {\n  position: absolute;\n  z-index: 20;')
+    expect(css).toContain('.tappable-post .tappable-parent {\n  position: relative;\n  z-index: auto;')
+    expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;\n  z-index: 1;')
+    expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),')
+    expect(css).toContain('  z-index: 21;')
+  })
+
   test('keeps poll percentages on one line', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.poll-option-count { white-space: nowrap; }')

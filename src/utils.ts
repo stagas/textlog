@@ -688,12 +688,12 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     }<button class="button${following ? ' button-muted' : ''}" type="submit" form="${
       esc(referenceFormId(referencePopover.formPrefix, isUser ? 'user' : 'tag', key))
     }">${following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}</button></span></span>`
-    : `<a class="button" href="${
+    : `<span class="reference-popover-actions"><a class="button" href="${
       esc(
         pendingFollowHref(isUser ? 'user' : 'tag', key,
           new URLSearchParams(navigationQuery.slice(1)).get('from') || undefined),
       )
-    }" rel="nofollow">follow</a>`
+    }" rel="nofollow">follow</a></span>`
   return `<span class="reference-menu"><input class="mobile-popover-toggle" type="checkbox" `
     + `aria-label="Toggle reference details"><a class="reference-menu-trigger" href="${href}">${label}</a>`
     + `<span class="reference-menu-popover${isUser ? '' : ' reference-menu-popover-tag'}">`
