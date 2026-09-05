@@ -7900,10 +7900,6 @@ a.post-context:hover {
   transition: grid-template-rows 200ms ease, visibility 0s;
 }
 
-.hidden-replies-notice {
-  margin-right: clamp(18px, 3vw, 28px);
-}
-
 a.hidden-replies-notice {
   color: inherit;
   border-bottom: 0;
