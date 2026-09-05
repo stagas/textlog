@@ -30,7 +30,7 @@ export function InviteShare() {
         {socialShares.map(({ name, Icon, href }) => (
           <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Share textlog on ${name}`}
             title={name} key={name}>
-            <Icon aria-hidden="true" focusable="false" />
+            <Icon aria-hidden="true" />
           </a>
         ))}
       </div>
