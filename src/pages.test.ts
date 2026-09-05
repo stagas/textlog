@@ -2347,6 +2347,16 @@ test('posts describe whether their author wrote or replied', () => {
     + '<span class="reference-menu"><a class="reference-menu-trigger postauthor" href="/u/deleted-363')
 })
 
+test('moderators see a hidden-post label beside anonymized handles', () => {
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    p: { id: 9, user_id: 1, parent_id: null, body: 'hidden body', created_at: '2026-08-20 12:00:00',
+      deleted_at: null, handle: 'anon123456789abc', hidden_post: true },
+    user: { id: 2, handle: 'moderator', email: 'gstagas@gmail.com', bio: '' },
+  }))
+  expect(html).toContain('@anon123456789abc</a>')
+  expect(html).toContain('<span class="post-context">(hidden post)</span>')
+})
+
 test('quoted parents use the same attribution wording', () => {
   const user = { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' }
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 10:00:00', deleted_at: null,

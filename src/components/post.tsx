@@ -837,6 +837,7 @@ export function Post({
                 referenceData={p.bio_reference} extraAction={authorPopoverAction} />
             )}
           {p.blocked_viewer && <span className="post-context">(user has blocked you)</span>}
+          {p.hidden_post && <span className="post-context">(hidden post)</span>}
           {contextLabel && (canonicalTimestamp
             ? (
               <>

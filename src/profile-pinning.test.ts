@@ -37,4 +37,24 @@ describe('profile pinning', () => {
     expect(replies.posts.map(post => post.id)).toEqual([7, 8, 6, 5])
     expect(replies.posts.filter(post => post.profile_pinned).map(post => post.id)).toEqual([7])
   })
+
+  test('hides dropped-username profiles from others but keeps their posts for moderators', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(2,'moderator','gstagas@gmail.com','x');
+      UPDATE users SET handle='anon123456789abc',handle_chosen_at=NULL WHERE id=1;
+      INSERT INTO banned_usernames(username,dropped_user_id,dropped_by) VALUES('writer',1,2)`)
+    const page = { profileId: 1, page: 1, pageSize: 20 as const, kind: 'notes' as const }
+
+    const publicPosts = await executeDatabaseDomain(database, 'profiles.postsPage', { ...page, viewerId: -1 })
+    const moderatorPosts = await executeDatabaseDomain(database, 'profiles.postsPage', { ...page, viewerId: 2 })
+    const publicDetail = await executeDatabaseDomain(database, 'posts.detail', { id: 1, viewerId: -1 })
+    const moderatorDetail = await executeDatabaseDomain(database, 'posts.detail', { id: 1, viewerId: 2 })
+
+    expect(publicPosts.posts).toEqual([])
+    expect(moderatorPosts.posts.map(post => post.id)).toEqual([3, 4, 2, 1])
+    expect(moderatorPosts.posts.every(post => post.hidden_post)).toBeTrue()
+    expect(publicDetail.status).toBe('not_found')
+    expect(moderatorDetail.status).toBe('ready')
+    if (moderatorDetail.status === 'ready') expect(moderatorDetail.post.hidden_post).toBeTrue()
+  })
 })

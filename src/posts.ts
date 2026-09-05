@@ -364,6 +364,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     : new Map<number, string>()
   if (!posts.length) return posts
   const moderator = moderatorViewer(database, viewerId)
+  const hiddenAuthorIds = moderator && database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
+  ).get()
+    ? new Set((database.query(`SELECT DISTINCT dropped_user_id id FROM banned_usernames
+      WHERE dropped_user_id IN (${posts.map(() => '?').join(',')})`).all(...posts.map(post => post.user_id)) as
+        Array<{ id: number }>).map(row => row.id))
+    : new Set<number>()
   const blockViewerId = moderator ? -1 : viewerId
   const blockers = moderator && viewerId >= 0
     ? new Set((database.query(`SELECT blocker_id FROM blocks WHERE blocked_id=?
@@ -762,6 +769,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     return reference
   }
   for (const parent of parents.values()) {
+    parent.hidden_post = parent.user_id != null && hiddenAuthorIds.has(parent.user_id)
     parent.mood = parent.user_id == null ? '' : moods.get(parent.user_id) || ''
     parent.profile_stats = parent.user_id == null ? undefined : profileStats.get(parent.user_id)
     parent.note_count = parent.profile_stats?.notes || 0
@@ -792,6 +800,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
     viewer_following: followedUserIds.has(post.user_id),
     follows_viewer: followerUserIds.has(post.user_id),
     blocked_viewer: blockers.has(post.user_id),
+    hidden_post: hiddenAuthorIds.has(post.user_id),
     mention_bios: mentionBios,
     mention_note_counts: mentionNoteCounts,
     mention_profile_stats: mentionProfileStats,

@@ -1662,8 +1662,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.detail': {
       const { id, viewerId } = input as DatabaseDomainInput<'posts.detail'>
+      const hiddenAuthorVisibility = viewerIsModerator(database, viewerId)
+        ? '1'
+        : excludesDroppedUsernameUsers(database)
       const found = database.query(`SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id
-        WHERE p.id=? AND ${excludesDroppedUsernameUsers(database)}`)
+        WHERE p.id=? AND ${hiddenAuthorVisibility}`)
         .get(id) as PostView | null
       if (!found) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0 && !viewerIsModerator(database, viewerId)) {
@@ -1906,17 +1909,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'profiles.postsPage': {
       const { profileId, viewerId, page, pageSize, kind } = input as DatabaseDomainInput<'profiles.postsPage'>
+      const hiddenAuthorVisibility = viewerIsModerator(database, viewerId)
+        ? '1'
+        : excludesDroppedUsernameUsers(database)
       const postKindFilter = kind === 'replies' ? 'AND p.parent_id IS NOT NULL' : 'AND p.parent_id IS NULL'
       const pinnedKindFilter = kind === 'replies'
         ? 'AND pinned.parent_id IS NOT NULL'
         : 'AND pinned.parent_id IS NULL'
-      const snapshot = feedSnapshotPage<PostView>(database, `profile:v2:${profileId}:${kind}`, viewerId, page,
+      const snapshot = feedSnapshotPage<PostView>(database, `profile:v3:${profileId}:${kind}`, viewerId, page,
         () =>
           database.query(`SELECT p.*,u.handle,p.id=(SELECT max(pinned.id) FROM posts pinned
             JOIN post_hashtags pin_tag ON pin_tag.post_id=pinned.id AND pin_tag.tag='pin'
             WHERE pinned.user_id=p.user_id AND pinned.deleted_at IS NULL ${pinnedKindFilter}) profile_pinned
           FROM posts p JOIN users u ON u.id=p.user_id
-          WHERE p.user_id=? AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+          WHERE p.user_id=? AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility}
           AND (? < 0 OR NOT EXISTS
             (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
               WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}

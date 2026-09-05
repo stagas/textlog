@@ -73,6 +73,7 @@ export type ParentPost = Pick<PostRow,
   viewer_following?: boolean
   follows_viewer?: boolean
   blocked_viewer?: boolean
+  hidden_post?: boolean
   mention_bios?: Record<string, string>
   mention_note_counts?: Record<string, number>
   mention_profile_stats?: Record<string, UserProfileStats>
@@ -96,6 +97,7 @@ export type ParentPost = Pick<PostRow,
 
 export type PostView = PostRow & {
   handle: string
+  hidden_post?: boolean
   mood?: string
   profile_pinned?: number | boolean
   viewer_context?: 'reply' | 'mention'

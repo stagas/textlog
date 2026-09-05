@@ -176,7 +176,8 @@ export function registerProfilesRoutes(app: Hono) {
     return page(
       <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
         ? []
-        : snapshot.posts} following={following} followsViewer={followsViewer} blocked={blocked} total={total}
+        : snapshot.posts} following={following} followsViewer={followsViewer} blocked={blocked}
+        total={moderatorBypass ? total : snapshot.totalItems}
         noteCount={noteCount} replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'}
         followerCount={followerCount} followingCount={followingCount} followingTagCount={followingTagCount}
         blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social} page={snapshot.page}
