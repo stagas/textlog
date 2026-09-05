@@ -18,6 +18,10 @@ describe('polls', () => {
       options: ['Tea', 'Coffee'],
       after: 'I usually drink mine in the morning.',
     })
+    expect(parsePoll('Tea or coffee? #poll\n\n\nTea\nCoffee')).toEqual({
+      question: 'Tea or coffee?',
+      options: ['Tea', 'Coffee'],
+    })
   })
 
   test('does not activate a poll marker inside fenced code', () => {
@@ -39,6 +43,12 @@ describe('polls', () => {
       kind: 'quiz',
       correctIndex: 1,
       explanation: 'Athens has been the capital since 1834.',
+    })
+    expect(parsePoll('Capital? #quiz\n \n\nRome\n> Athens')).toEqual({
+      question: 'Capital?',
+      options: ['Rome', 'Athens'],
+      kind: 'quiz',
+      correctIndex: 1,
     })
   })
 

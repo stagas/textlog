@@ -6240,7 +6240,7 @@ form.report-panel {
 .font-size-regular>span:first-of-type { font-size: var(--font-size-16); }
 .font-size-large>span:first-of-type { font-size: var(--font-size-18); }
 
-.poll { position: relative; z-index: 2; display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: var(--font-size-13); }
+.poll { position: relative; z-index: 2; display: grid; gap: var(--space-1); margin: .5lh 0; font-size: var(--font-size-13); }
 .thread-root>.post>.poll { font-size: var(--font-size-15); letter-spacing: -.5px; }
 .feed-thread .thread-root>.post>.poll { font-size: var(--font-size-13); letter-spacing: normal; }
 .poll-option { display: block; width: 100%; margin: 0; }

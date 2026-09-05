@@ -22,10 +22,12 @@ export function parsePoll(body: string): PollDefinition | null {
   const markerStart = markerMatch.index!
   const question = [...lines.slice(0, marker), markerLine.slice(0, markerStart)].join('\n').trim()
   const remainingLines = lines.slice(marker + 1)
-  const separator = remainingLines.findIndex(line => !line.trim())
-  const answerLines = (separator < 0 ? remainingLines : remainingLines.slice(0, separator))
+  const firstAnswer = remainingLines.findIndex(line => line.trim())
+  const answerSection = firstAnswer < 0 ? [] : remainingLines.slice(firstAnswer)
+  const separator = answerSection.findIndex(line => !line.trim())
+  const answerLines = (separator < 0 ? answerSection : answerSection.slice(0, separator))
     .map(option => option.trim()).filter(Boolean)
-  const after = separator < 0 ? '' : remainingLines.slice(separator + 1).join('\n').trim()
+  const after = separator < 0 ? '' : answerSection.slice(separator + 1).join('\n').trim()
   const correct = answerLines.map(option => kind === 'quiz' && /^>\s+/.test(option))
   const options = answerLines.map(option => kind === 'quiz' ? option.replace(/^>\s+/, '').trim() : option)
   if (!question || options.length < 2 || options.length > 8 || new Set(options).size !== options.length) return null
