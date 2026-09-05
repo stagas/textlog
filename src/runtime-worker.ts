@@ -24,14 +24,20 @@ const foregroundQueue: QueuedDomainMessage[] = []
 const backgroundQueue: QueuedDomainMessage[] = []
 let processing = false
 let drainScheduled = false
+let drainTimer: ReturnType<typeof setTimeout> | undefined
+const BACKGROUND_IDLE_DELAY_MS = 25
 
 function scheduleDrain() {
   if (processing || drainScheduled || (!foregroundQueue.length && !backgroundQueue.length)) return
   drainScheduled = true
-  setTimeout(() => {
+  // Give incoming page requests a short window to overtake cache maintenance and warming. Background work is still
+  // guaranteed to run during an idle period, but a burst of navigation does not get stuck behind work which is not
+  // needed for the current response.
+  drainTimer = setTimeout(() => {
+    drainTimer = undefined
     drainScheduled = false
     void drainQueue()
-  }, 0)
+  }, foregroundQueue.length ? 0 : BACKGROUND_IDLE_DELAY_MS)
 }
 
 async function drainQueue() {
@@ -95,6 +101,11 @@ self.onmessage = event => {
   const queued = { ...message, queuedAt: performance.now() }
   if (message.priority === 'background') backgroundQueue.push(queued)
   else foregroundQueue.push(queued)
+  if (message.priority !== 'background' && drainScheduled && drainTimer) {
+    clearTimeout(drainTimer)
+    drainTimer = undefined
+    drainScheduled = false
+  }
   scheduleDrain()
 }
 

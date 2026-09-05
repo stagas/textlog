@@ -20,6 +20,20 @@ const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
 const MATERIALIZED_HTML_VERSION = 48
 let memoryGeneration = 0
+const DEFERRED_CACHE_DELAY_MS = 25
+
+function deferredCacheWork(work: () => Promise<unknown>) {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => void work().then(() => resolve(), reject), DEFERRED_CACHE_DELAY_MS)
+    timer.unref?.()
+  })
+}
+
+function persistMaterialization(kind: MaterializedFeedKind, viewerId: number, variant: string, generation: number,
+  html: string)
+{
+  return backgroundDatabaseCall('cache.materializedFeedPut', { kind, viewerId, variant, generation, html })
+}
 
 export function invalidateMaterializedFeedMemory() {
   memoryGeneration++
@@ -153,7 +167,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
           })
         }
         if (cached.stale && !revalidations.has(key)) {
-          const revalidation = (async () => {
+          const revalidation = deferredCacheWork(async () => {
             const response = await render()
             if (response.status !== 200) return
             const html = await response.text()
@@ -162,14 +176,8 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
               : rerenderForCache
               ? await (await render()).text()
               : html
-            await call('cache.materializedFeedPut', {
-              kind,
-              viewerId,
-              variant,
-              generation: cached.generation,
-              html: cachedHtml,
-            })
-          })()
+            await persistMaterialization(kind, viewerId, variant, cached.generation, cachedHtml)
+          })
           revalidations.set(key, revalidation)
           void revalidation.finally(() => {
             if (revalidations.get(key) === revalidation) revalidations.delete(key)
@@ -191,13 +199,11 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
           ? await (await render()).text()
           : html
         memoryBody = cachedHtml
-        await call('cache.materializedFeedPut', {
-          kind,
-          viewerId,
-          variant,
-          generation: cached.generation,
-          html: cachedHtml,
-        })
+        // The rendered first page is ready. Keep it in memory immediately and persist it only after yielding to new
+        // foreground requests; the generation check in materializedFeedPut rejects an obsolete delayed write.
+        const persistence = () => persistMaterialization(kind, viewerId, variant, cached.generation, cachedHtml)
+        if (Bun.env.NODE_ENV === 'test') await persistence()
+        else void deferredCacheWork(persistence).catch(error => console.error(`Could not persist ${kind} feed`, error))
       }
       return { body: html, memoryBody, status: response.status,
         headers: [...response.headers.entries(), ['x-feed-cache', 'miss']] }
