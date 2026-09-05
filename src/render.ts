@@ -5,8 +5,7 @@ import { renderToStaticMarkup as render } from 'preact-render-to-string'
 // that stable HTML contract while the application moves to Preact rendering.
 export function renderToStaticMarkup(vnode: VNode<any>) {
   return render(vnode)
-    .replace(/>([^<]*)</g, (_segment, text: string) =>
-      `>${text.replaceAll('>', '&gt;').replaceAll("'", '&#x27;')}<`)
+    .replace(/<script([^>]*)\/>/gi, '<script$1></script>')
     .replace(/<([a-z][^<>]*?)>/gi, tag => {
     const classAttribute = tag.match(/\sclass="[^"]*"/)
     const classFirst = classAttribute

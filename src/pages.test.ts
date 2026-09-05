@@ -2052,6 +2052,8 @@ test('notification settings are the only account page that loads their client sc
     editing: true,
   }))
   expect(notifications).toContain('src="/notifications.js"')
+  expect(notifications).toContain('</script>')
+  expect(notifications).not.toMatch(/<script[^>]*\/>/)
   expect(notifications).toContain('data-handle="reader"')
   expect(notifications).toContain('data-return-href="/account/edit?from=%2Flatest%3Fpage%3D2#notifications"')
   expect(notifications).toContain('class="static-page notifications-page"')
@@ -2071,7 +2073,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('notify @reader about')
   expect(notifications).toContain('Only notes addressed to you')
   expect(notifications).toContain('name="peopleFollowActivity"')
-  expect(notifications).toContain('include people&#x27;s follow activity')
+  expect(notifications).toContain("include people's follow activity")
   expect(notifications).toContain('name="hashtagFollowActivity"')
   expect(notifications).toContain('name="broadcasts" checked=""')
   expect(notifications).toContain('Announcements sent by the administrators')

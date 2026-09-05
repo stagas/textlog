@@ -205,8 +205,8 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1421" />
-        <style>{themeCss}</style>
+        <link rel="stylesheet" href="/styles.css?v=1422" />
+        <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body
         className={`density-${density}${corners === 'round' ? ' corners-round' : ''}${mobile ? ' mobile-agent' : ''}${

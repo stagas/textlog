@@ -21,7 +21,7 @@ describe('mood prompt', () => {
     expect(html).toContain("What's up?")
     expect(html).toContain('name="mood" value="😊"')
     expect(html).toContain('name="returnTo" value="/@?page=2"')
-    expect(html).toContain('I&#x27;ll do it later, thanks')
+    expect(html).toContain("I'll do it later, thanks")
     expect(html).toContain('action="/pick-mood/dismiss"')
   })
 
