@@ -2237,7 +2237,8 @@ test('feed tabs include the chronological top-level new feed', () => {
 
   expect(html).toContain('<a class="active" aria-current="page" href="/new">')
   expect(html).toContain('<h1 class="visually-hidden">New notes</h1>')
-  expect(html).not.toContain('type="application/rss+xml"')
+  expect(html).toContain('type="application/rss+xml" title="New conversations (RSS)" href="/new.rss"')
+  expect(html).toContain('type="application/atom+xml" title="New conversations (Atom)" href="/new.atom"')
 })
 
 test('new feed threads load replies but hide every reply while collapsed', () => {
@@ -2708,7 +2709,8 @@ describe('About', () => {
 
   test('API documentation lists root feed aliases', () => {
     const html = renderToStaticMarkup(React.createElement(ApiDocs, { user: null }))
-    for (const alias of ['/all.json', '/all.rss', '/all.atom', '/hot.json', '/hot.rss', '/hot.atom']) {
+    for (const alias of ['/all.json', '/all.rss', '/all.atom', '/new.json', '/new.rss', '/new.atom',
+      '/hot.json', '/hot.rss', '/hot.atom']) {
       expect(html).toContain(alias)
     }
   })

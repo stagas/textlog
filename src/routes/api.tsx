@@ -291,6 +291,10 @@ function openApiDocument() {
         get: { summary: 'Hot posts as RSS or Atom', parameters: [formatParameter], responses: syndicationResponses,
           'x-root-aliases': ['/hot.rss', '/hot.atom'] },
       },
+      '/feeds/new.{format}': {
+        get: { summary: 'Newest top-level posts as RSS or Atom', parameters: [formatParameter],
+          responses: syndicationResponses, 'x-root-aliases': ['/new.rss', '/new.atom'] },
+      },
       '/posts/{id}': {
         get: { summary: 'Single post', security: optionalAuthSecurity, parameters: [postIdParameter],
           responses: { ...jsonResponses, '200': postResponse } },

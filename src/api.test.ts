@@ -568,7 +568,7 @@ describe('public API', () => {
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
     expect(rss.headers.get('access-control-allow-origin')).toBe('*')
     expect(spec.openapi).toBe('3.1.0')
-    expect(Object.keys(spec.paths)).toHaveLength(54)
+    expect(Object.keys(spec.paths)).toHaveLength(55)
     expect(spec.paths['/autotag'].post.security).toEqual([{ bearerAuth: [] }])
     expect(spec.paths['/bookmarks'].get.responses['401']).toBeDefined()
     expect(spec.paths['/posts/{id}/bookmark'].post).toBeDefined()
@@ -600,6 +600,7 @@ describe('public API', () => {
     expect(spec.paths['/feeds/hot'].get['x-root-aliases']).toEqual(['/hot.json'])
     expect(spec.paths['/feeds/all.{format}'].get['x-root-aliases']).toEqual(['/all.rss', '/all.atom'])
     expect(spec.paths['/feeds/hot.{format}'].get['x-root-aliases']).toEqual(['/hot.rss', '/hot.atom'])
+    expect(spec.paths['/feeds/new.{format}'].get['x-root-aliases']).toEqual(['/new.rss', '/new.atom'])
     const repliesOperation = spec.paths['/posts/{id}/replies'].get
     expect(repliesOperation.parameters.find((parameter: any) => parameter.name === 'depth').schema)
       .toMatchObject({ type: 'integer', minimum: 1, maximum: 20, default: 1 })

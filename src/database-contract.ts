@@ -302,7 +302,7 @@ export type DatabaseDomainOperations = {
     output: PostFeedPage
   }
   'syndication.load': {
-    input: { kind: 'latest' | 'hot' | 'user' | 'tag' | 'personalized'; origin: string; identifier?: string }
+    input: { kind: 'latest' | 'new' | 'hot' | 'user' | 'tag' | 'personalized'; origin: string; identifier?: string }
     output: { status: 'not_found' } | { status: 'redirect'; handle: string } | { status: 'ready'; handle?: string;
       posts: ApiPost[]; viewerHandle?: string; activities: Array<
         { id: string; title: string; url: string; created_at: string; author: { handle: string; url: string } }

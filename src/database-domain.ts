@@ -1874,7 +1874,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const posts = kind === 'hot'
         ? apiHotPosts(database, origin, API_DEFAULT_LIMIT, null).data
         : apiPosts(database, origin, { limit: API_DEFAULT_LIMIT, before: null,
-          ...(kind === 'latest' ? { excludeWhispers: true } : { tag: identifier || '' }) }).data
+          ...(kind === 'latest' ? { excludeWhispers: true }
+            : kind === 'new' ? { topLevelOnly: true }
+            : { tag: identifier || '' }) }).data
       return { status: 'ready', posts, activities: [], postTitlePrefixes: {} } as DatabaseDomainOutput<K>
     }
     case 'api.publicRead': {

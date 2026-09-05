@@ -36,7 +36,9 @@ export function PublicFeed(
   return (
     <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
       mobileWriteAction notificationBanner={notificationBanner}
-      feeds={random || newest ? undefined : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
+      feeds={random ? undefined : newest
+        ? { title: 'New conversations', rss: '/new.rss', atom: '/new.atom' }
+        : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
       <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
       {writePreview && (

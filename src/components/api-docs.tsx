@@ -255,13 +255,17 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
             to the collection address and enter it manually in a feed reader.
           </p>
           <pre><code>{`/feeds/all.rss
+/feeds/new.rss
 /feeds/hot.atom
 /users/:handle/posts.rss
 /tags/:tag/posts.atom`}</code></pre>
-          <p>The all and hot feeds also have shorter root-level aliases:</p>
+          <p>The all, new, and hot feeds also have shorter root-level aliases:</p>
           <pre><code>{`/all.json
 /all.rss
 /all.atom
+/new.json
+/new.rss
+/new.atom
 /hot.json
 /hot.rss
 /hot.atom`}</code></pre>

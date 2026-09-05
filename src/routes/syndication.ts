@@ -59,6 +59,18 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
       posts: loaded.posts,
     })
   }
+  const newest = async (c: Context, format: SyndicationFormat, feedPath?: string) => {
+    const origin = apiOrigin(c.req.url, appUrl)
+    const loaded = await service().call('syndication.load', { kind: 'new', origin })
+    if (loaded.status !== 'ready') return c.text('Not found', 404)
+    return feedResponse(c, format, appUrl, {
+      title: `New conversations on ${name}`,
+      description: `Newest public conversations started on ${name}.`,
+      pagePath: '/new',
+      feedPath,
+      posts: loaded.posts,
+    })
+  }
   const user = async (c: Context, requestedHandle: string, format: SyndicationFormat, feedPath?: string) => {
     if (!/^[A-Za-z0-9_]{2,24}$/.test(requestedHandle)) return c.text('Not found', 404)
     const origin = apiOrigin(c.req.url, appUrl)
@@ -122,9 +134,11 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
     app.get(`/all.${format}`, c => latest(c, format, `/all.${format}`))
     app.get(`/latest.${format}`, c => latest(c, format, `/latest.${format}`))
     app.get(`/hot.${format}`, c => hot(c, format))
+    app.get(`/new.${format}`, c => newest(c, format))
     app.get(`/api/v1/feeds/all.${format}`, c => latest(c, format, `/api/v1/feeds/all.${format}`))
     app.get(`/api/v1/feeds/latest.${format}`, c => latest(c, format, `/api/v1/feeds/latest.${format}`))
     app.get(`/api/v1/feeds/hot.${format}`, c => hot(c, format, `/api/v1/feeds/hot.${format}`))
+    app.get(`/api/v1/feeds/new.${format}`, c => newest(c, format, `/api/v1/feeds/new.${format}`))
   }
 
   const personalizedFeedRoute = async (c: Context) => {

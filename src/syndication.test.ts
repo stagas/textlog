@@ -173,12 +173,14 @@ describe('RSS and Atom feeds', () => {
   test('exposes the same feed formats on API collection URLs', async () => {
     const app = fixture()
     const latest = await app.request('https://textlog.cc/api/v1/feeds/latest.atom')
+    const newest = await app.request('https://textlog.cc/api/v1/feeds/new.rss')
     const user = await app.request('https://textlog.cc/api/v1/users/Alice/posts.rss')
     const tag = await app.request('https://textlog.cc/api/v1/tags/textlog/posts.atom')
 
     expect(latest.status).toBe(200)
     expect(latest.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
     expect(await latest.text()).toContain('<id>https://textlog.cc/api/v1/feeds/latest.atom</id>')
+    expect(await newest.text()).toContain('https://textlog.cc/api/v1/feeds/new.rss')
     expect(await user.text()).toContain('https://textlog.cc/api/v1/users/Alice/posts.rss')
     expect(await tag.text()).toContain('https://textlog.cc/api/v1/tags/textlog/posts.atom')
   })
@@ -186,18 +188,18 @@ describe('RSS and Atom feeds', () => {
   test('loads the same latest and hot posts for JSON, RSS, and Atom', async () => {
     const app = fixture()
     const database = (app as any).database as Database
-    for (const kind of ['latest', 'hot'] as const) {
+    for (const kind of ['latest', 'new', 'hot'] as const) {
       const syndication = await executeDatabaseDomain(database, 'syndication.load', {
         kind,
         origin: 'https://textlog.cc',
       })
-      const api = kind === 'latest'
+      const api = kind === 'latest' || kind === 'new'
         ? await executeDatabaseDomain(database, 'api.publicRead', {
           kind: 'collection',
           origin: 'https://textlog.cc',
           limit: 20,
           before: null,
-          excludeWhispers: true,
+          ...(kind === 'latest' ? { excludeWhispers: true } : { topLevelOnly: true }),
         })
         : await executeDatabaseDomain(database, 'api.publicRead', {
           kind: 'hot',
