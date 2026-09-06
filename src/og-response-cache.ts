@@ -47,6 +47,7 @@ export function clearOgResponseCache() {
 
 const postOgMutations = new Set([
   'admin.deletePost',
+  'admin.moderateUser',
   'admin.translatePost',
   'api.deletePost',
   'api.persistPostLocation',

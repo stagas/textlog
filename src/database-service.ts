@@ -11,6 +11,7 @@ const feedMutationListeners = new Set<(operation: DatabaseDomainOperation) => vo
 const feedMutations = new Set<DatabaseDomainOperation>([
   'auth.claimInitialHandle',
   'admin.deletePost',
+  'admin.moderateUser',
   'admin.translatePost',
   'admin.addTagAliases',
   'admin.removeTagAlias',

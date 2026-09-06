@@ -18,6 +18,11 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
   await databaseService().call('interactions.toggleTagBlock', { userId: 1, tag: 'muted' })
   await databaseService().call('drafts.save', { id: null, userId: 1, parentId: null, body: 'A draft' })
   await databaseService().call('drafts.delete', { id: 'opaque-draft-id', userId: 1 })
+  await databaseService().call('admin.moderateUser', { id: 2, actorId: 1, action: 'drop-username', note: '' })
+  expect(cachedAnonymousPostPage('/post/42')).toBeNull()
+  expect(cachedOgResponse('post:42')).toBeNull()
+  await materializeAnonymousPostPage('/post/42', new Response('stale post'))
+  cacheOgResponse('post:42', new Uint8Array([42]), {})
   await databaseService().call('admin.deletePost', { id: 42, actorId: 1, note: '' })
   expect(cachedAnonymousPostPage('/post/42')).toBeNull()
   expect(cachedOgResponse('post:42')).toBeNull()
@@ -33,6 +38,7 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
     'interactions.toggleTagBlock',
     'drafts.save',
     'drafts.delete',
+    'admin.moderateUser',
     'admin.deletePost',
     'admin.translatePost',
   ])
