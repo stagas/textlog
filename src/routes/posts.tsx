@@ -302,13 +302,13 @@ export function registerPostsRoutes(app: Hono) {
     const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
       locationMapProvider(c.req.header('user-agent') || '')
     }\0${requestUrl.pathname}${requestUrl.search}`
+    const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
+    if (detail.status === 'not_found') return c.text('Not found', 404)
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
     if (cached) {
       if (c.req.query('hn') !== undefined) cached.headers.append('set-cookie', campaignAttributionCookie('hn'))
       return cached
     }
-    const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
-    if (detail.status === 'not_found') return c.text('Not found', 404)
     const post = detail.post
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const topHref = detail.conversationRootId

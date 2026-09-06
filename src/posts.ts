@@ -3,7 +3,7 @@ import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, normalizeHashtagSpelling,
   pascalCaseHashtagDisplayName, postContentFlags } from './content'
-import { resolveHandle } from './handles'
+import { excludesDroppedUsernameUsers, resolveHandle } from './handles'
 import { recordHotActivity } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { markLatestPostsRead } from './latest-state'
@@ -856,6 +856,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
   const gate = hiddenReplyGateState(database, [parentId], viewerId, moderator)
   if (gate.hiddenRoots.has(parentId)) return []
   const blockViewerId = moderator ? -1 : viewerId
+  const hiddenAuthorVisibility = moderator ? '1' : excludesDroppedUsernameUsers(database)
   const metaVisibility = moderator ? '1' : metaThreadVisibleToViewer(viewerId)
   const supportsExecutionOutput = !!database.query(
     'SELECT 1 FROM pragma_table_info(\'posts\') WHERE name=\'execution_output\'',
@@ -871,7 +872,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
           OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
-        AND ${metaVisibility}
+        AND ${metaVisibility} AND ${hiddenAuthorVisibility}
       UNION ALL
       SELECT p.*,u.handle,thread.depth+1 FROM posts p JOIN users u ON u.id=p.user_id
         JOIN thread ON p.parent_id=thread.id WHERE (? < 0 OR NOT EXISTS
@@ -879,7 +880,7 @@ export function loadThreadReplies(database: Database, parentId: number, viewerId
           OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
           WHERE ph.post_id=p.id AND bh.user_id=?))
-        AND ${metaVisibility}
+        AND ${metaVisibility} AND ${hiddenAuthorVisibility}
     ) SELECT id,user_id,parent_id,body,${translationColumn},created_at,deleted_at,
       has_latex,has_links,has_code,${
     supportsExecutionOutput ? 'execution_output' : 'NULL execution_output'

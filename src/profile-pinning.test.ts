@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
 import { feedSnapshotPage } from './feed-snapshots'
 import { runMigrations } from './migrations'
+import { loadThreadReplies } from './posts'
 
 function fixture() {
   const database = new Database(':memory:')
@@ -56,5 +57,18 @@ describe('profile pinning', () => {
     expect(publicDetail.status).toBe('not_found')
     expect(moderatorDetail.status).toBe('ready')
     if (moderatorDetail.status === 'ready') expect(moderatorDetail.post.hidden_post).toBeTrue()
+  })
+
+  test('hides dropped-username replies on parent threads except for moderators', () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (2,'anon123456789abc','hidden@example.com','x'),(3,'moderator','gstagas@gmail.com','x');
+      INSERT INTO posts(id,user_id,parent_id,body) VALUES(9,2,1,'hidden reply');
+      INSERT INTO banned_usernames(username,dropped_user_id,dropped_by) VALUES('hidden-writer',2,3)`)
+
+    expect(loadThreadReplies(database, 1, -1).map(post => post.id)).not.toContain(9)
+    const moderatorReplies = loadThreadReplies(database, 1, 3)
+    expect(moderatorReplies.map(post => post.id)).toContain(9)
+    expect(moderatorReplies.find(post => post.id === 9)?.hidden_post).toBeTrue()
   })
 })
