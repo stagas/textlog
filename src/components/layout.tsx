@@ -196,7 +196,7 @@ export function Layout({
         </>
         <link rel="icon" href={`/favicon-theme.svg?v=${appearanceVersion}`} type="image/svg+xml" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
+        {user && <link rel="manifest" href="/site.webmanifest" />}
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
         {feeds && (
           <>
@@ -205,7 +205,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1474" />
+        <link rel="stylesheet" href="/styles.css?v=1475" />
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body

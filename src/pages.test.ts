@@ -1824,13 +1824,17 @@ test('admin metrics use locale-aware number formatting', () => {
   )
 })
 
-test('pages advertise the dynamic favicon, touch icon, and manifest', () => {
-  const html = renderToStaticMarkup(React.createElement(About, { user: null }))
+test('pages advertise icons to everyone and the manifest only to signed-in users', () => {
+  const guestHtml = renderToStaticMarkup(React.createElement(About, { user: null }))
+  const signedInHtml = renderToStaticMarkup(React.createElement(About, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' },
+  }))
 
-  expect(html).toContain('href="/favicon-theme.svg?v=system.theme" type="image/svg+xml" sizes="any"')
-  expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"')
-  expect(html).toContain('rel="manifest" href="/site.webmanifest"')
-  expect(html).not.toContain('rel="icon" href="/textlog.svg')
+  expect(guestHtml).toContain('href="/favicon-theme.svg?v=system.theme" type="image/svg+xml" sizes="any"')
+  expect(guestHtml).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"')
+  expect(guestHtml).not.toContain('rel="manifest"')
+  expect(signedInHtml).toContain('rel="manifest" href="/site.webmanifest"')
+  expect(guestHtml).not.toContain('rel="icon" href="/textlog.svg')
 })
 
 test('pagination requests instant scrolling without client-side scripts', () => {
