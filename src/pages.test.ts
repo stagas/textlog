@@ -14,6 +14,7 @@ import {
   BlogBuildingWithoutJavascript,
   BlogRecap,
   BlogRecapV2,
+  Bookmarks,
   ChangeAppearance,
   ChooseHandle,
   Compose,
@@ -54,6 +55,20 @@ import { PublicFeed } from './components/public-feed'
 import { TagFeed } from './components/tag-feed'
 import { renderToStaticMarkup } from './render'
 import { withAppearance } from './theme'
+
+test('bookmarks page hides search until there are bookmarks', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01' }
+  const html = renderToStaticMarkup(React.createElement(Bookmarks, {
+    user,
+    query: '',
+    page: 1,
+    data: { posts: [], total: 0, totalPages: 0, highlights: [] },
+  }))
+
+  expect(html).toContain('No bookmarks yet.')
+  expect(html).not.toContain('role="search"')
+  expect(html).not.toContain('placeholder="search bookmarks"')
+})
 
 test('mobile account navigation uses an in-flow details menu', () => {
   const request = new Request('https://textlog.test/', {

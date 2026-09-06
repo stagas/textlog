@@ -16,13 +16,13 @@ export function Bookmarks({ user, query, page, data }: {
     <Layout user={user} title="bookmarks">
       <section className="search-header bookmarks-header">
         <h1>Bookmarks</h1>
-        <form className="search-form" method="get" action="/bookmarks" role="search">
+        {(query || data.posts.length > 0) && <form className="search-form" method="get" action="/bookmarks" role="search">
           <label className="visually-hidden" htmlFor="bookmark-search-query">Search bookmarks</label>
           <input id="bookmark-search-query" type="search" name="q" maxLength={100} defaultValue={query}
             placeholder="search bookmarks" autoFocus={false} autoComplete="off" inputMode="search"
             enterkeyhint="search" />
           <button className="button">search</button>
-        </form>
+        </form>}
       </section>
       <Pagination page={page} totalPages={data.totalPages} path={path} top />
       <div className="bookmarks-list">
