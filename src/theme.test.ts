@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, cornerChoice, cornerCookie, fontChoice,
+import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, appearanceRequestVariant, cornerChoice, cornerCookie, fontChoice,
   fontCookie, fontSizeChoice, fontSizeCookie, primaryFontChoice, primaryFontCookie, sansSerifFontChoice,
   sansSerifFontCookie, themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
 
@@ -8,6 +8,15 @@ test('appearance reads valid choices and falls back safely', () => {
     .toEqual({ theme: 'sepia', accent: 'amber' })
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=nope.neon' } })))
     .toEqual({ theme: 'system', accent: 'theme' })
+})
+
+test('cache variants use the effective render request', () => {
+  const original = new Request('http://localhost/post/1')
+  const assigned = new Request(original, {
+    headers: { cookie: 'appearance=dracula.cyan; primary-font=sans-serif; sans-serif-font=roboto; corners=round' },
+  })
+  expect(withAppearance(assigned, () => appearanceRequestVariant(original)))
+    .toBe('dracula.cyan||roboto|sans-serif||round')
 })
 
 test('appearance is available while rendering a request', () => {

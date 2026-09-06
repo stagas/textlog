@@ -38,6 +38,7 @@ import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody }
 import { postRateLimitMessage } from '../post-rate-limit'
 import { wakePostPushWorker } from '../push'
 import { normalizeSearchQuery } from '../search'
+import { appearanceRequestVariant } from '../theme'
 import { toggleTodo } from '../todos'
 import { postTranslation } from '../translation'
 import { currentUser } from '../utils'
@@ -301,7 +302,7 @@ export function registerPostsRoutes(app: Hono) {
     const requestUrl = new URL(c.req.url)
     const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
       locationMapProvider(c.req.header('user-agent') || '')
-    }\0${requestUrl.pathname}${requestUrl.search}`
+    }\0${appearanceRequestVariant(c.req.raw)}\0${requestUrl.pathname}${requestUrl.search}`
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)

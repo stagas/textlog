@@ -1,13 +1,12 @@
 import type { Database } from 'bun:sqlite'
-import { activeRequest } from './theme'
+import { appearanceRequestVariant } from './theme'
 
 export const MAX_MATERIALIZED_PAGES = 1_024
 
 function appearanceVariant(request: Request) {
-  request = activeRequest(request)
   const cookie = request.headers.get('cookie') || ''
-  const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'corners', 'notification_device']
-  return names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
+  const notificationDevice = cookie.match(/(?:^|;\s*)notification_device=([^;]*)/)?.[1] || ''
+  return `${appearanceRequestVariant(request)}|${notificationDevice}`
 }
 
 /** Reuse the fully rendered anonymous first page until a database mutation advances the feed generation. */

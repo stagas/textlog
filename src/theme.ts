@@ -130,6 +130,12 @@ export function activeRequest(fallback: Request = new Request('http://localhost'
   return appearanceContext.getStore()?.request || fallback
 }
 
+export function appearanceRequestVariant(request: Request) {
+  const cookie = activeRequest(request).headers.get('cookie') || ''
+  const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'corners']
+  return names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
+}
+
 export function activeAppearance() {
   return appearanceContext.getStore()?.appearance || { theme: 'system', accent: 'theme' } as Appearance
 }

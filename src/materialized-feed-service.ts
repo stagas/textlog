@@ -1,7 +1,7 @@
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
 import { locationMapProvider } from './locations'
 import { isMobileRequest } from './user-agent'
-import { activeRequest } from './theme'
+import { activeRequest, appearanceRequestVariant } from './theme'
 
 type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -103,11 +103,11 @@ export function readActionNeedsRerender(changed: boolean | void, actionStale = f
 function appearanceVariant(request: Request) {
   request = activeRequest(request)
   const cookie = request.headers.get('cookie') || ''
-  const names = ['appearance', 'font', 'sans-serif-font', 'primary-font', 'font-size', 'corners', 'notification_device',
-    'donation_banner_dismissed', 'pwa_standalone', 'pwa_install_banner_dismissed']
+  const names = ['notification_device', 'donation_banner_dismissed', 'pwa_standalone', 'pwa_install_banner_dismissed']
   return `${isMobileRequest(request) ? 'mobile' : 'desktop'}|${
     locationMapProvider(request.headers.get('user-agent') || '')
-  }|${names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')}`
+  }|${appearanceRequestVariant(request)}|${
+    names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')}`
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
