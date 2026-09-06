@@ -17,6 +17,7 @@ import { randomInt } from 'node:crypto'
 import { instance } from '../../instance.config'
 import { executePostCode } from '../code-execution'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
+import { feedWarmIdle } from '../idle-work'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
 import {
   campaignAttributionCookie,
@@ -160,6 +161,8 @@ const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const latestFeedCacheVersion = 15
 const newFeedCacheVersion = 1
 const recentFeedVisitorLimit = 40
+let feedWarmTail = Promise.resolve()
+const missWarmGenerations = new Map<number, number>()
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -181,20 +184,28 @@ function feedVariantCookie(request: Request) {
   }).join('; ')
 }
 
-function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null) {
-  if (!user) return
+function recentFeedVisitor(request: Request, user: NonNullable<ReturnType<typeof currentUser>>): RecentFeedVisitor {
   const density = resolvedDensity(request)
   const pageSize = resolvedPageSize(request)
   const cookie = feedVariantCookie(request)
   const userAgent = request.headers.get('user-agent') || ''
   const requestUrl = new URL('/all', request.url).href
-  recentFeedVisitors.delete(user.id)
-  recentFeedVisitors.set(user.id, {
+  return {
     density,
     pageSize,
     user,
     request: new Request(requestUrl, { headers: { cookie, 'user-agent': userAgent } }),
-  })
+  }
+}
+
+function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null) {
+  if (!user) return
+  const visitor = recentFeedVisitor(request, user)
+  const cookie = visitor.request.headers.get('cookie') || ''
+  const userAgent = visitor.request.headers.get('user-agent') || ''
+  const requestUrl = visitor.request.url
+  recentFeedVisitors.delete(user.id)
+  recentFeedVisitors.set(user.id, visitor)
   while (recentFeedVisitors.size > recentFeedVisitorLimit) {
     recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
   }
@@ -203,8 +214,8 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
     requestUrl,
     cookie,
     userAgent,
-    pageSize,
-    density,
+    pageSize: visitor.pageSize,
+    density: visitor.density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
 
@@ -248,13 +259,53 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor,
     }))
 }
 
+async function serialWarmFeedTab(visitor: RecentFeedVisitor, kind: Parameters<typeof warmRecentFeedTab>[1],
+  waitUntilIdle: () => Promise<void>)
+{
+  const previous = feedWarmTail
+  let release!: () => void
+  feedWarmTail = new Promise<void>(resolve => release = resolve)
+  await previous.catch(() => undefined)
+  try {
+    await waitUntilIdle()
+    await warmRecentFeedTab(visitor, kind)
+  }
+  finally {
+    release()
+  }
+}
+
+function warmOtherFeedTabsAfterMiss(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null,
+  current: Parameters<typeof warmRecentFeedTab>[1], response: Response)
+{
+  if (!user || response.headers.get('x-feed-cache') !== 'miss' || Bun.env.DEV_RELOAD === 'true'
+    || Bun.env.DISABLE_FEED_WARMING === 'true') return
+  const generation = (missWarmGenerations.get(user.id) || 0) + 1
+  missWarmGenerations.set(user.id, generation)
+  const visitor = recentFeedVisitor(request, user)
+  const tabs = (['latest', 'new', 'hot', 'for-you', 'to-me'] as const).filter(tab => tab !== current)
+  void (async () => {
+    for (const tab of tabs) {
+      await serialWarmFeedTab(visitor, tab, async () => {
+        await feedWarmIdle.waitUntilIdle()
+        if (missWarmGenerations.get(user.id) !== generation) {
+          throw new DOMException('Superseded miss warm', 'AbortError')
+        }
+      })
+    }
+  })().catch(error => {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) {
+      console.error('Could not warm other feed tabs after cache miss', error)
+    }
+  })
+}
+
 export async function warmRecentFeedTabs(waitUntilIdle: () => Promise<void>, limit = 40) {
   const visitors = [...recentFeedVisitors.values()].reverse().slice(0, limit)
   const tabs = ['latest', 'new', 'hot', 'for-you', 'to-me'] as const
   for (const visitor of visitors) {
     for (const tab of tabs) {
-      await waitUntilIdle()
-      await warmRecentFeedTab(visitor, tab)
+      await serialWarmFeedTab(visitor, tab, waitUntilIdle)
     }
   }
 }
@@ -354,6 +405,7 @@ export function registerFeedsRoutes(app: Hono) {
           toMe: false }) > 0
       })
       : await render()
+    warmOtherFeedTabsAfterMiss(c.req.raw, user, 'for-you', response)
     const remembered = rememberFeed(response, 'following')
     return remembered
   })
@@ -392,6 +444,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
         viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache)
       : await render()
+    warmOtherFeedTabsAfterMiss(c.req.raw, user, 'latest', response)
     const remembered = rememberFeed(response, 'latest')
     return remembered
   })
@@ -444,6 +497,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
         viewerCacheVersion(newFeedCacheVersion, user, notificationBanner))
       : await render()
+    warmOtherFeedTabsAfterMiss(c.req.raw, user, 'new', response)
     return rememberFeed(response, 'new')
   })
 
@@ -496,6 +550,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(0, user, notificationBanner), false, renderForCache)
       : await render()
+    warmOtherFeedTabsAfterMiss(c.req.raw, user, 'to-me', response)
     return rememberFeed(response, 'activity')
   })
 
@@ -528,6 +583,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,
         viewerCacheVersion(hotRankingVersion, user, notificationBanner))
       : await render()
+    warmOtherFeedTabsAfterMiss(c.req.raw, user, 'hot', response)
     const remembered = rememberFeed(response, 'hot')
     return remembered
   })
