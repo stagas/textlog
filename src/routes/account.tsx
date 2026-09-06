@@ -936,7 +936,7 @@ export function registerAccountRoutes(app: Hono) {
     if (!result.ok) return page(<ConfirmEmail invalid />, 400)
     return result.kind === 'change'
       ? redirect('/account/security?changed=email')
-      : redirect('/explore', exploreWelcomeCookie())
+      : redirect('/explore', exploreWelcomeCookie('2'))
   })
 
   app.post('/account/sessions/revoke', async c => {

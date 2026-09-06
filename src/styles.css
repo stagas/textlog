@@ -3400,7 +3400,7 @@ body.corners-round a.button {
 }
 
 .magic-sent-panel {
-  width: min(100%, 560px);
+  width: min(100%, 460px);
 }
 
 .magic-sent-panel>p {
@@ -6789,6 +6789,114 @@ form.report-panel {
   margin: var(--space-6) auto 0;
   padding: clamp(22px, 5vw, 34px);
   text-align: center;
+}
+
+.welcome-celebration {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.welcome-celebration-emoji {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  font-size: 3.25rem;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.25) rotate(-12deg);
+  animation: welcome-emoji 3.35s ease-out both;
+}
+
+.welcome-confetti i {
+  --confetti-color: var(--accent);
+  --duration: 2.7s;
+  --delay: 0s;
+  --fall: 155px;
+  position: absolute;
+  top: -4px;
+  left: -3px;
+  width: 6px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--confetti-color);
+  opacity: 0;
+  animation: welcome-confetti var(--duration) linear var(--delay) both;
+}
+
+.welcome-confetti i:nth-child(6n + 1) { --confetti-color: #ff4f76; }
+.welcome-confetti i:nth-child(6n + 2) { --confetti-color: #ffc83d; }
+.welcome-confetti i:nth-child(6n + 3) { --confetti-color: #35c98b; }
+.welcome-confetti i:nth-child(6n + 4) { --confetti-color: #4d96ff; }
+.welcome-confetti i:nth-child(6n + 5) { --confetti-color: #a66cff; }
+.welcome-confetti i:nth-child(6n) { --confetti-color: #ff8c42; }
+.welcome-confetti i:nth-child(3n + 2) { width: 9px; height: 5px; }
+.welcome-confetti i:nth-child(4n) { width: 7px; height: 7px; border-radius: 50%; }
+.welcome-confetti i:nth-child(1) { --x: -174px; --r: -315deg; --duration: 2.55s; --delay: .02s; --fall: 138px; }
+.welcome-confetti i:nth-child(2) { --x: -151px; --r: 260deg; --duration: 2.9s; --delay: .12s; --fall: 174px; }
+.welcome-confetti i:nth-child(3) { --x: -132px; --r: -225deg; --duration: 2.68s; --delay: .06s; --fall: 158px; }
+.welcome-confetti i:nth-child(4) { --x: -113px; --r: 340deg; --duration: 3.05s; --delay: .18s; --fall: 186px; }
+.welcome-confetti i:nth-child(5) { --x: -94px; --r: -280deg; --duration: 2.48s; --delay: .08s; --fall: 144px; }
+.welcome-confetti i:nth-child(6) { --x: -76px; --r: 230deg; --duration: 2.78s; --delay: .21s; --fall: 166px; }
+.welcome-confetti i:nth-child(7) { --x: -61px; --r: -360deg; --duration: 2.62s; --delay: .14s; --fall: 178px; }
+.welcome-confetti i:nth-child(8) { --x: -45px; --r: 285deg; --duration: 2.96s; --delay: .04s; --fall: 152px; }
+.welcome-confetti i:nth-child(9) { --x: -29px; --r: -245deg; --duration: 2.72s; --delay: .24s; --fall: 188px; }
+.welcome-confetti i:nth-child(10) { --x: -16px; --r: 320deg; --duration: 2.52s; --delay: .1s; --fall: 160px; }
+.welcome-confetti i:nth-child(11) { --x: -7px; --r: -290deg; --duration: 3.08s; --delay: .16s; --fall: 180px; }
+.welcome-confetti i:nth-child(12) { --x: 12px; --r: 250deg; --duration: 2.64s; --delay: 0s; --fall: 148px; }
+.welcome-confetti i:nth-child(13) { --x: 24px; --r: -330deg; --duration: 2.86s; --delay: .2s; --fall: 172px; }
+.welcome-confetti i:nth-child(14) { --x: 39px; --r: 275deg; --duration: 2.46s; --delay: .09s; --fall: 142px; }
+.welcome-confetti i:nth-child(15) { --x: 55px; --r: -240deg; --duration: 3s; --delay: .15s; --fall: 184px; }
+.welcome-confetti i:nth-child(16) { --x: 71px; --r: 350deg; --duration: 2.7s; --delay: .03s; --fall: 156px; }
+.welcome-confetti i:nth-child(17) { --x: 88px; --r: -270deg; --duration: 2.56s; --delay: .23s; --fall: 176px; }
+.welcome-confetti i:nth-child(18) { --x: 106px; --r: 235deg; --duration: 2.92s; --delay: .11s; --fall: 146px; }
+.welcome-confetti i:nth-child(19) { --x: 123px; --r: -345deg; --duration: 2.66s; --delay: .19s; --fall: 168px; }
+.welcome-confetti i:nth-child(20) { --x: 140px; --r: 295deg; --duration: 3.1s; --delay: .05s; --fall: 190px; }
+.welcome-confetti i:nth-child(21) { --x: 157px; --r: -255deg; --duration: 2.5s; --delay: .17s; --fall: 154px; }
+.welcome-confetti i:nth-child(22) { --x: 172px; --r: 325deg; --duration: 2.82s; --delay: .07s; --fall: 182px; }
+.welcome-confetti i:nth-child(23) { --x: -164px; --r: -300deg; --duration: 2.74s; --delay: .22s; --fall: 162px; }
+.welcome-confetti i:nth-child(24) { --x: 164px; --r: 265deg; --duration: 2.6s; --delay: .13s; --fall: 170px; }
+
+@keyframes welcome-emoji {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.25) rotate(-12deg); }
+  8%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(5deg); }
+  100% { opacity: 0; transform: translate(-50%, -65%) scale(.85) rotate(0); }
+}
+
+@keyframes welcome-confetti {
+  0% {
+    opacity: 1;
+    top: -4px;
+    left: -3px;
+    transform: scale(.7) rotate(0);
+  }
+  6% { top: -62px; }
+  14% { top: -100px; }
+  24% { top: -118px; }
+  31% {
+    opacity: 1;
+    top: -120px;
+    transform: scale(1) rotate(var(--r));
+  }
+  40% { top: -106px; }
+  52% { top: -68px; opacity: 1; }
+  67% { top: -2px; opacity: .78; }
+  100% {
+    top: var(--fall);
+    left: var(--x);
+    opacity: 0;
+    transform: scale(.88) rotate(calc(var(--r) + 210deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-celebration-emoji { animation-duration: 2.9s; }
+  .welcome-confetti { display: none; }
 }
 
 .welcome-dismiss {

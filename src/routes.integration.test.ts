@@ -651,7 +651,7 @@ async function signup(handle: string, email: string, _password: string, ip?: str
     const chosen = await request('/choose-handle', { method: 'POST', cookie, form: { handle, next } })
     expect(chosen.status).toBe(303)
     expect(chosen.headers.get('location')).toBe('/explore')
-    expect(chosen.headers.get('set-cookie')).toContain('explore_welcome=1')
+    expect(chosen.headers.get('set-cookie')).toContain('explore_welcome=2')
   }
   return cookie
 }
@@ -1496,6 +1496,13 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(welcomeExploreHtml).toContain('href="/account/edit/appearance">customize appearance</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/invite">invite friends</a>')
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
+  expect(welcomeExploreHtml).not.toContain('welcome-celebration')
+
+  const freshWelcome = await request('/explore', { cookie: `${aliceCookie}; explore_welcome=2` })
+  const freshWelcomeHtml = await freshWelcome.text()
+  expect(freshWelcomeHtml).toContain('class="welcome-celebration"')
+  expect(freshWelcomeHtml).toContain('🎉')
+  expect(freshWelcome.headers.get('set-cookie')).toContain('explore_welcome=1')
   const dismissedWelcome = await request('/explore/welcome/dismiss', { method: 'POST', cookie: welcomeCookie })
   expect(dismissedWelcome.status).toBe(303)
   expect(dismissedWelcome.headers.get('location')).toBe('/explore')

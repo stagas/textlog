@@ -387,7 +387,7 @@ export function registerAuthRoutes(app: Hono) {
     }
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
     const response = redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
-    response.headers.append('set-cookie', exploreWelcomeCookie())
+    response.headers.append('set-cookie', exploreWelcomeCookie('2'))
     if (isMobileRequest(c.req.raw) && !/(?:^|;\s*)font-size=/.test(c.req.header('cookie') || '')) {
       response.headers.append('set-cookie', fontSizeCookie('small'))
     }

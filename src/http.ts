@@ -268,7 +268,11 @@ export function clearPendingPollCookie(appUrl: string | undefined = Bun.env.APP_
 }
 
 export function exploreWelcome(request: Request) {
-  return cookieValue(request, EXPLORE_WELCOME_COOKIE) === '1'
+  return ['1', '2'].includes(cookieValue(request, EXPLORE_WELCOME_COOKIE) || '')
+}
+
+export function exploreWelcomeCelebration(request: Request) {
+  return cookieValue(request, EXPLORE_WELCOME_COOKIE) === '2'
 }
 
 export function exploreWelcomeCookie(value = '1', maxAge = 365 * 24 * 60 * 60,

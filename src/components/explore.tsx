@@ -11,9 +11,10 @@ import { writeHref } from './write-link'
 
 const PEOPLE_PAGE_SIZE = 8
 
-export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, data }: {
+export function Explore({ user, welcome = false, celebrate = false, tagsPage = 1, peoplePage = 1, data }: {
   user: User | null
   welcome?: boolean
+  celebrate?: boolean
   tagsPage?: number
   peoplePage?: number
   data: ExploreData
@@ -35,6 +36,12 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
     <Layout user={user} title="explore">
       {user && welcome && (
         <Panel as="section" width="fluid" className="welcome-panel" role="status">
+          {celebrate && (
+            <div className="welcome-celebration" aria-hidden="true">
+              <span className="welcome-celebration-emoji emoji">🎉</span>
+              <span className="welcome-confetti">{Array.from({ length: 24 }, (_, index) => <i key={index} />)}</span>
+            </div>
+          )}
           <form className="welcome-dismiss" method="post" action="/explore/welcome/dismiss">
             <button type="submit" aria-label="Dismiss welcome">
               <span aria-hidden="true" />
