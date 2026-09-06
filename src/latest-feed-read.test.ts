@@ -6,7 +6,7 @@ import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead, unreadLatestCount } from './latest-state'
 import { runMigrations } from './migrations'
 
-test('All unread count excludes hidden posts except for moderators', () => {
+test('All hides dropped-username posts except for moderators', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -17,6 +17,15 @@ test('All unread count excludes hidden posts except for moderators', () => {
 
   expect(unreadLatestCount(1, database)).toBe(0)
   expect(unreadLatestCount(3, database)).toBe(1)
+  const publicFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+  const moderatorFeed = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 3, page: 1, pageSize: 20, markRead: false,
+  })
+  expect(publicFeed.posts).toEqual([])
+  expect(moderatorFeed.posts.map(post => post.id)).toEqual([1])
+  expect(moderatorFeed.posts[0].hidden_post).toBeTrue()
 })
 
 test('latest count remains for the rendered page and is reduced on the next load', async () => {

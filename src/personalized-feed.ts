@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { isAdminEmail } from './admin'
 import { activityAnchor } from './activity-anchor'
 import { isAdmin } from './admin'
 import { databaseIdentity } from './database-identity'
@@ -105,6 +106,7 @@ const hasVisibleDescendantFromAnotherUser = `EXISTS (SELECT 1 FROM post_ancestor
 export function loadPersonalizedFeed(database: Database, user: User, page: number, pageSize: number, toMe: boolean,
   path: string, markRead = true): PersonalizedFeedData
 {
+  const hiddenAuthorVisibility = isAdminEmail(user.email) ? '1' : excludesDroppedUsernameUsers(database)
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
   const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
@@ -122,7 +124,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility}
         AND ((NOT ${isWhisperThread()} AND
         ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
         ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
@@ -148,7 +150,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
-      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+      WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility}
         AND p.user_id!=$viewer
         AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
         AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b

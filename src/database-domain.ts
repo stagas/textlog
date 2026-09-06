@@ -317,15 +317,11 @@ function publicFeedProjection(database: Database) {
   const conversationIds = (database.query(`SELECT h.conversation_id FROM conversation_heads h
     WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
       WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
-    AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
-      JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
-      AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)})
     AND ${excludesMetaPosts('h.conversation_id')}
     ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
     .map(row => row.conversation_id)
   const newRootIds = (database.query(`SELECT p.id FROM posts p JOIN users u ON u.id=p.user_id
     WHERE p.deleted_at IS NULL AND p.parent_id IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-    AND ${excludesDroppedUsernameUsers(database)}
     AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
     ORDER BY p.created_at DESC,p.id DESC`).all() as Array<{ id: number }>).map(row => row.id)
   const projection = { generation, conversationIds, newRootIds, seededConversationIds: new Map() }
@@ -365,11 +361,11 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
   const chunkSize = Math.max(100, pageSize * 4)
   for (let offset = 0; offset < ids.length && visible.length < wanted; offset += chunkSize) {
     const chunk = ids.slice(offset, offset + chunkSize)
-    if (viewerId < 0) visible.push(...chunk)
-    else {
+    {
       const placeholders = chunk.map(() => '?').join(',')
       const rows = kind === 'new'
-        ? database.query(`SELECT p.id FROM posts p WHERE p.id IN (${placeholders})
+        ? database.query(`SELECT p.id FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${placeholders})
+          AND ${hiddenAuthorVisibility(database, viewerId)}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
           AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
@@ -378,7 +374,8 @@ function visibleProjectedIds(database: Database, ids: number[], viewerId: number
         : database.query(`SELECT DISTINCT pc.conversation_id id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${placeholders}) AND p.deleted_at IS NULL
-          AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+          AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+          AND ${hiddenAuthorVisibility(database, viewerId)}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
               WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
@@ -510,6 +507,10 @@ function viewerIsModerator(database: Database, viewerId: number) {
   if (!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'email\'').get()) return false
   const viewer = database.query('SELECT email FROM users WHERE id=?').get(viewerId) as { email: string } | null
   return !!viewer && isAdminEmail(viewer.email)
+}
+
+function hiddenAuthorVisibility(database: Database, viewerId: number, userAlias = 'u') {
+  return viewerIsModerator(database, viewerId) ? '1' : excludesDroppedUsernameUsers(database, userAlias)
 }
 
 function groupPostsByConversation<T extends { id: number }>(database: Database, posts: T[]) {
@@ -3207,7 +3208,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
             AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
               JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
-              AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)})
+              AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
             AND ${excludesMetaPosts('h.conversation_id')}`
           const totalItems = (database.query(`SELECT count(*) count FROM conversation_heads h WHERE ${filters}`)
             .get() as { count: number }).count
@@ -3222,6 +3223,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
               WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+              JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
+              AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
             AND ${excludesMetaPosts('h.conversation_id')}
             ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
               .map(row => row.conversation_id))
@@ -3249,7 +3253,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
-          AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
+          AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)}
           AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
             SELECT p.user_id,p.parent_id
             UNION ALL
@@ -3361,7 +3365,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
           WHERE pc.conversation_id IN (${snapshot.items.map(() => '?').join(',')})
           AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-          AND ${excludesDroppedUsernameUsers(database)}
+          AND ${hiddenAuthorVisibility(database, viewerId)}
           AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
             (b.blocker_id=? AND (b.blocked_id=p.user_id OR EXISTS (SELECT 1 FROM post_ancestors pa
               WHERE pa.post_id=p.id AND pa.ancestor_user_id=b.blocked_id)))
@@ -3448,7 +3452,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id
         FROM post_conversations pc JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
         WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
-        AND ${excludesDroppedUsernameUsers(database)} AND ${visibility}
+        AND ${hiddenAuthorVisibility(database, viewerId)} AND ${visibility}
         AND ${excludesWhisperPosts('p.id')} ORDER BY p.id DESC`)
           .all(...conversationIds, ...visibilityParameters) as Array<PostView & { conversation_id: number }>
         : []
