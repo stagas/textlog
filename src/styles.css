@@ -504,7 +504,7 @@ header>nav>a:not(.button),
 }
 
 .nav-mood {
-  margin-left: 1px;
+  margin-left: -4px;
 }
 
 .account-menu-popover {
