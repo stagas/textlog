@@ -261,7 +261,7 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
               Which one? <b>#quiz</b>
               <br />
               Wrong answer<br />
-              <b>&gt;</b>Correct answer<br />
+              <b>&gt;</b> Correct answer<br />
               <br />
               Explanation revealed after answering
             </code>
