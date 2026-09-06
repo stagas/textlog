@@ -6273,7 +6273,7 @@ form.report-panel {
 .quiz-mark { display: inline-block; margin-left: var(--space-2); font-size: 1.25em; font-weight: bold; line-height: 1; vertical-align: -.08em; }
 .quiz-mark-correct { color: var(--success-ink); }
 .quiz-mark-incorrect { color: var(--danger-link-hover); }
-.quiz-explanation { margin-top: var(--space-1); }
+.quiz-explanation { margin-top: var(--space-1); white-space: pre-wrap; }
 .poll-option-label,
 .poll-option-count { position: relative; }
 .poll-option-count,
