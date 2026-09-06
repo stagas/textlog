@@ -616,8 +616,9 @@ test('posting helpers use the compact action and show copyable highlighted resul
   }))
 
   expect(html).toContain('<label class="secondary-action posting-help-action" for="write-posting-help"')
-  expect(html).toContain('title="Show more writing actions and help"')
-  expect(html).toContain('/>more</label>')
+  expect(html).toContain('title="Toggle writing actions and help"')
+  expect(html).toContain('/><span class="posting-help-more">more</span>')
+  expect(html).toContain('<span class="posting-help-less">less</span></label>')
   expect(html).toContain(
     'id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""',
   )
@@ -734,8 +735,8 @@ test('post edit keeps destructive navigation above the textarea and secondary wr
   expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
   expect(html.indexOf('>autotag')).toBeLessThan(html.indexOf('>preview</button>'))
   expect(html.indexOf('>preview</button>')).toBeLessThan(html.indexOf('>draft</button>'))
-  expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('>more</label>'))
-  expect(html.indexOf('>more</label>')).toBeLessThan(html.indexOf('>save →</button>'))
+  expect(html.indexOf('>draft</button>')).toBeLessThan(html.indexOf('class="posting-help-more"'))
+  expect(html.indexOf('class="posting-help-less"')).toBeLessThan(html.indexOf('>save →</button>'))
 })
 
 test('moderator post editing keeps save but hides owner-only actions', () => {
@@ -2224,7 +2225,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).not.toContain('autofocus')
     expect(html).not.toContain('feed-tab-new-badge')
     expect(html).toContain(
-      '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Show more writing actions and help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/>more</label>',
+      '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Toggle writing actions and help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/><span class="posting-help-more">more</span><span class="posting-help-less">less</span></label>',
     )
     expect(html).toContain(
       '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 15 lines max</span> · use #hashtags, @mentions and more</div>',
@@ -2725,7 +2726,7 @@ describe('About', () => {
       expect(html).toContain('anonymous-write-compose')
       expect(html).toContain('placeholder="What\'s on your mind?"')
       expect(html).not.toMatch(/<textarea[^>]*name="body"[^>]*required/)
-      expect(html).toContain('title="Show more writing actions and help"')
+      expect(html).toContain('title="Toggle writing actions and help"')
       expect(html).not.toContain('placeholder="What’s on your mind, @')
     }
   })
@@ -4300,7 +4301,7 @@ test('Anonymous post pages show the full reply composer when reply is requested'
   expect(html).toContain('anonymous-reply-compose')
   expect(html).toContain('action="/post/2/reply#post-2"')
   expect(html).toContain('placeholder="Reply to @writer…"')
-  expect(html).toContain('title="Show more writing actions and help"')
+  expect(html).toContain('title="Toggle writing actions and help"')
 })
 
 test('Anonymous reply detail places the composer beneath the clicked reply without a reply link', () => {

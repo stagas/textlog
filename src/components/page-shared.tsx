@@ -445,10 +445,11 @@ export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = 
 
 export function PostingHelpAction({ id, defaultChecked = false }: { id: string; defaultChecked?: boolean }) {
   return (
-    <label className="secondary-action posting-help-action" htmlFor={id} title="Show more writing actions and help">
+    <label className="secondary-action posting-help-action" htmlFor={id} title="Toggle writing actions and help">
       <input className="posting-help-toggle" id={id} type="checkbox" aria-controls={`${id}-content`}
         defaultChecked={defaultChecked} />
-      more
+      <span className="posting-help-more">more</span>
+      <span className="posting-help-less">less</span>
     </label>
   )
 }

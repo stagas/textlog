@@ -4651,6 +4651,15 @@ form.report-panel {
   opacity: 0;
 }
 
+.posting-help-less,
+.posting-help-toggle:checked ~ .posting-help-more {
+  display: none;
+}
+
+.posting-help-toggle:checked ~ .posting-help-less {
+  display: inline;
+}
+
 :is(.write-compose, .reply-compose) .composefoot:has(.posting-help-toggle:checked) .posting-help-content {
   display: grid;
 }
@@ -4674,6 +4683,12 @@ form.report-panel {
   align-self: start;
   justify-content: flex-end;
   gap: var(--space-4);
+  margin-top: calc(-1 * var(--space-4) - 1px);
+  margin-right: calc(-1 * var(--space-4) - 1px);
+  padding: var(--space-2) var(--space-3);
+  background: var(--panel);
+  border-bottom: 1px solid var(--soft);
+  border-left: 1px solid var(--soft);
 }
 
 .posting-help-tabs-section {
@@ -4689,6 +4704,8 @@ form.report-panel {
   .posting-help-actions {
     grid-column: 1 / -1;
     grid-row: 1;
+    margin-top: calc(-1 * var(--space-3) - 1px);
+    margin-right: calc(-1 * var(--space-3) - 1px);
     margin-left: auto;
   }
 
