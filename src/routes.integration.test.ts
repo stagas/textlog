@@ -341,6 +341,24 @@ test('/about?hn starts the hn campaign without redirecting', async () => {
     WHERE campaign='hn' AND visitor_hash IS NOT NULL`).get()).toEqual({ count: visitorsBefore + 1 })
 })
 
+test('/post/<id>?hn starts the hn campaign without redirecting', async () => {
+  const post = database.query(`INSERT INTO posts(user_id,body) VALUES(1,'HN campaign landing') RETURNING id`)
+    .get() as { id: number }
+  const visitorsBefore = (database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`)
+    .get() as { count: number }).count
+
+  const landing = await request(`/post/${post.id}?hn`, { ip: '203.0.113.88', acceptHtml: true })
+  expect(landing.status).toBe(200)
+  expect(await landing.text()).toContain('HN campaign landing')
+  expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=hn')
+  const campaignCookie = landing.headers.get('set-cookie')!.match(/campaign_attribution=hn/)![0]
+
+  await request('/styles.css', { ip: '203.0.113.88', cookie: campaignCookie })
+
+  expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`).get())
+    .toEqual({ count: visitorsBefore + 1 })
+})
+
 test('an anonymous feed note is published after signup chooses a handle', async () => {
   const body = 'A thought carried through signup'
   const ip = '203.0.113.84'

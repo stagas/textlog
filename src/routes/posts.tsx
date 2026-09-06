@@ -22,7 +22,7 @@ import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
 import { publishPost } from '../api-broker'
 import type { PostingSuggestionSearch } from '../components/page-shared'
-import { safeRefererPath } from '../http'
+import { campaignAttributionCookie, safeRefererPath } from '../http'
 import { clearPendingPollCookie, clearPendingPostCookie, pendingPoll, pendingPollCookie, pendingPost,
   pendingPostCookie } from '../http'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
@@ -303,7 +303,10 @@ export function registerPostsRoutes(app: Hono) {
       locationMapProvider(c.req.header('user-agent') || '')
     }\0${requestUrl.pathname}${requestUrl.search}`
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
-    if (cached) return cached
+    if (cached) {
+      if (c.req.query('hn') !== undefined) cached.headers.append('set-cookie', campaignAttributionCookie('hn'))
+      return cached
+    }
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     const post = detail.post
@@ -365,7 +368,9 @@ export function registerPostsRoutes(app: Hono) {
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
         flatHref={flatHref} treeHref={treeHref} flat={flat} replyTo={replyTo} />,
     )
-    return materializeAnonymousPostPage(postPageCacheKey, rendered)
+    const response = await materializeAnonymousPostPage(postPageCacheKey, rendered)
+    if (c.req.query('hn') !== undefined) response.headers.append('set-cookie', campaignAttributionCookie('hn'))
+    return response
   })
 
   app.get('/post/:id/og.png', async c => {
