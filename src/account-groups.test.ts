@@ -34,6 +34,27 @@ test('email login resolves the selected full account while preserving the primar
   ])
 })
 
+test('recent feed visitors retain mood and linked accounts for startup warming', async () => {
+  const { database, primary, persona } = fixture()
+  database.query("UPDATE users SET mood='🌙' WHERE id=?").run(primary.id)
+  database.query("UPDATE users SET mood='☀️' WHERE id=?").run(persona.id)
+  await executeDatabaseDomain(database, 'cache.recentFeedVisitorPut', {
+    userId: primary.id,
+    requestUrl: 'http://localhost/all',
+    cookie: '',
+    userAgent: 'test',
+    pageSize: 20,
+    density: 'regular',
+  })
+
+  const visitors = await executeDatabaseDomain(database, 'cache.recentFeedVisitors', {})
+
+  expect(visitors.find(visitor => visitor.user.id === primary.id)?.user).toEqual(expect.objectContaining({
+    mood: '🌙',
+    linked_accounts: [expect.objectContaining({ id: persona.id, mood: '☀️' })],
+  }))
+})
+
 test('removing the selected primary promotes a remaining account', () => {
   const { database, primary, persona, group } = fixture()
   detachAccountFromGroup(database, primary.id)

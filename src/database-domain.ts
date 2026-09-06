@@ -3693,11 +3693,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           density: DensityChoice }
       >
       const result = rows.flatMap(row => {
-        const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
+        const user = database.query(`SELECT id,handle,email,bio,mood,suspended_at,email_verified_at,handle_chosen_at,
           show_link_previews,show_moderated_content,hide_people_follow_activity,hide_hashtag_follow_activity,
-          show_note_streak,show_timestamps,timezone
+          show_note_streak,show_timestamps,timezone,mood_prompt_dismissed_at,tag_prompt_completed_at,
+          people_prompt_completed_at
           FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
           .get(row.user_id) as User | null
+        if (user) {
+          user.draft_count = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?')
+            .get(user.id) as { count: number }).count
+          user.linked_accounts = accountChoices(database, user.id)
+            .filter(account => account.id !== user.id && account.handle_chosen_at !== null)
+            .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
+              has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) }))
+        }
         return user
           ? [{ user, requestUrl: row.request_url, cookie: row.cookie, userAgent: row.user_agent,
             pageSize: row.page_size, density: row.density }]
