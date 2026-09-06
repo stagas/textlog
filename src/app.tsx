@@ -1,6 +1,6 @@
 import { applyHtmlCachePolicy, campaignAttribution, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
-  GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest, limitedFormData, pwaStandaloneCookie,
-  RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders } from './http'
+  exploreWelcomeCelebration, exploreWelcomeCookie, GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest,
+  limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
@@ -519,6 +519,16 @@ app.use('*', async (c, next) => {
     return page(<PeoplePicker user={user} people={people} returnTo={returnTo} />)
   }
   return next()
+})
+app.use('*', async (c, next) => {
+  const user = currentUser(c.req.raw)
+  const completedSignup = Boolean(user?.handle_chosen_at && user.mood_prompt_dismissed_at
+    && user.tag_prompt_completed_at && user.people_prompt_completed_at)
+  const consumeCelebration = c.req.method === 'GET' && completedSignup && exploreWelcomeCelebration(c.req.raw)
+  await next()
+  if (consumeCelebration && c.res.status < 400 && c.res.headers.get('content-type')?.includes('text/html')) {
+    c.header('set-cookie', exploreWelcomeCookie(), { append: true })
+  }
 })
 app.post('/pick-mood', async c => {
   const user = currentUser(c.req.raw)

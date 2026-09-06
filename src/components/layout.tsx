@@ -1,5 +1,5 @@
 import { appHost, appName, appOrigin } from '../brand'
-import { pwaInstallBannerDismissed, pwaStandalone } from '../http'
+import { exploreWelcomeCelebration, pwaInstallBannerDismissed, pwaStandalone } from '../http'
 import {
   activeAppearance,
   activeRequest,
@@ -89,6 +89,8 @@ export function Layout({
   }
   // Older callers that predate the marker already represent established accounts.
   const ready = user?.handle_chosen_at !== null
+  const celebrateSignup = Boolean(user?.handle_chosen_at && user.mood_prompt_dismissed_at
+    && user.tag_prompt_completed_at && user.people_prompt_completed_at && exploreWelcomeCelebration(request))
   const accountMenuPopover = user && (
     <div className="account-menu-popover">
       {isAdmin(user) && <a href="/admin">admin</a>}
@@ -205,7 +207,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1475" />
+        <link rel="stylesheet" href="/styles.css?v=1476" />
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body
@@ -215,6 +217,12 @@ export function Layout({
           fullScreenScrollable ? ' full-screen-scrollable' : ''
         }`}
       >
+        {celebrateSignup && (
+          <div className="welcome-celebration" aria-hidden="true">
+            <span className="welcome-celebration-emoji emoji">🎉</span>
+            <span className="welcome-confetti">{Array.from({ length: 24 }, (_, index) => <i key={index} />)}</span>
+          </div>
+        )}
         {!fullScreen && user && ready && !mobileWriteAction
           && <a className="skip-link" href={writeShortcutHref} accessKey="w">write</a>}
         {!fullScreen && (

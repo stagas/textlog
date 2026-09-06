@@ -1498,11 +1498,16 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
   expect(welcomeExploreHtml).not.toContain('welcome-celebration')
 
+  database.query(`UPDATE users SET mood_prompt_dismissed_at=CURRENT_TIMESTAMP,
+    tag_prompt_completed_at=CURRENT_TIMESTAMP,people_prompt_completed_at=CURRENT_TIMESTAMP WHERE id=?`).run(alice.id)
   const freshWelcome = await request('/explore', { cookie: `${aliceCookie}; explore_welcome=2` })
   const freshWelcomeHtml = await freshWelcome.text()
   expect(freshWelcomeHtml).toContain('class="welcome-celebration"')
   expect(freshWelcomeHtml).toContain('🎉')
   expect(freshWelcome.headers.get('set-cookie')).toContain('explore_welcome=1')
+  const freshProfile = await request('/u/alice', { cookie: `${aliceCookie}; explore_welcome=2`, acceptHtml: true })
+  expect(await freshProfile.text()).toContain('class="welcome-celebration"')
+  expect(freshProfile.headers.get('set-cookie')).toContain('explore_welcome=1')
   const dismissedWelcome = await request('/explore/welcome/dismiss', { method: 'POST', cookie: welcomeCookie })
   expect(dismissedWelcome.status).toBe(303)
   expect(dismissedWelcome.headers.get('location')).toBe('/explore')

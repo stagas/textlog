@@ -11,7 +11,6 @@ import { databaseService } from '../database-service'
 import {
   clearPendingFollowCookie,
   exploreWelcome,
-  exploreWelcomeCelebration,
   exploreWelcomeCookie,
   pendingFollow,
   pendingFollowCookie,
@@ -220,11 +219,9 @@ export function registerInteractionsRoutes(app: Hono) {
       peoplePage,
     })
     const welcome = !!user && exploreWelcome(c.req.raw)
-    const celebrate = welcome && exploreWelcomeCelebration(c.req.raw)
     const response = page(
-      <Explore user={user} welcome={welcome} celebrate={celebrate} tagsPage={tagsPage} peoplePage={peoplePage} data={data} />,
+      <Explore user={user} welcome={welcome} tagsPage={tagsPage} peoplePage={peoplePage} data={data} />,
     )
-    if (celebrate) response.headers.append('set-cookie', exploreWelcomeCookie())
     if (savedPeople) {
       response.headers.append('set-cookie', 'explore_people=; Max-Age=0; Path=/explore; HttpOnly; SameSite=Lax')
     }
