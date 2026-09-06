@@ -2383,7 +2383,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const emailDeleteRequest = await request('/account/delete', {
     method: 'POST',
     cookie: emailDeleteCookie,
-    form: {},
+    form: { reason: 'not_using' },
   })
   expect(emailDeleteRequest.status).toBe(200)
   expect(
@@ -2428,7 +2428,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const rejectedDeletion = await request('/account/delete', {
     method: 'POST',
     cookie: passwordDeleteCookie,
-    form: { password: 'wrong password' },
+    form: { password: 'wrong password', reason: 'hard_to_use' },
   })
   expect(rejectedDeletion.status).toBe(400)
   expect(database.query('SELECT 1 FROM users WHERE handle=? AND deleted_at IS NULL').get('passworddelete'))
@@ -2436,10 +2436,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const passwordDeletion = await request('/account/delete', {
     method: 'POST',
     cookie: passwordDeleteCookie,
-    form: { password: 'delete password 123' },
+    form: { password: 'delete password 123', reason: 'other', otherReason: '' },
   })
   expect(passwordDeletion.status).toBe(303)
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('passworddelete')).toBeNull()
+  expect(database.query(`SELECT deleted_handle,deletion_reason FROM users WHERE deleted_handle='passworddelete'`).get())
+    .toEqual({ deleted_handle: 'passworddelete', deletion_reason: 'Other' })
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
   const adminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
@@ -2465,7 +2467,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(ordinaryActivity).not.toContain('signed up:</span>')
   const dashboard = await request('/admin', { cookie: adminCookie })
   expect(dashboard.status).toBe(200)
-  expect(await dashboard.text()).toContain('A route-level integration post')
+  const dashboardHtml = await dashboard.text()
+  expect(dashboardHtml).toContain('A route-level integration post')
+  expect(dashboardHtml).toContain('@passworddelete deleted their account')
+  expect(dashboardHtml).toContain('reason: Other')
   const emailPage = await request('/admin/email', { cookie: adminCookie })
   expect(emailPage.status).toBe(200)
   const emailPageHtml = await emailPage.text()

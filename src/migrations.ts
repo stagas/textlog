@@ -3390,6 +3390,19 @@ export const migrations: Migration[] = [
       END;`)
     },
   },
+  {
+    version: 197,
+    name: 'account_deletion_reasons',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+        addColumn(database, 'users', 'deletion_reason', 'TEXT')
+        addColumn(database, 'users', 'deleted_handle', 'TEXT')
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_deletion_tokens'").get()) {
+        addColumn(database, 'account_deletion_tokens', 'deletion_reason', "TEXT NOT NULL DEFAULT ''")
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

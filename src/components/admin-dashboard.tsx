@@ -10,7 +10,7 @@ import { StatsGrid } from './stats'
 
 export function AdminDashboard(
   { user, stats, reports, actions, illegalReports = [], status, page, total, suspended = [], ipRequests = [],
-    bannedUsernames = [] }: {
+    bannedUsernames = [], deletions = [] }: {
       user: User
       stats: DashboardStats
       reports: AdminReportView[]
@@ -24,6 +24,7 @@ export function AdminDashboard(
       bannedUsernames?: Array<
         { username: string; dropped_user_id: number | null; actor_handle: string; note: string; created_at: string }
       >
+      deletions?: Array<{ id: number; handle: string; reason: string; deleted_at: string }>
     },
 ) {
   return (
@@ -200,6 +201,18 @@ export function AdminDashboard(
             </div>
           )
           : <p className="section-empty">No usernames have been dropped.</p>}
+      </section>
+      <section className="admin-section admin-actions-log">
+        <h2>recent account deletions</h2>
+        {deletions.length
+          ? deletions.map(deletion => (
+            <article key={deletion.id}>
+              <span>@{deletion.handle} deleted their account</span>
+              <p>reason: {deletion.reason}</p>
+              <time dateTime={deletion.deleted_at}>{fmtFull(deletion.deleted_at)}</time>
+            </article>
+          ))
+          : <p className="section-empty">No account deletions recorded yet.</p>}
       </section>
       <section className="admin-section admin-actions-log">
         <h2>recent admin actions</h2>

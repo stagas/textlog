@@ -227,6 +227,8 @@ body.corners-round :where(
   .bio-form > .composefoot, .account-choice, .account-create-persona, .notification-toggle,
   .appearance-tabs, .explore-tag-chips, .activity-header, .admin-section, .admin-report,
   .admin-actions-log article, .admin-user-list article, .admin-ip-list article, .section-empty,
+  .admin-tag-groups article, .admin-tag-display-list form,
+  .account-danger-zone:not(#invite-friends), .account-settings-separator,
   .tags, .people article, .feed-thread, .reference-popover-bio
 ) {
   border-radius: 0;

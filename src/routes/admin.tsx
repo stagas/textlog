@@ -256,13 +256,13 @@ export function registerAdminRoutes(app: Hono) {
     const reportPage = currentPage(c.req.query('page'))
     await flushIpRequests()
     const data = await databaseService().call('admin.dashboard', { status, page: reportPage })
-    const { stats, total, reports, actions, suspended, illegalReports, ipRequests, bannedUsernames } = data
+    const { stats, total, reports, actions, suspended, illegalReports, ipRequests, bannedUsernames, deletions } = data
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
     return page(
       <AdminDashboard user={signedIn} stats={stats} reports={reports} actions={actions} illegalReports={illegalReports}
         status={status} page={reportPage} total={total} suspended={suspended} ipRequests={ipRequests}
-        bannedUsernames={bannedUsernames} />,
+        bannedUsernames={bannedUsernames} deletions={deletions} />,
     )
   })
 

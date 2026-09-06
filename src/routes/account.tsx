@@ -1,4 +1,4 @@
-import { accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
+import { accountDeletionReason, accountForDeletionToken, issueAccountDeletionToken } from '../account-deletion'
 import { accountGroupForUser, isPrimaryAccount } from '../account-groups'
 import { anonymizeUser, isAdmin } from '../admin'
 import { AUTH_LIMITS, authRateLimitMessage } from '../auth-rate-limit'
@@ -966,7 +966,8 @@ export function registerAccountRoutes(app: Hono) {
         now: Date.now(),
       })
       return account
-        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value} />)
+        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value}
+          reason={account.deletionReason} />)
         : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)
     }
     const user = currentUser(c.req.raw)
@@ -981,6 +982,7 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/delete', async c => {
     const user = currentUser(c.req.raw)
     const f = await form(c.req.raw)
+    const selectedReason = accountDeletionReason(f.reason || '', f.otherReason || '')
     const deletionAccount = f.token
       ? await databaseService().call('account.deletionInfo', {
         selector: { tokenHash: hash(f.token) },
@@ -991,7 +993,10 @@ export function registerAccountRoutes(app: Hono) {
       if (isAdmin({ email: deletionAccount.email }) && deletionAccount.primary) {
         return c.text('Admin accounts cannot delete themselves', 403)
       }
-      const deleted = await databaseService().call('account.delete', { userId: deletionAccount.id })
+      const reason = deletionAccount.deletionReason || selectedReason
+      if (!reason) return page(<ConfirmAccountDelete user={user} handle={deletionAccount.handle} token={f.token}
+        error="Choose a reason for deleting your account." />, 400)
+      const deleted = await databaseService().call('account.delete', { userId: deletionAccount.id, reason })
       await deleteImagesAfterCommit(deleted.imageKeys)
       return redirect('/', clearSessionCookie())
     }
@@ -1005,6 +1010,10 @@ export function registerAccountRoutes(app: Hono) {
     if (isAdmin(user) && account.primary) return c.text('Admin accounts cannot delete themselves', 403)
     const limited = await authLimit(c, 'account-delete', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
     const passwordEnabled = account.passwordHash !== '!'
+    if (!selectedReason) {
+      return page(<ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled} reason={f.reason}
+        otherReason={f.otherReason} error="Choose a reason for deleting your account." />, 400)
+    }
     if (limited) {
       return retryPage(
         page(
@@ -1019,7 +1028,7 @@ export function registerAccountRoutes(app: Hono) {
       if (!await verifyPassword(f.password || '', account.passwordHash)) {
         return page(<ConfirmAccountDelete user={user} passwordEnabled error="Password is incorrect." />, 400)
       }
-      const deleted = await databaseService().call('account.delete', { userId: user.id })
+      const deleted = await databaseService().call('account.delete', { userId: user.id, reason: selectedReason })
       await deleteImagesAfterCommit(deleted.imageKeys)
       return redirect('/', clearSessionCookie())
     }
@@ -1028,7 +1037,7 @@ export function registerAccountRoutes(app: Hono) {
     const tokenHash = hash(value)
     const confirmationUrl = `${origin}/account/delete?token=${encodeURIComponent(value)}`
     await databaseService().call('account.storeDeletionToken', { userId: user.id, email: user.email, tokenHash,
-      expiresAt: Date.now() + 3600000, now: Date.now() })
+      deletionReason: selectedReason, expiresAt: Date.now() + 3600000, now: Date.now() })
     try {
       await sendAccountDeletionConfirmation(
         user.email,

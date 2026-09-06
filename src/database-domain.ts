@@ -1078,7 +1078,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const account = ('userId' in selector
         ? database.query(`SELECT id,handle,email,password passwordHash FROM users WHERE id=? AND deleted_at IS NULL`)
           .get(selector.userId)
-        : database.query(`SELECT u.id,u.handle,u.email,u.password passwordHash FROM account_deletion_tokens t
+        : database.query(`SELECT u.id,u.handle,u.email,u.password passwordHash,t.deletion_reason deletionReason
+          FROM account_deletion_tokens t
           JOIN users u ON u.id=t.user_id WHERE t.token_hash=? AND t.expires_at>? AND u.deleted_at IS NULL
             AND u.password='!' AND u.email=t.email`).get(selector.tokenHash, now)) as {
           id: number
@@ -1091,11 +1092,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       >
     }
     case 'account.storeDeletionToken': {
-      const { userId, email, tokenHash, expiresAt, now } = input as DatabaseDomainInput<'account.storeDeletionToken'>
+      const { userId, email, tokenHash, deletionReason, expiresAt, now } =
+        input as DatabaseDomainInput<'account.storeDeletionToken'>
       database.transaction(() => {
         database.query('DELETE FROM account_deletion_tokens WHERE user_id=? OR expires_at<=?').run(userId, now)
-        database.query('INSERT INTO account_deletion_tokens(token_hash,user_id,email,expires_at) VALUES(?,?,?,?)')
-          .run(tokenHash, userId, email, expiresAt)
+        database.query(`INSERT INTO account_deletion_tokens(token_hash,user_id,email,expires_at,deletion_reason)
+          VALUES(?,?,?,?,?)`).run(tokenHash, userId, email, expiresAt, deletionReason)
       })()
       return null as DatabaseDomainOutput<K>
     }
@@ -1105,7 +1107,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'account.delete': {
-      const { userId } = input as DatabaseDomainInput<'account.delete'>
+      const { userId, reason } = input as DatabaseDomainInput<'account.delete'>
       const imageKeys: string[] = []
       database.transaction(() => {
         if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_link_previews\'').get()) {
@@ -1122,6 +1124,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             .all(userId) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey))
           database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
         }
+        database.query('UPDATE users SET deletion_reason=?,deleted_handle=handle WHERE id=?').run(reason, userId)
         anonymizeUser(database, userId)
       })()
       return { imageKeys } as DatabaseDomainOutput<K>
@@ -1339,8 +1342,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const bannedUsernames = database.query(`SELECT b.username,b.dropped_user_id,b.note,b.created_at,
         actor.handle actor_handle FROM banned_usernames b JOIN users actor ON actor.id=b.dropped_by
         ORDER BY b.created_at DESC,b.username LIMIT 100`).all()
+      const deletions = database.query(`SELECT id,deleted_handle handle,deletion_reason reason,deleted_at FROM users
+        WHERE deleted_at IS NOT NULL AND deletion_reason IS NOT NULL ORDER BY deleted_at DESC,id DESC LIMIT 50`).all()
       return { stats: dashboardStats(database), total, reports, actions, suspended, illegalReports, ipRequests,
-        bannedUsernames } as DatabaseDomainOutput<K>
+        bannedUsernames, deletions } as DatabaseDomainOutput<K>
     }
     case 'admin.blockIp': {
       const { day, hash, actorId } = input as DatabaseDomainInput<'admin.blockIp'>

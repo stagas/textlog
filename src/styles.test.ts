@@ -821,6 +821,8 @@ describe('in-memory stylesheet', () => {
       'body.corners-round .pagination :is(a, span, input) {\n  border-radius: var(--corner-radius);',
     )
     expect(css).toContain('body.corners-round .notification-toggle {\n  border-radius: 0;')
+    expect(css).toContain('.admin-tag-groups article, .admin-tag-display-list form,')
+    expect(css).toContain('.account-danger-zone:not(#invite-friends), .account-settings-separator,')
     expect(css).toContain(
       '.pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,',
     )

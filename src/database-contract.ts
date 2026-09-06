@@ -156,13 +156,14 @@ export type DatabaseDomainOperations = {
   'account.confirmEmailToken': { input: { value: string; now: number };
     output: { ok: true; kind: 'verify' | 'change' } | { ok: false; reason: 'invalid' | 'email_unavailable' } }
   'account.deletionInfo': { input: { selector: { userId: number } | { tokenHash: string }; now: number };
-    output: { id: number; handle: string; email: string; passwordHash: string; primary: boolean } | null }
+    output: { id: number; handle: string; email: string; passwordHash: string; primary: boolean;
+      deletionReason?: string } | null }
   'account.storeDeletionToken': {
-    input: { userId: number; email: string; tokenHash: string; expiresAt: number; now: number }
+    input: { userId: number; email: string; tokenHash: string; deletionReason: string; expiresAt: number; now: number }
     output: null
   }
   'account.deleteDeletionToken': { input: { tokenHash: string }; output: null }
-  'account.delete': { input: { userId: number }; output: { imageKeys: string[] } }
+  'account.delete': { input: { userId: number; reason: string }; output: { imageKeys: string[] } }
   'admin.dashboard': { input: { status: 'open' | 'resolved' | 'dismissed'; page: number }; output: {
     stats: DashboardStats
     total: number
@@ -174,6 +175,7 @@ export type DatabaseDomainOperations = {
     bannedUsernames: Array<
       { username: string; dropped_user_id: number | null; actor_handle: string; note: string; created_at: string }
     >
+    deletions: Array<{ id: number; handle: string; reason: string; deleted_at: string }>
   } }
   'admin.blockIp': { input: { day: string; hash: string; actorId: number }; output: boolean }
   'admin.decideIllegalReport': { input: { id: number; decision: 'resolve' | 'dismiss'; reasons: string };
