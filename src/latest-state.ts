@@ -1,4 +1,6 @@
 import type { Database } from 'bun:sqlite'
+import { isAdminEmail } from './admin'
+import { excludesDroppedUsernameUsers } from './handles'
 import { excludesMetaPosts } from './meta-thread'
 import { excludesWhisperPosts } from './whisper'
 
@@ -12,7 +14,19 @@ function excludesExistingWhispers(database: Database) {
     : '1'
 }
 
+function latestAuthorVisibility(userId: number, database: Database) {
+  const hasUsers = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()
+  const hasDroppedUsernames = database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
+  ).get()
+  if (!hasUsers || !hasDroppedUsernames) return { join: '', filter: '1' }
+  const viewer = database.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null
+  return { join: 'JOIN users u ON u.id=p.user_id',
+    filter: viewer && isAdminEmail(viewer.email) ? '1' : excludesDroppedUsernameUsers(database) }
+}
+
 export function latestPostState(userId: number, database: Database) {
+  const authorVisibility = latestAuthorVisibility(userId, database)
   const read = usesCompactReads(database)
     ? `p.id<=coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)
       OR EXISTS (SELECT 1 FROM latest_read_exceptions r WHERE r.user_id=? AND r.post_id=p.id)`
@@ -20,10 +34,11 @@ export function latestPostState(userId: number, database: Database) {
   return database.query(`SELECT p.id,
     NOT (${read}) unread,
     CASE WHEN parent.user_id=? OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
-    FROM posts p
+    FROM posts p ${authorVisibility.join}
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
     WHERE p.deleted_at IS NULL
+      AND ${authorVisibility.filter}
       AND ${excludesExistingWhispers(database)}
       AND ${excludesMetaPosts()}
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -40,6 +55,7 @@ export function latestPostState(userId: number, database: Database) {
 }
 
 export function latestUnreadPostState(userId: number, database: Database) {
+  const authorVisibility = latestAuthorVisibility(userId, database)
   const compact = usesCompactReads(database)
   const unread = compact
     ? `p.id>coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)
@@ -47,10 +63,11 @@ export function latestUnreadPostState(userId: number, database: Database) {
     : 'NOT EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)'
   return database.query(`SELECT p.id,1 unread,
     CASE WHEN parent.user_id=? OR pm.user_id IS NOT NULL THEN 1 ELSE 0 END targeted_to_viewer
-    FROM posts p
+    FROM posts p ${authorVisibility.join}
     LEFT JOIN posts parent ON parent.id=p.parent_id
     LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=?
     WHERE p.deleted_at IS NULL AND ${unread}
+      AND ${authorVisibility.filter}
       AND ${excludesExistingWhispers(database)}
       AND ${excludesMetaPosts()}
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
@@ -85,12 +102,14 @@ export function markLatestPostsRead(userId: number, postIds: number[], database:
 }
 
 export function unreadLatestCount(userId: number, database: Database) {
+  const authorVisibility = latestAuthorVisibility(userId, database)
   const read = usesCompactReads(database)
     ? `p.id<=coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)
       OR EXISTS (SELECT 1 FROM latest_read_exceptions r WHERE r.user_id=? AND r.post_id=p.id)`
     : 'EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)'
-  return (database.query(`SELECT count(*) count FROM posts p
+  return (database.query(`SELECT count(*) count FROM posts p ${authorVisibility.join}
     WHERE p.deleted_at IS NULL
+      AND ${authorVisibility.filter}
       AND ${excludesExistingWhispers(database)}
       AND ${excludesMetaPosts()}
       AND NOT (${read})

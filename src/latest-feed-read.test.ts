@@ -3,8 +3,21 @@ import { expect, test } from 'bun:test'
 import { cacheDb } from './cache-db'
 import { executeDatabaseDomain } from './database-domain'
 import { unreadForYouCount } from './for-you-state'
-import { markLatestPostsRead } from './latest-state'
+import { markLatestPostsRead, unreadLatestCount } from './latest-state'
 import { runMigrations } from './migrations'
+
+test('All unread count excludes hidden posts except for moderators', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'anon123456789abc','hidden@example.test','x'),
+    (3,'moderator','gstagas@gmail.com','x');
+    INSERT INTO posts(id,user_id,body) VALUES(1,2,'hidden post');
+    INSERT INTO banned_usernames(username,dropped_user_id,dropped_by) VALUES('writer',2,3)`)
+
+  expect(unreadLatestCount(1, database)).toBe(0)
+  expect(unreadLatestCount(3, database)).toBe(1)
+})
 
 test('latest count remains for the rendered page and is reduced on the next load', async () => {
   const database = new Database(':memory:', { strict: true })
