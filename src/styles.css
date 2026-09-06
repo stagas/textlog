@@ -4672,6 +4672,7 @@ form.report-panel {
   overflow-x: visible;
   color: var(--muted);
   text-align: left;
+  text-wrap: balance;
   white-space: normal;
   scrollbar-width: none;
 }
