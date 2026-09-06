@@ -143,7 +143,7 @@ export function HiddenRepliesNotice() {
     <div className="reply-branch hidden-replies-notice">
       <div className="reply-node">
         <article className="post">
-          <div className="post-body quiet">(replies are hidden until you reply)</div>
+          <div className="post-body quiet">(replies are hidden until you answer the quiz)</div>
         </article>
       </div>
     </div>

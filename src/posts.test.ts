@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createPost, enrichPosts, isThreadLocked, loadThreadReplies, rewireVisibleAncestorGaps } from './posts'
+import { syncPoll } from './polls'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -728,6 +729,29 @@ describe('post persistence', () => {
     expect(loadThreadReplies(db, 1, 1)).toEqual([])
     db.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(5,1,1,'author answer')")
     expect(loadThreadReplies(db, 1, 1).map(post => post.id)).toEqual([2, 3, 4, 5])
+  })
+
+  test('hides quiz replies and their count until the viewer answers the quiz', () => {
+    const db = database()
+    db.run(`CREATE TABLE poll_options(id INTEGER PRIMARY KEY,post_id INTEGER NOT NULL,position INTEGER NOT NULL,
+        label TEXT NOT NULL);
+      CREATE TABLE poll_votes(post_id INTEGER NOT NULL,option_id INTEGER NOT NULL,user_id INTEGER NOT NULL,
+        PRIMARY KEY(post_id,user_id));
+      INSERT INTO users(id,handle) VALUES(3,'other');
+      INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+        (1,1,NULL,'Capital? #quiz\nRome\n> Athens','2026-08-03 10:00:00'),
+        (2,3,1,'secret explanation','2026-08-03 11:00:00');`)
+    syncPoll(db, 1, 'Capital? #quiz\nRome\n> Athens')
+    const root = db.query('SELECT p.*,u.handle FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=1')
+      .get() as PostView
+    const option = db.query('SELECT id FROM poll_options WHERE post_id=1 ORDER BY position').get() as { id: number }
+
+    expect(enrichPosts(db, [root], 2)[0]).toMatchObject({ replies_hidden: true, reply_count: 0 })
+    expect(loadThreadReplies(db, 1, 2)).toEqual([])
+
+    db.run('INSERT INTO poll_votes(post_id,option_id,user_id) VALUES(1,?,2)', [option.id])
+    expect(enrichPosts(db, [root], 2)[0]).toMatchObject({ replies_hidden: false, reply_count: 1 })
+    expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2])
   })
 
   test('classifies replies and mentions addressed to the viewer', () => {

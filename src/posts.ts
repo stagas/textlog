@@ -10,7 +10,7 @@ import { markLatestPostsRead } from './latest-state'
 import { decodeHtmlEntities, userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM, locationMapKey, osmLocationUrl } from './locations'
 import { metaThreadVisibleToViewer } from './meta-thread'
-import { loadPolls, syncPoll } from './polls'
+import { loadPolls, parsePoll, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 import { postReferenceIds } from './utils'
@@ -26,24 +26,44 @@ function hiddenReplyGateState(database: Database, postIds: number[], viewerId: n
   const hiddenRoots = new Set<number>()
   const hiddenDescendants = new Set<number>()
   if (!postIds.length || moderator) return { hiddenRoots, hiddenDescendants }
+  const supportsPollVotes = !!database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'",
+  ).get()
+  const ancestorRows = database.query(`WITH RECURSIVE ancestors(id,parent_id,body) AS (
+    SELECT id,parent_id,body FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
+    UNION SELECT parent.id,parent.parent_id,parent.body FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+  ) SELECT DISTINCT id,body FROM ancestors`).all(...postIds) as Array<{ id: number; body: string }>
+  const quizIds = supportsPollVotes
+    ? ancestorRows.filter(row => parsePoll(row.body)?.kind === 'quiz').map(row => row.id)
+    : []
+  const quizGate = quizIds.length
+    ? `UNION ALL SELECT ancestors.start_id,ancestors.id root_id,ancestors.user_id root_user_id,
+        ancestors.depth,'quiz' kind FROM ancestors WHERE ancestors.id IN (${quizIds.map(() => '?').join(',')})`
+    : ''
+  const unansweredQuizGate = quizIds.length
+    ? `OR (gates.kind='quiz' AND NOT EXISTS (
+        SELECT 1 FROM poll_votes WHERE post_id=gates.root_id AND user_id=?
+      ))`
+    : ''
   const rows = database.query(`WITH RECURSIVE ancestors(start_id,id,user_id,parent_id,depth) AS (
     SELECT id,id,user_id,parent_id,0 FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
     UNION ALL
     SELECT ancestors.start_id,parent.id,parent.user_id,parent.parent_id,ancestors.depth+1
       FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
   ), gates AS (
-    SELECT ancestors.start_id,ancestors.id root_id,ancestors.user_id root_user_id,ancestors.depth
+    SELECT ancestors.start_id,ancestors.id root_id,ancestors.user_id root_user_id,ancestors.depth,'replies' kind
       FROM ancestors JOIN post_hashtags ph ON ph.post_id=ancestors.id
       WHERE ph.tag IN ('hiddenreplies','hiddenreply','hiddenreplie')
+    ${quizGate}
   ) SELECT gates.start_id,gates.root_id,gates.depth FROM gates
-    WHERE NOT EXISTS (
+    WHERE (gates.kind='replies' AND NOT EXISTS (
       WITH RECURSIVE descendants(id) AS (
         SELECT id FROM posts WHERE parent_id=gates.root_id
         UNION ALL SELECT child.id FROM posts child JOIN descendants ON child.parent_id=descendants.id
       ) SELECT 1 FROM descendants JOIN posts participant ON participant.id=descendants.id
         WHERE participant.user_id=? AND participant.deleted_at IS NULL
-    ) ORDER BY gates.start_id,gates.depth`)
-    .all(...postIds, viewerId) as Array<{
+    )) ${unansweredQuizGate} ORDER BY gates.start_id,gates.depth`)
+    .all(...postIds, ...quizIds, viewerId, ...(quizIds.length ? [viewerId] : [])) as Array<{
       start_id: number
       root_id: number
       depth: number

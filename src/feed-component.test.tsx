@@ -355,7 +355,7 @@ test('new feed folds gated-replies notices with the conversation', () => {
   const expanded = renderToStaticMarkup(<PublicFeed path="/new" feed={feed} expandedRootId={post.id} />)
 
   expect(collapsed).toContain('id="feed-thread-fold-22" checked=""')
-  expect(collapsed).toContain('(replies are hidden until you reply)')
+  expect(collapsed).toContain('(replies are hidden until you answer the quiz)')
   expect(collapsed).toContain('class="reply-branch hidden-replies-branch"><div class="thread-branch-content">')
   expect(expanded).toContain('id="feed-thread-fold-22"')
   expect(expanded).not.toContain('id="feed-thread-fold-22" checked=""')
@@ -367,7 +367,7 @@ test('profile feeds omit gated-replies notices', () => {
   const html = renderToStaticMarkup(<Profile user={null}
     profile={{ id: 2, handle: 'alice', email: 'alice@example.com', bio: '' }} posts={[post]} following={false} />)
 
-  expect(html).not.toContain('(replies are hidden until you reply)')
+  expect(html).not.toContain('(replies are hidden until you answer the quiz)')
 })
 
 test('to-me renders sibling reply activities as separate chronological entries', () => {
