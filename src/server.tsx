@@ -3,6 +3,7 @@ import { clientIpHeaderName, sessionCookieName } from './brand'
 import { validateStartupConfiguration } from './config'
 import { configureDatabaseService } from './database-service'
 import { notificationDevice, sessionCookie } from './http'
+import { feedWarmIdle } from './idle-work'
 import { closeLogConnections } from './log-stream'
 import { PAGE_SIZE } from './pagination'
 import { withRequestContext } from './request-context'
@@ -174,9 +175,11 @@ const server = Bun.serve({
   port: configuration.port,
   hostname: configuration.host,
   async fetch(request: Request, server: Bun.Server<unknown>) {
+    const path = requestPath(request)
+    const address = server.requestIP(request)?.address || null
+    feedWarmIdle.record(address, path === '/styles.css')
     const asset = mainThreadAsset(request)
     if (asset) return asset
-    const path = requestPath(request)
     if (path === '/health' && (runtime.state !== 'ready' || !application || startupError)) {
       return unavailableResponse(request)
     }
@@ -200,12 +203,12 @@ const server = Bun.serve({
           return unavailableResponse(request)
         })
     }
-    const address = server.requestIP(request)?.address || null
     const identity = await requestWithResolvedIdentity(request).catch(error => {
       if (!(error instanceof DatabaseUnavailableError)) throw error
       return null
     })
     if (!identity) return unavailableResponse(request)
+    feedWarmIdle.record(address, Boolean(identity.sessionUser || identity.apiUser))
     const headers = new Headers(request.headers)
     headers.delete('x-textlog-session-user')
     headers.delete('x-textlog-api-user')

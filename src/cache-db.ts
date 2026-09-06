@@ -34,7 +34,7 @@ export function createCacheDatabase(path = defaultCachePath()) {
     CREATE INDEX IF NOT EXISTS materialized_feed_pages_v2_created ON materialized_feed_pages_v2(created_at);
     CREATE TABLE IF NOT EXISTS recent_feed_visitors (
       user_id INTEGER PRIMARY KEY,request_url TEXT NOT NULL,cookie TEXT NOT NULL,page_size INTEGER NOT NULL,
-      density TEXT NOT NULL,last_visited_at INTEGER NOT NULL);
+      density TEXT NOT NULL,last_visited_at INTEGER NOT NULL,user_agent TEXT NOT NULL DEFAULT '');
     CREATE INDEX IF NOT EXISTS recent_feed_visitors_visited ON recent_feed_visitors(last_visited_at DESC);`)
   const materializedColumns = database.query('PRAGMA table_info(materialized_feed_pages_v2)').all() as Array<{
     name: string
@@ -42,14 +42,20 @@ export function createCacheDatabase(path = defaultCachePath()) {
   if (!materializedColumns.some(column => column.name === 'strict_generation')) {
     database.run('ALTER TABLE materialized_feed_pages_v2 ADD COLUMN strict_generation INTEGER NOT NULL DEFAULT 0')
   }
+  const recentVisitorColumns = database.query('PRAGMA table_info(recent_feed_visitors)').all() as Array<{
+    name: string
+  }>
+  if (!recentVisitorColumns.some(column => column.name === 'user_agent')) {
+    database.run("ALTER TABLE recent_feed_visitors ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
+  }
   return database
 }
 
-export function clearCacheDatabase(database: Database) {
+export function clearCacheDatabase(database: Database, preserveRecentVisitors = false) {
   database.transaction(() => {
     database.query('DELETE FROM feed_snapshots').run()
     database.query('DELETE FROM materialized_feed_pages_v2').run()
-    database.query('DELETE FROM recent_feed_visitors').run()
+    if (!preserveRecentVisitors) database.query('DELETE FROM recent_feed_visitors').run()
   })()
 }
 

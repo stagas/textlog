@@ -86,7 +86,8 @@ async function drainQueue() {
 // Every Worker generation owns and validates both connections before advertising readiness.
 db.query('SELECT 1').get()
 cacheDb.query('SELECT 1').get()
-clearCacheDatabase(cacheDb)
+// Feed pages are disposable across releases, but the visitor list is needed to rebuild them while startup is idle.
+clearCacheDatabase(cacheDb, true)
 await normalizeExistingWordNetTags(db)
 
 self.onmessage = event => {

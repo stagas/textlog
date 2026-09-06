@@ -532,11 +532,13 @@ export type DatabaseDomainOperations = {
     output: null
   }
   'cache.recentFeedVisitorPut': {
-    input: { userId: number; requestUrl: string; cookie: string; pageSize: PageSizeChoice; density: DensityChoice }
+    input: { userId: number; requestUrl: string; cookie: string; userAgent: string; pageSize: PageSizeChoice;
+      density: DensityChoice }
     output: null
   }
   'cache.recentFeedVisitors': { input: Record<string, never>; output: Array<
-    { user: User; requestUrl: string; cookie: string; pageSize: PageSizeChoice; density: DensityChoice }
+    { user: User; requestUrl: string; cookie: string; userAgent: string; pageSize: PageSizeChoice;
+      density: DensityChoice }
   > }
   'search.results': {
     input: { query: string; viewerId: number; page: number; pageSize: PageSizeChoice; tab: 'notes' | 'tags' | 'people' }

@@ -21,6 +21,7 @@ import { compressResponse } from './compression'
 import { databaseService, subscribeToFeedMutations } from './database-service'
 import { isDevelopment } from './environment'
 import { localImageFile, usesLocalImageStorage } from './image-storage'
+import { feedWarmIdle } from './idle-work'
 import { campaignIpPseudonym } from './ip-privacy'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
@@ -41,8 +42,7 @@ import { registerApiRoutes } from './routes/api'
 import { registerAuthRoutes } from './routes/auth'
 import { registerBookmarksRoutes } from './routes/bookmarks'
 import { registerEmbedRoutes } from './routes/embed'
-import { loadRecentFeedVisitors, registerFeedsRoutes, warmNextRecentLatestFeed,
-  warmRecentLatestFeeds } from './routes/feeds'
+import { loadRecentFeedVisitors, registerFeedsRoutes, warmRecentFeedTabs } from './routes/feeds'
 import { registerIllegalActivityRoutes } from './routes/illegal-activity'
 import { registerInteractionsRoutes } from './routes/interactions'
 import { registerMediaRoutes } from './routes/media'
@@ -217,17 +217,23 @@ const navigationCaptchaGate = new NavigationCaptchaGate()
 await loadBlockedIps()
 startPostPushWorker()
 await loadRecentFeedVisitors()
-let publicationWarmScheduled = false
-subscribeToFeedMutations(operation => {
+let publicationWarmGeneration = 0
+function scheduleRecentFeedTabWarm() {
   if (Bun.env.DEV_RELOAD === 'true' || Bun.env.DISABLE_FEED_WARMING === 'true') return
-  if (!['api.createPost', 'api.publishDraft', 'api.updatePost', 'api.deletePost', 'api.unpublishPost', 'posts.votePoll']
-    .includes(operation) || publicationWarmScheduled) return
-  publicationWarmScheduled = true
-  setTimeout(() => {
-    publicationWarmScheduled = false
-    void warmRecentLatestFeeds().catch(error => logError('write-through latest feed warm failed', error))
-  }, 50)
+  const generation = ++publicationWarmGeneration
+  void warmRecentFeedTabs(async () => {
+    await feedWarmIdle.waitUntilIdle()
+    if (generation !== publicationWarmGeneration) throw new DOMException('Superseded feed warm', 'AbortError')
+  }).catch(error => {
+    if (!(error instanceof DOMException && error.name === 'AbortError')) logError('feed-tab warm failed', error)
+  })
+}
+subscribeToFeedMutations(operation => {
+  if (operation !== 'api.createPost' && operation !== 'api.publishDraft') return
+  scheduleRecentFeedTabWarm()
 })
+feedWarmIdle.postpone()
+scheduleRecentFeedTabWarm()
 let hotProjectionRefreshRunning = false
 const hotProjectionWorker = new Worker(new URL('./hot-projection-worker.ts', import.meta.url))
 let finishInitialHotProjection: (() => void) | undefined
@@ -265,12 +271,6 @@ refreshHotProjection()
 await initialHotProjection
 const hotProjectionTimer = setInterval(refreshHotProjection, 30_000)
 hotProjectionTimer.unref()
-const recentLatestWarmTimer = setInterval(() => {
-  if (Bun.env.DEV_RELOAD !== 'true' && Bun.env.DISABLE_FEED_WARMING !== 'true') {
-    void warmNextRecentLatestFeed().catch(error => logError('recent latest feed warm failed', error))
-  }
-}, 2_000)
-recentLatestWarmTimer.unref()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
   5_000,

@@ -159,8 +159,7 @@ type RecentFeedVisitor = {
 const recentFeedVisitors = new Map<number, RecentFeedVisitor>()
 const latestFeedCacheVersion = 15
 const newFeedCacheVersion = 1
-const recentFeedVisitorLimit = 30
-let recentLatestWarmCursor = 0
+const recentFeedVisitorLimit = 40
 
 const feedVariantCookieNames = new Set([
   'appearance',
@@ -168,7 +167,9 @@ const feedVariantCookieNames = new Set([
   'sans-serif-font',
   'primary-font',
   'font-size',
+  'corners',
   'notification_device',
+  'donation_banner_dismissed',
   'pwa_standalone',
   'pwa_install_banner_dismissed',
 ])
@@ -185,13 +186,14 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
   const density = resolvedDensity(request)
   const pageSize = resolvedPageSize(request)
   const cookie = feedVariantCookie(request)
+  const userAgent = request.headers.get('user-agent') || ''
   const requestUrl = new URL('/all', request.url).href
   recentFeedVisitors.delete(user.id)
   recentFeedVisitors.set(user.id, {
     density,
     pageSize,
     user,
-    request: new Request(requestUrl, { headers: { cookie } }),
+    request: new Request(requestUrl, { headers: { cookie, 'user-agent': userAgent } }),
   })
   while (recentFeedVisitors.size > recentFeedVisitorLimit) {
     recentFeedVisitors.delete(recentFeedVisitors.keys().next().value!)
@@ -200,33 +202,61 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
     userId: user.id,
     requestUrl,
     cookie,
+    userAgent,
     pageSize,
     density,
   }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
 
-export async function warmNextRecentLatestFeed() {
-  const visitors = [...recentFeedVisitors.values()].reverse()
-  if (!visitors.length) return
-  const visitor = visitors[recentLatestWarmCursor++ % visitors.length]
+async function warmRecentFeedTab(visitor: RecentFeedVisitor,
+  kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me')
+{
+  const notificationBanner = await showNotificationBanner(visitor.request, visitor.user)
   await withRequestContext({ sessionUser: visitor.user, apiUser: null, pageSize: visitor.pageSize,
     density: visitor.density }, () =>
     withAppearance(visitor.request, async () => {
-      await rpcMaterializedFeedPage(visitor.request, 'latest', visitor.user.id, async () => {
-        const feed = await backgroundDatabaseCall('feeds.latestPage', {
-          viewerId: visitor.user.id,
-          page: 1,
-          pageSize: visitor.pageSize,
-          markRead: false,
-        })
-        return page(<PublicFeed user={visitor.user} feed={feed} path="/all" />)
-      }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user), true)
+      if (kind === 'latest') {
+        await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
+          const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId: visitor.user.id, page: 1,
+            pageSize: visitor.pageSize, markRead: false })
+          return page(<PublicFeed user={visitor.user} feed={feed} path="/all"
+            notificationBanner={notificationBanner} />)
+        }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user, notificationBanner), true)
+      }
+      else if (kind === 'new' || kind === 'hot') {
+        await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
+          const feed = kind === 'new'
+            ? await backgroundDatabaseCall('feeds.newPage', { viewerId: visitor.user.id, page: 1,
+              pageSize: visitor.pageSize })
+            : await backgroundDatabaseCall('feeds.hotPage', { viewerId: visitor.user.id, page: 1,
+              pageSize: visitor.pageSize })
+          return page(kind === 'new'
+            ? <PublicFeed user={visitor.user} feed={feed} path="/new" notificationBanner={notificationBanner} />
+            : <HotFeed user={visitor.user} feed={feed} title="hot" notificationBanner={notificationBanner} />)
+        }, false, viewerCacheVersion(kind === 'new' ? newFeedCacheVersion : hotRankingVersion, visitor.user,
+          notificationBanner), true)
+      }
+      else {
+        const toMe = kind === 'to-me'
+        await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
+          const data = await backgroundDatabaseCall('feeds.personalizedPage', { user: visitor.user, page: 1,
+            pageSize: visitor.pageSize, toMe, path: toMe ? '/@' : '/my-feed', markRead: false })
+          return page(<Feed user={visitor.user} data={data} title={toMe ? '@' : 'my feed'}
+            path={toMe ? '/@' : undefined} toMe={toMe} notificationBanner={notificationBanner} />)
+        }, false, viewerCacheVersion(kind === 'for-you' ? 12 : 0, visitor.user, notificationBanner), true)
+      }
     }))
 }
 
-export async function warmRecentLatestFeeds(limit = 5) {
-  const count = Math.min(limit, recentFeedVisitors.size)
-  for (let index = 0; index < count; index++) await warmNextRecentLatestFeed()
+export async function warmRecentFeedTabs(waitUntilIdle: () => Promise<void>, limit = 40) {
+  const visitors = [...recentFeedVisitors.values()].reverse().slice(0, limit)
+  const tabs = ['latest', 'new', 'hot', 'for-you', 'to-me'] as const
+  for (const visitor of visitors) {
+    for (const tab of tabs) {
+      await waitUntilIdle()
+      await warmRecentFeedTab(visitor, tab)
+    }
+  }
 }
 
 export async function loadRecentFeedVisitors() {
@@ -234,7 +264,10 @@ export async function loadRecentFeedVisitors() {
   for (const visitor of visitors) {
     recentFeedVisitors.set(visitor.user.id, {
       user: visitor.user,
-      request: new Request(visitor.requestUrl, { headers: { cookie: visitor.cookie } }),
+      request: new Request(visitor.requestUrl, { headers: {
+        cookie: visitor.cookie,
+        'user-agent': visitor.userAgent,
+      } }),
       pageSize: visitor.pageSize,
       density: visitor.density,
     })
@@ -365,6 +398,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.on(['GET', 'POST'], '/any', async c => {
     const user = currentUser(c.req.raw)
+    rememberFeedVisitor(c.req.raw, user)
     const write = await writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const requestedSeed = anySeed(c.req.query('seed'))
@@ -390,6 +424,7 @@ export function registerFeedsRoutes(app: Hono) {
 
   app.on(['GET', 'POST'], '/new', async c => {
     const user = currentUser(c.req.raw)
+    rememberFeedVisitor(c.req.raw, user)
     const write = await writeState(c)
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -429,6 +464,7 @@ export function registerFeedsRoutes(app: Hono) {
   app.on(['GET', 'POST'], '/@', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/@'))
+    rememberFeedVisitor(c.req.raw, user)
     const write = await writeState(c)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))

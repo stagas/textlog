@@ -41,3 +41,21 @@ test('clears every durable cache', () => {
     database.close()
   }
 })
+
+test('can retain recent visitors while clearing feed pages at startup', () => {
+  const database = createCacheDatabase(':memory:')
+  try {
+    database.query(`INSERT INTO recent_feed_visitors(user_id,request_url,cookie,page_size,density,last_visited_at)
+      VALUES(1,'/all','',20,'regular',1)`).run()
+    database.query(`INSERT INTO materialized_feed_pages_v2(kind,viewer_id,variant,generation,html)
+      VALUES('latest',1,'test',1,'cached')`).run()
+
+    clearCacheDatabase(database, true)
+
+    expect(database.query('SELECT count(*) count FROM recent_feed_visitors').get()).toEqual({ count: 1 })
+    expect(database.query('SELECT count(*) count FROM materialized_feed_pages_v2').get()).toEqual({ count: 0 })
+  }
+  finally {
+    database.close()
+  }
+})

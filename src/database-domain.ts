@@ -3670,24 +3670,27 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'cache.recentFeedVisitorPut': {
-      const { userId, requestUrl, cookie, pageSize, density } = input as DatabaseDomainInput<
+      const { userId, requestUrl, cookie, userAgent, pageSize, density } = input as DatabaseDomainInput<
         'cache.recentFeedVisitorPut'
       >
       cacheDb.transaction(() => {
-        cacheDb.query(`INSERT INTO recent_feed_visitors(user_id,request_url,cookie,page_size,density,last_visited_at)
-          VALUES(?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET request_url=excluded.request_url,
-          cookie=excluded.cookie,page_size=excluded.page_size,density=excluded.density,
-          last_visited_at=excluded.last_visited_at`).run(userId, requestUrl, cookie, pageSize, density, Date.now())
+        cacheDb.query(`INSERT INTO recent_feed_visitors(
+          user_id,request_url,cookie,user_agent,page_size,density,last_visited_at
+        ) VALUES(?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET request_url=excluded.request_url,
+          cookie=excluded.cookie,user_agent=excluded.user_agent,page_size=excluded.page_size,
+          density=excluded.density,last_visited_at=excluded.last_visited_at`)
+          .run(userId, requestUrl, cookie, userAgent, pageSize, density, Date.now())
         cacheDb.query(`DELETE FROM recent_feed_visitors WHERE user_id IN (
-          SELECT user_id FROM recent_feed_visitors ORDER BY last_visited_at DESC,user_id DESC LIMIT -1 OFFSET 30
+          SELECT user_id FROM recent_feed_visitors ORDER BY last_visited_at DESC,user_id DESC LIMIT -1 OFFSET 40
         )`).run()
       })()
       return null as DatabaseDomainOutput<K>
     }
     case 'cache.recentFeedVisitors': {
-      const rows = cacheDb.query(`SELECT user_id,request_url,cookie,page_size,density FROM recent_feed_visitors
-        ORDER BY last_visited_at ASC,user_id ASC LIMIT 30`).all() as Array<
-        { user_id: number; request_url: string; cookie: string; page_size: PageSizeChoice; density: DensityChoice }
+      const rows = cacheDb.query(`SELECT user_id,request_url,cookie,user_agent,page_size,density FROM recent_feed_visitors
+        ORDER BY last_visited_at ASC,user_id ASC LIMIT 40`).all() as Array<
+        { user_id: number; request_url: string; cookie: string; user_agent: string; page_size: PageSizeChoice;
+          density: DensityChoice }
       >
       const result = rows.flatMap(row => {
         const user = database.query(`SELECT id,handle,email,bio,suspended_at,email_verified_at,handle_chosen_at,
@@ -3696,7 +3699,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           FROM users WHERE id=? AND deleted_at IS NULL AND suspended_at IS NULL`)
           .get(row.user_id) as User | null
         return user
-          ? [{ user, requestUrl: row.request_url, cookie: row.cookie, pageSize: row.page_size, density: row.density }]
+          ? [{ user, requestUrl: row.request_url, cookie: row.cookie, userAgent: row.user_agent,
+            pageSize: row.page_size, density: row.density }]
           : []
       })
       return result as DatabaseDomainOutput<K>
