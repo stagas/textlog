@@ -89,7 +89,12 @@ export function personalizedReadActionOutOfSync(kind: 'for-you' | 'to-me', html:
     `href="${path.replace('/', '\\/')}"[^>]*>${label}<span class="to-me-count">(\\d+)\\+?</span>`,
   ))?.[1] || 0)
   const action = kind === 'to-me' ? '/@/read-all' : '/my-feed/read-all'
-  return (count > 0) !== html.includes(`action="${action}"`)
+  const actionOutOfSync = (count > 0) !== html.includes(`action="${action}"`)
+  // Counts are hydrated from current read state, but unread dots are embedded in the cached page body. If the
+  // snapshot was consumed by an earlier request/process, markPersonalizedSnapshotPageRead returns zero and would
+  // otherwise leave that stale body in memory indefinitely.
+  const hasCachedUnreadRows = html.includes('class="unread-dot" aria-label="unread"')
+  return actionOutOfSync || hasCachedUnreadRows
 }
 
 export function memoryHitNeedsReadAction(kind: MaterializedFeedKind, hitActionDone: boolean, actionStale = false) {

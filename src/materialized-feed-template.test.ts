@@ -78,6 +78,8 @@ test('personalized cache entries detect stale read-all markup', () => {
   expect(personalizedReadActionOutOfSync('for-you', count)).toBe(true)
   expect(personalizedReadActionOutOfSync('for-you', count
     + '<form action="/my-feed/read-all"></form>')).toBe(false)
+  expect(personalizedReadActionOutOfSync('for-you', count
+    + '<form action="/my-feed/read-all"></form><span class="unread-dot" aria-label="unread"></span>')).toBe(true)
   expect(
     personalizedReadActionOutOfSync('for-you',
       '<a href="/my-feed">my feed</a><form action="/my-feed/read-all"></form>'),
