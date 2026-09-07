@@ -195,7 +195,7 @@ body.corners-round .accent-swatch {
 body.corners-round :is(a:not(.button), .quiet, .reference-menu, .danger, .content-warning-action,
   .activity-side-link, .posting-help-summary-link, .preview-post-meta > *,
   .reply-preview .postdate, .activity-follow-stats, .bookmark-link, .post-share-link,
-  .raw-link, .compose-preview-heading, .to-me-count, .profile-edit-link) {
+  .raw-link, .compose-preview-heading, .profile-edit-link) {
   border-radius: 0 !important;
 }
 
