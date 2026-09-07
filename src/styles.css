@@ -2728,6 +2728,35 @@ body.corners-round a.button {
   border-bottom: var(--hairline) solid var(--link-border);
 }
 
+.post-share-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.post-share-link {
+  cursor: pointer;
+  border-bottom: var(--hairline) solid var(--link-border);
+}
+
+.post-share-toggle:focus-visible ~ .postfoot .post-share-link {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.post-share-panel {
+  display: none;
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--subtle);
+  border: 1px solid var(--soft);
+  border-radius: var(--corner-radius-small);
+}
+
+.post-share-toggle:checked ~ .post-share-panel { display: block; }
+
 .report-post-preview {
   margin-bottom: var(--space-6);
   border-bottom: 1px solid var(--soft);

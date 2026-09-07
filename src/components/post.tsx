@@ -18,6 +18,7 @@ import { displayedExecutionOutput } from '../code-execution'
 import { collapsedConversationPreview } from '../latest-conversation'
 import { renderToStaticMarkup } from '../render'
 import type { User } from '../types'
+import { InviteShare } from './invite-share'
 import { MetaRow } from './meta'
 
 function maskedContent(body: string) {
@@ -657,6 +658,7 @@ export function Post({
   replyLabel,
   reportHref,
   bookmarkAction = false,
+  shareAction = false,
   foldControlId,
   collapsedExpansionControlId,
   highlightTerms = [],
@@ -684,7 +686,8 @@ export function Post({
   suppressContentWarning = false,
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
-  reportHref?: string; bookmarkAction?: boolean; foldControlId?: string; collapsedExpansionControlId?: string;
+  reportHref?: string; bookmarkAction?: boolean; shareAction?: boolean; foldControlId?: string;
+  collapsedExpansionControlId?: string;
   highlightTerms?: string[]; tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
@@ -774,6 +777,9 @@ export function Post({
   const defaultReplyPath = '/post/' + p.id + '?reply=1' + returnQuery
   const navigationRel = returnPath ? 'nofollow' : undefined
   const formPrefix = `post-${p.id}`
+  const shareControlId = `${formPrefix}-share`
+  const configuredOrigin = Bun.env.APP_URL?.replace(/\/$/, '') || 'https://textlog.cc'
+  const permalink = `${configuredOrigin}/post/${p.id}`
   const resolvedReplyHref = replyHref
     ?? defaultReplyPath
   const resolvedReplyLabel = replyLabel ?? (user
@@ -803,6 +809,8 @@ export function Post({
       }${contextDirectedUnread ? ' activity-item-directed-unread' : ''}`}
       id={`post-${p.id}`}
     >
+      {shareAction && <input className="post-share-toggle" id={shareControlId} type="checkbox"
+        aria-label="show sharing options" />}
       {tappable && (
         <a className="post-hit-area" href={tappableHref || detailPath} rel={navigationRel}
           aria-label={`open post by @${p.handle}`} />
@@ -956,7 +964,7 @@ export function Post({
         <Todo p={p} user={user} preview={preview} returnPath={returnPath} formPrefix={formPrefix} />
       </ContentWarning>
       {!parent && (showReplyAction && !p.thread_locked || hasVisibleContinuation || canModerate || reportHref
-        || bookmarkAction || showOwnerActions && !!user)
+        || bookmarkAction || shareAction || showOwnerActions && !!user)
         && (
           <MetaRow className={`postfoot${preview ? ' preview-post-meta' : ''}`}>
             {showReplyAction && !p.thread_locked && (
@@ -975,7 +983,7 @@ export function Post({
                   </a>
                 )
             )}
-            {(canModerate || reportHref || bookmarkAction || showOwnerActions && !!user) && (
+            {(canModerate || reportHref || bookmarkAction || shareAction || showOwnerActions && !!user) && (
               <span className="post-actions">
                 {canModerate && (
                   <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -1005,6 +1013,9 @@ export function Post({
                       {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
                     </button>
                   </form>
+                )}
+                {shareAction && (
+                  <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>
                 )}
               </span>
             )}
@@ -1122,7 +1133,7 @@ export function Post({
             )}
         </blockquote>
       )}
-      {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction
+      {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction || shareAction
         || showOwnerActions && !!user) && (
         <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
           {resolvedContinuationHref && (
@@ -1134,7 +1145,7 @@ export function Post({
                 </a>
               )
           )}
-          {(canModerate || reportHref || bookmarkAction || showOwnerActions && !!user) && (
+          {(canModerate || reportHref || bookmarkAction || shareAction || showOwnerActions && !!user) && (
             <span className="post-actions">
               {canModerate && (
                 <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
@@ -1163,9 +1174,18 @@ export function Post({
                   </button>
                 </form>
               )}
+              {shareAction && (
+                <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>
+              )}
             </span>
           )}
         </MetaRow>
+      )}
+      {shareAction && (
+        <div className="post-share-panel">
+          <InviteShare shareUrl={permalink} shareMessage={`@${p.handle} wrote on textlog`}
+            heading="share with friends" headingId={`${formPrefix}-share-heading`} />
+        </div>
       )}
     </article>
   )

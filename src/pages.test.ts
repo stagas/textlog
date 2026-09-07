@@ -4166,7 +4166,7 @@ test('Post only renders owner actions when requested by the detail view', () => 
   }
   const feedHtml = renderToStaticMarkup(React.createElement(Post, props))
   const detailHtml = renderToStaticMarkup(React.createElement(Post, {
-    ...props, showOwnerActions: true, bookmarkAction: true,
+    ...props, showOwnerActions: true, bookmarkAction: true, shareAction: true,
   }))
 
   expect(feedHtml).not.toContain('/post/2/edit')
@@ -4175,6 +4175,13 @@ test('Post only renders owner actions when requested by the detail view', () => 
   expect(detailHtml).toContain('class="postfoot"')
   expect(detailHtml).toContain('class="quiet bookmark-link" type="submit" aria-label="mute replies to this post"')
   expect(detailHtml.indexOf('action="/post/2/mute"')).toBeLessThan(detailHtml.indexOf('action="/post/2/bookmark"'))
+  expect(detailHtml).toContain('id="post-2-share" type="checkbox" aria-label="show sharing options"')
+  expect(detailHtml).toContain('class="quiet post-share-link" for="post-2-share">share</label>')
+  expect(detailHtml).toContain('share with friends')
+  expect(detailHtml).toContain('%40writer%20wrote%20on%20textlog')
+  expect(detailHtml).toContain(
+    'title="Select all">@writer wrote on textlog http://localhost:3000/post/2</div>',
+  )
   expect(detailHtml).toContain('/post/2/edit')
   expect(detailHtml).not.toContain('/post/2/delete')
 })
@@ -4313,6 +4320,8 @@ test('Public post pages end with join and browse actions', () => {
   expect(html).toContain('href="/hot">browse more notes</a>')
   expect(html).not.toContain('post-reply-link')
   expect(html).toContain('anonymous-reply-compose')
+  expect(html).toContain('class="quiet post-share-link" for="post-2-share">share</label>')
+  expect(html).toContain('%40writer%20wrote%20on%20textlog')
 })
 
 test('Anonymous post pages show the full reply composer when reply is requested', () => {

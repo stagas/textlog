@@ -27,7 +27,7 @@ export function PublicThread(
       <div className="post-page-thread public-post-page-thread">
         <div className="thread-root">
           <Post p={post} user={null} tappableParent backHref={returnPath} canonicalTimestamp topHref={topHref}
-            flatHref={flatHref} treeHref={treeHref} />
+            flatHref={flatHref} treeHref={treeHref} shareAction />
         </div>
         {showForm && !post.thread_locked && !replyTo && (
           <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath} />

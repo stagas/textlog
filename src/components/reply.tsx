@@ -196,7 +196,7 @@ export function Reply(
       <div className="post-page-thread">
         <div className="thread-root">
           <Post p={post} user={user} showReplyAction={showForm && !!replyTo} showOwnerActions showModerateAction
-            tappableParent bookmarkAction suppressContentWarning={showForm} returnPath={returnPath}
+            tappableParent bookmarkAction shareAction suppressContentWarning={showForm} returnPath={returnPath}
             backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref} treeHref={treeHref}
             reportHref={user.id !== post.user_id
               ? `/post/${post.id}/report${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
