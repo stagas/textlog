@@ -153,7 +153,7 @@ describe('in-memory stylesheet', () => {
 
   test('gives Mermaid keywords a distinct syntax color', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.post .language-mermaid .hljs-keyword {\n  color: var(--mermaid-keyword-ink);\n}')
+    expect(css).toContain('.post .language-mermaid .hljs-keyword {\n  color: var(--api-patch-ink);\n}')
   })
 
   test('keeps code fences above the tappable post hit area so they can scroll horizontally', async () => {
