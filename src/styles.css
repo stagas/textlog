@@ -466,7 +466,6 @@ header>nav>a:not(.button),
   min-height: calc(1.5em + 2 * var(--space-4));
   padding: var(--space-4) var(--space-5);
   font-size: var(--font-size-14);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
 }
 
 .has-mobile-write-action .site-footer {
