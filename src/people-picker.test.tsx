@@ -32,17 +32,17 @@ test('people prompt renders whole-card multi-select choices and dismissal', () =
   expect(html).toContain('Writes about <strong>small</strong>, useful things.')
 })
 
-test('people prompt shuffles ten people from the top thirty candidates', () => {
+test('people prompt shuffles five people from the top thirty candidates', () => {
   const people = Array.from({ length: 30 }, (_, index) => ({
     id: index + 1,
     handle: `person${index + 1}`,
     bio: '',
   }))
-  const displayed = shuffledPeople(people, 10, () => 0)
+  const displayed = shuffledPeople(people, undefined, () => 0)
 
-  expect(displayed).toHaveLength(10)
-  expect(new Set(displayed.map(person => person.id)).size).toBe(10)
-  expect(displayed.map(person => person.id)).not.toEqual(people.slice(0, 10).map(person => person.id))
+  expect(displayed).toHaveLength(5)
+  expect(new Set(displayed.map(person => person.id)).size).toBe(5)
+  expect(displayed.map(person => person.id)).not.toEqual(people.slice(0, 5).map(person => person.id))
   expect(people.map(person => person.id)).toEqual(Array.from({ length: 30 }, (_, index) => index + 1))
 })
 

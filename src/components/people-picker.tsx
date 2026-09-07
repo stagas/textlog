@@ -9,7 +9,7 @@ export function shouldShowPeoplePicker(user: User | null | undefined) {
   return Boolean(user?.handle_chosen_at && user.tag_prompt_completed_at && !user.people_prompt_completed_at)
 }
 
-export function shuffledPeople(people: PopularPerson[], limit = 10, random = Math.random) {
+export function shuffledPeople(people: PopularPerson[], limit = 5, random = Math.random) {
   const shuffled = [...people]
   for (let index = shuffled.length - 1; index > 0; index--) {
     const swapIndex = Math.floor(random() * (index + 1))
