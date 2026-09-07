@@ -177,24 +177,23 @@ export function Connections(
         )
         : people.length
         ? (
-          <div className="columns connections-columns connections-columns-stacked">
-            <section>
-              <div className={paginationHeadingClass()}>
-                <div className="connections-heading">
-                  <h2 id="connections-people-heading">People</h2>
-                  {sortToggle}
-                </div>
+          <>
+            <div className={`${paginationHeadingClass()} connections-heading-wide`}>
+              <div className="connections-heading">
+                <h2 id="connections-people-heading">People</h2>
+                {sortToggle}
+              </div>
               <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
                 path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination" compact
                 anchor="connections-people-heading" instantScroll />
-              </div>
-              <ConnectionPeople user={user} people={people} showMood showNoteCount={false} showPopover={false}
-                returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
-              <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-                path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-                compact anchor="connections-people-heading" instantScroll />
-            </section>
-          </div>
+            </div>
+            <ConnectionPeople user={user} people={people} className="connections-list connections-list-headed"
+              showMood showNoteCount={false} showPopover={false}
+              returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+            <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+              path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
+              anchor="connections-people-heading" instantScroll />
+          </>
         )
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>

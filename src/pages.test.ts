@@ -3454,7 +3454,8 @@ test('Following and followers paginate every 8 people', () => {
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
     if (kind === 'followers') {
-      expect(html).toContain('class="columns connections-columns connections-columns-stacked"')
+      expect(html).toContain('connections-heading-wide')
+      expect(html).toContain('connections-list connections-list-headed')
       expect(html.indexOf('<h2 id="connections-people-heading">People</h2>')).toBeLessThan(
         html.indexOf('aria-label="People pagination"'),
       )

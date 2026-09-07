@@ -442,7 +442,10 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache)
+        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache,
+        user
+          ? async () => ((await data()).unreadPostIds?.length || 0) > 0
+          : undefined)
       : await render()
     warmOtherFeedTabsAfterMiss(c.req.raw, user, 'latest', response)
     const remembered = rememberFeed(response, 'latest')

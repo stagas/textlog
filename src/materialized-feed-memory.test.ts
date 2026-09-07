@@ -88,3 +88,38 @@ test('@ feed memory and snapshot are invalidated when directed replies and menti
   expect(mentioned.headers.get('x-feed-cache')).toBe('miss')
   expect(await mentioned.json()).toContain(mention.id)
 })
+
+test('a warmed all feed marks visible posts read when that account opens it', async () => {
+  const request = new Request('http://localhost/all')
+  const alice: User = { id: 1, handle: 'alice', email: 'alice@example.test', bio: '' }
+  const post = createPost(database, 3, 'unread before switching to alice', null, false)
+  if (!('id' in post)) throw new Error('could not create unread post')
+  const cacheVersion = 2_140_000_000 + Math.floor(Math.random() * 7_000_000)
+  const load = (markRead: boolean) => executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: alice.id,
+    page: 1,
+    pageSize: 20,
+    markRead,
+  })
+  const body = (feed: Awaited<ReturnType<typeof load>>, read = false) => new Response(JSON.stringify({
+    postIds: feed.posts.map(row => row.id),
+    unreadPostIds: read ? [] : feed.unreadPostIds,
+  }))
+
+  await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)), false,
+    cacheVersion)
+  const warmed = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)),
+    false, cacheVersion)
+  expect(warmed.headers.get('x-feed-cache')).toBe('memory')
+  expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: alice.id })).toBeGreaterThan(0)
+
+  let loaded: Awaited<ReturnType<typeof load>> | undefined
+  const data = async () => loaded ||= await load(true)
+  const opened = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await data()), false,
+    cacheVersion, false, async () => body(await data(), true),
+    async () => ((await data()).unreadPostIds?.length || 0) > 0)
+
+  expect(opened.headers.get('x-feed-cache')).toBe('memory')
+  expect(await opened.json()).toMatchObject({ unreadPostIds: [] })
+  expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: alice.id })).toBe(0)
+})
