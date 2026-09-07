@@ -3403,6 +3403,41 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 198,
+    name: 'invalidate_personalized_feeds_from_candidates',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'",
+      ).get() || !database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS personalized_candidates_generation_insert;
+        DROP TRIGGER IF EXISTS personalized_candidates_generation_update;
+        DROP TRIGGER IF EXISTS personalized_candidates_generation_delete;
+        CREATE TRIGGER personalized_candidates_generation_insert
+          AFTER INSERT ON personalized_post_candidates BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation) VALUES(NEW.viewer_id,2)
+            ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+        END;
+        CREATE TRIGGER personalized_candidates_generation_update
+          AFTER UPDATE ON personalized_post_candidates BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation) VALUES(OLD.viewer_id,2)
+            ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+          INSERT INTO personalized_feed_generations(viewer_id,generation)
+            SELECT NEW.viewer_id,2 WHERE NEW.viewer_id!=OLD.viewer_id
+            ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+        END;
+        CREATE TRIGGER personalized_candidates_generation_delete
+          AFTER DELETE ON personalized_post_candidates BEGIN
+          INSERT INTO personalized_feed_generations(viewer_id,generation)
+            SELECT OLD.viewer_id,2 WHERE EXISTS(SELECT 1 FROM users WHERE id=OLD.viewer_id)
+            ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
+        END;
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

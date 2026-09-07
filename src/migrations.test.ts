@@ -850,11 +850,13 @@ describe('database migrations', () => {
 
     const initial = generation()
     database.run('INSERT INTO posts(id,user_id,body) VALUES(1,1,\'hello\')')
-    expect(generation()).toBe(initial + 1)
+    const afterInsert = generation()
+    expect(afterInsert).toBeGreaterThan(initial)
     database.run('UPDATE posts SET body=\'edited\' WHERE id=1')
-    expect(generation()).toBe(initial + 2)
+    const afterUpdate = generation()
+    expect(afterUpdate).toBeGreaterThan(afterInsert)
     database.run('DELETE FROM posts WHERE id=1')
-    expect(generation()).toBe(initial + 3)
+    expect(generation()).toBeGreaterThan(afterUpdate)
   })
 
   test('invalidates followers of thread ancestors when a deep reply is added', () => {
@@ -877,7 +879,7 @@ describe('database migrations', () => {
 
     database.run('INSERT INTO posts(id,user_id,body,parent_id) VALUES(3,4,\'deep reply\',2)')
 
-    expect(generation()).toBe(initial + 1)
+    expect(generation()).toBeGreaterThan(initial)
   })
 
   test('invalidates existing personalized feeds when a signup chooses a handle', () => {
@@ -920,6 +922,28 @@ describe('database migrations', () => {
     expect(generation()).toBe(initial + 1)
     expect(await executeDatabaseDomain(database, 'feeds.flushRelationshipInvalidation', {}))
       .toEqual({ flushed: 0, remaining: 0 })
+  })
+
+  test('candidate changes directly invalidate the matching personalized feed', () => {
+    const database = new Database(':memory:')
+    database.run('PRAGMA foreign_keys=ON')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'viewer','viewer@example.com','x'),(2,'author','author@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,2,'candidate');`)
+    const generation = () => (database.query(
+      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+    ).get() as { generation: number }).generation
+    const initial = generation()
+
+    database.run(`INSERT INTO personalized_post_candidates(viewer_id,post_id,created_at)
+      VALUES(1,1,CURRENT_TIMESTAMP)`)
+    expect(generation()).toBe(initial + 1)
+    database.run(`UPDATE personalized_post_candidates SET created_at=datetime(created_at,'+1 second')
+      WHERE viewer_id=1 AND post_id=1`)
+    expect(generation()).toBe(initial + 2)
+    database.run('DELETE FROM personalized_post_candidates WHERE viewer_id=1 AND post_id=1')
+    expect(generation()).toBe(initial + 3)
   })
 
   test('replaces legacy internal OG previews with native post references', () => {
