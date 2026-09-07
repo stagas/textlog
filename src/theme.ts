@@ -353,8 +353,9 @@ export function themeStyles(request: Request) {
     || SANS_SERIF_FONT_CHOICES[0]
   const primaryFont = requestedFont ? 'monospace' : primaryFontChoice(request)
   const fontSize = FONT_SIZE_CHOICES.find(choice => choice.value === fontSizeChoice(request)) || FONT_SIZE_CHOICES[1]
+  const primaryFontSize = primaryFont === 'sans-serif' ? `calc(${fontSize.size} * 1.1)` : fontSize.size
   const fontRule =
-    `:root{--font-monospace:${font.family}, var(--font-emoji);--font-sans-serif:${sansSerifFont.family}, var(--font-emoji);--font-primary:var(--font-${primaryFont});font-family:var(--font-primary);font-size:${fontSize.size}}html,body{font-family:var(--font-primary)}.emoji{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}`
+    `:root{--font-monospace:${font.family}, var(--font-emoji);--font-sans-serif:${sansSerifFont.family}, var(--font-emoji);--font-primary:var(--font-${primaryFont});font-family:var(--font-primary);font-size:${primaryFontSize}}html,body{font-family:var(--font-primary)}.emoji{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${
       rules('dark', selected.accent)

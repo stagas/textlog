@@ -139,6 +139,7 @@ test('sans serif and primary font preferences are validated independently', () =
   expect(themeStyles(request)).toContain('--font-monospace:Menlo, monospace')
   expect(themeStyles(request)).toContain('--font-sans-serif:Inter, sans-serif')
   expect(themeStyles(request)).toContain('--font-primary:var(--font-sans-serif)')
+  expect(themeStyles(request)).toContain('font-size:calc(16px * 1.1)')
   expect(sansSerifFontCookie('inter', 'https://textlog.cc')).toContain('sans-serif-font=inter')
   expect(primaryFontCookie('sans-serif', 'https://textlog.cc')).toContain('primary-font=sans-serif')
 
