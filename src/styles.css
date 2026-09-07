@@ -5449,6 +5449,10 @@ form.report-panel {
   padding-top: 0;
 }
 
+.profile-tabs .feed-tab-highlight {
+  height: 2.5px;
+}
+
 .profile-page-tabs {
   position: sticky;
   z-index: 40;
