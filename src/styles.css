@@ -396,7 +396,7 @@ header {
   border-bottom: 1px solid var(--soft);
 }
 
-body:has(#main-content .write-compose:not(.edit-write-compose)) > header {
+body:not(.write-page):has(#main-content .write-compose:not(.edit-write-compose)) > header {
   border-bottom: 0;
 }
 

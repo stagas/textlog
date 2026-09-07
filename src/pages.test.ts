@@ -96,6 +96,7 @@ test('write page omits the redundant header write action', () => {
     })))
 
   expect(html).not.toContain('class="button nav-write-action"')
+  expect(html).toContain('<body class="density-regular write-page">')
 })
 
 test('write page shows a back button above the form when a return path is available', () => {

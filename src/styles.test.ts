@@ -4,6 +4,9 @@ import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styl
 describe('in-memory stylesheet', () => {
   test('only lets standalone write forms consume spare page height', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      'body:not(.write-page):has(#main-content .write-compose:not(.edit-write-compose)) > header {',
+    )
     expect(css).toContain('main:has(> .write-compose:not(.embedded-write-compose)) {')
     expect(css).toContain('.write-compose:not(.embedded-write-compose) {\n  flex: 1;\n}')
     expect(css).not.toContain('.write-compose {\n  flex: 1;')
