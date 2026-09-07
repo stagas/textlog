@@ -32,6 +32,7 @@
     "ansi_up": "^6.0.6",
     "canvas": "^3.2.3",
     "highlight.js": "^11.11.2",
+    "hljs-mermaid": "0.0.0",
     "hono": "^4.13.0",
     "jszip": "^3.10.1",
     "linkify-it": "^6.1.0",

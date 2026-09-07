@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 import python from 'highlight.js/lib/languages/python'
+import { mermaidGrammar } from 'hljs-mermaid'
 import { LinkifyIt } from 'linkify-it'
 import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
@@ -21,12 +22,24 @@ import type { LinkPreview, LocationView, UserProfileStats } from './types'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('python', python)
+hljs.registerLanguage('mermaid', api => {
+  const grammar = mermaidGrammar(api)
+  grammar.contains = [
+    {
+      className: 'keyword',
+      begin: /\b(?:graph|flowchart|subgraph|end|direction|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|pie|gantt|requirementDiagram|sankey-beta|timeline|quadrantChart)(?:\s+(?:LR|TB|TD|RL|BT))?\b/,
+    },
+    ...(grammar.contains || []),
+  ]
+  return grammar
+})
 
-const highlightedCodeLanguages: Record<string, 'javascript' | 'python'> = {
+const highlightedCodeLanguages: Record<string, 'javascript' | 'python' | 'mermaid'> = {
   js: 'javascript',
   javascript: 'javascript',
   py: 'python',
   python: 'python',
+  mermaid: 'mermaid',
 }
 
 export function userHoverTitle(noteCount: number, bio?: string) {

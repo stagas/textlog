@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { displayedExecutionOutput, executableCode, executePostCode } from './code-execution'
+import { displayedExecutionOutput, executableCode, executePostCode, mermaidDiagram } from './code-execution'
 
 describe('executable notes', () => {
   test('requires a standalone exec hashtag and a language fence', () => {
@@ -16,17 +16,31 @@ describe('executable notes', () => {
     expect(executableCode('```text\n#exec\n```\n```js\nconsole.log(42)\n```')).toBeNull()
   })
 
+  test('requires a mermaid fence after a standalone mermaid hashtag', () => {
+    expect(mermaidDiagram('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```'))
+      .toBe('graph LR\n  A --> B')
+    expect(mermaidDiagram('#mermaid\n```js\nconsole.log(1)\n```')).toBeNull()
+    expect(mermaidDiagram('```text\n#mermaid\n```\n```mermaid\ngraph LR\nA --> B\n```')).toBeNull()
+    expect(mermaidDiagram('hello #mermaids\n```mermaid\ngraph LR\nA --> B\n```')).toBeNull()
+  })
+
+  test('renders mermaid diagrams as ASCII output', async () => {
+    const output = await executePostCode('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```', 'development')
+    expect(output).toContain('A')
+    expect(output).toContain('B')
+  })
+
   test('executes JavaScript locally and captures console output', async () => {
     expect(await executePostCode('#exec\n```js\nconsole.log("answer", 6 * 7)\n```', 'development'))
       .toBe('answer 42')
   })
 
-  test('folds output to the first eight lines, an ellipsis, and the last line only when rendered', async () => {
-    const output = await executePostCode('#exec\n```js\nfor (let i = 1; i <= 12; i++) console.log(i)\n```',
+  test('folds output to the first thirteen lines, an ellipsis, and the last line only when rendered', async () => {
+    const output = await executePostCode('#exec\n```js\nfor (let i = 1; i <= 17; i++) console.log(i)\n```',
       'development')
-    expect(output?.split('\n')).toHaveLength(12)
+    expect(output?.split('\n')).toHaveLength(17)
     expect(displayedExecutionOutput(output!).split('\n'))
-      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '…', '17'])
   })
 
   test('limits every rendered output line to 200 characters', () => {
@@ -38,10 +52,10 @@ describe('executable notes', () => {
   })
 
   test('removes the sandbox keeper fatal-signal line before limiting rendered lines', () => {
-    const output = `${Array.from({ length: 12 }, (_, index) => index + 1).join('\n')}\n`
+    const output = `${Array.from({ length: 17 }, (_, index) => index + 1).join('\n')}\n`
       + 'Sandbox keeper received fatal signal 6'
     expect(displayedExecutionOutput(output).split('\n'))
-      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '…', '17'])
     expect(output).toEndWith('\nSandbox keeper received fatal signal 6')
   })
 
@@ -51,9 +65,9 @@ describe('executable notes', () => {
   })
 
   test('trims trailing whitespace before limiting rendered lines', () => {
-    const output = `${Array.from({ length: 12 }, (_, index) => index + 1).join('\n')}\n\n  `
+    const output = `${Array.from({ length: 17 }, (_, index) => index + 1).join('\n')}\n\n  `
     expect(displayedExecutionOutput(output).split('\n'))
-      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '…', '12'])
+      .toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '…', '17'])
   })
 
   test('does not execute other languages in development', async () => {

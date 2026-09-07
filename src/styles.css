@@ -41,6 +41,7 @@
   --api-patch-bg: #f3ead5;
   --api-delete-ink: #8a3f37;
   --api-delete-bg: #f1dfdc;
+  --mermaid-keyword-ink: #70468c;
   --focus-ring-width: 2px;
   --focus-ring-offset: 3px;
   --focus-ring-inset-offset: -2px;
@@ -151,6 +152,7 @@ html.scroll-instant {
     --api-patch-bg: #443921;
     --api-delete-ink: #f0aaa1;
     --api-delete-bg: #472c29;
+    --mermaid-keyword-ink: #d6a8ed;
   }
 }
 
@@ -1874,6 +1876,10 @@ body.corners-round a.button {
 :is(.api-docs, .post, .blog-article) .hljs-number,
 :is(.api-docs, .post, .blog-article) .hljs-literal {
   color: var(--api-post-ink);
+}
+
+.post .language-mermaid .hljs-keyword {
+  color: var(--mermaid-keyword-ink);
 }
 
 .embed-example-grid {
