@@ -127,6 +127,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.poll-option-count { white-space: nowrap; }')
   })
 
+  test('removes trailing margin after quiz explanations', async () => {
+    const css = await Bun.file('src/styles.css').text()
+    expect(css).toContain('.poll:has(> .quiz-explanation) { margin-bottom: 0; }')
+  })
+
   test('renders poll options at the surrounding post text size', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.thread-root>.post>.poll { font-size: var(--font-size-15);')

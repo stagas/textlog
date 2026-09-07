@@ -6369,6 +6369,7 @@ form.report-panel {
 .quiz-mark-correct { color: var(--success-ink); }
 .quiz-mark-incorrect { color: var(--danger-link-hover); }
 .quiz-explanation { margin-top: var(--space-1); white-space: pre-wrap; }
+.poll:has(> .quiz-explanation) { margin-bottom: 0; }
 .poll-option-label,
 .poll-option-count { position: relative; }
 .poll-option-count,
