@@ -112,7 +112,7 @@ test('write page uses dedicated chrome and an embedded form', () => {
   expect(html).toContain('class="profile-edit-link compose-back-link" href="/latest?page=2">back</a>')
   expect(html).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
   expect(html).toContain('type="hidden" name="show_back" value="1"')
-  expect(html).toContain('placeholder="What’s on your mind, @reader?"')
+  expect(html).toMatch(/placeholder="[^"]+, @reader\?"/)
   expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('write-compose'))
 })
 
@@ -403,7 +403,7 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('What’s on your mind')
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form method="post" action="/post">'))
   expect(preview).not.toContain('<h1 class="compose-heading">')
-  expect(preview).toContain('placeholder="What’s on your mind, @writer?"')
+  expect(preview).toMatch(/placeholder="[^"]+, @writer\?"/)
   expect(preview.indexOf('<form method="post" action="/post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview.indexOf('<div class="compose-post-preview">')).toBeLessThan(
     preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose embedded-write-compose">'),
@@ -711,10 +711,8 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('placeholder="search handles"')
   expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
   expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
-  expect(html).toContain(
-    'autofocus="" accesskey="w" placeholder="What’s on your mind, @writer?" '
-      + 'aria-label="What’s on your mind, @writer?" autocomplete="off" inputmode="text" '
-      + 'enterkeyhint="enter">A draft worth keeping</textarea>',
+  expect(html).toMatch(
+    /autofocus="" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -2231,7 +2229,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
     expect(html.indexOf('compose write-compose')).toBeLessThan(html.indexOf('class="feed-tabs"'))
     expect(html).toContain('name="from"')
-    expect(html).toContain('placeholder="What’s on your mind, @reader?"')
+    expect(html).toMatch(/placeholder="[^"]+, @reader\?"/)
     expect(html).toContain('name="body" maxlength="500" accesskey="w"')
     expect(html).not.toContain('class="skip-link" href="/write')
     expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')

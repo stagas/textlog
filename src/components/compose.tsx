@@ -2,6 +2,7 @@ import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import { appName } from '../brand'
 import { activeThemeLogoSvg } from '../theme'
+import { randomComposePlaceholder } from '../compose-placeholders'
 import type { User } from '../types'
 import type { LocationView, PostView } from '../types'
 import { Layout } from './layout'
@@ -138,6 +139,7 @@ export function WriteForm(
     },
 ) {
   if (!canPublishPosts(user)) return null
+  const placeholder = randomComposePlaceholder(user.handle)
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const moreActions = (
     <>
@@ -180,7 +182,7 @@ export function WriteForm(
         <div className="compose-editor-row">
           <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
             accessKey={embedded ? 'w' : undefined} defaultValue={body}
-            placeholder={embedded ? `What’s on your mind, @${user.handle}?` : undefined}
+            placeholder={embedded ? placeholder : undefined}
             aria-label={`What’s on your mind, @${user.handle}?`} autoComplete="off" inputMode="text"
             enterkeyhint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
