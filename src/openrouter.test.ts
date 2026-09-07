@@ -18,6 +18,8 @@ describe('OpenRouter autotag', () => {
     expect(systemPrompt).toContain('multiple words')
     expect(systemPrompt).toContain('PascalCase')
     expect(systemPrompt).toContain('without underscores')
+    expect(systemPrompt).toContain('single-word hashtags lowercase')
+    expect(systemPrompt).toContain('location, proper noun, acronym')
     expect(systemPrompt).toContain('synonyms or represent the same concept')
     expect(systemPrompt).toContain('Choose only the shortest hashtag')
   })

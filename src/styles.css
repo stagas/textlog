@@ -4510,10 +4510,10 @@ form.report-panel {
 
 .status-message-dismiss-icon {
   display: block;
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   background: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") center / 11px 11px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E") center / 10px 10px no-repeat;
 }
 
 .status-message-dismiss:hover,
