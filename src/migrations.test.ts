@@ -7,6 +7,26 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('restores focus tags corrupted by trailing-s singularization', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'#focus');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'focu');
+      INSERT INTO hashtag_follows(user_id,tag) VALUES(1,'focu');
+      INSERT INTO blocked_hashtags(user_id,tag) VALUES(1,'focu');
+      INSERT INTO wordnet_normalizations(word,normalized_word) VALUES('focus','focu');
+      PRAGMA user_version=198;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'focus' }])
+    expect(database.query('SELECT tag FROM hashtag_follows').all()).toEqual([{ tag: 'focus' }])
+    expect(database.query('SELECT tag FROM blocked_hashtags').all()).toEqual([{ tag: 'focus' }])
+    expect(database.query("SELECT normalized_word normalizedWord FROM wordnet_normalizations WHERE word='focus'").get())
+      .toEqual({ normalizedWord: 'focus' })
+  })
+
   test('requeues historical people-picker follows for personalized feeds', () => {
     const database = new Database(':memory:')
     runMigrations(database)

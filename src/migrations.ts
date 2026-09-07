@@ -3434,8 +3434,33 @@ export const migrations: Migration[] = [
             SELECT OLD.viewer_id,2 WHERE EXISTS(SELECT 1 FROM users WHERE id=OLD.viewer_id)
             ON CONFLICT(viewer_id) DO UPDATE SET generation=generation+1;
         END;
-        UPDATE personalized_feed_generations SET generation=generation+1;
-        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+      UPDATE personalized_feed_generations SET generation=generation+1;
+      DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
+  {
+    version: 199,
+    name: 'restore_focus_tag',
+    up(database) {
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+        database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+            SELECT post_id,'focus' FROM post_hashtags WHERE tag='focu';
+          DELETE FROM post_hashtags WHERE tag='focu';`)
+      }
+      for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        database.run(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+            SELECT user_id,'focus',created_at FROM ${table} WHERE tag='focu';
+          DELETE FROM ${table} WHERE tag='focu';`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+        database.run(`INSERT OR IGNORE INTO tag_display_names(tag,display_name,created_at)
+            SELECT 'focus',display_name,created_at FROM tag_display_names WHERE tag='focu';
+          DELETE FROM tag_display_names WHERE tag='focu';`)
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='wordnet_normalizations'").get()) {
+        database.run("UPDATE wordnet_normalizations SET normalized_word='focus' WHERE normalized_word='focu'")
+      }
     },
   },
 ]

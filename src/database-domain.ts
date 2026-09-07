@@ -130,7 +130,10 @@ async function learnWordNetTagAliases(database: Database, words: string[]) {
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'',
     ).get() && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
     const source = invariant ? spelling : normalizeHashtag(spelling)
-    const noun = invariant ? source : normalizeHashtag(cached?.normalized_word || await normalizeWord(spelling))
+    // normalizeWord only returns a different value after WordNet has validated
+    // it as a noun. Running the heuristic singularizer again corrupts singular
+    // nouns ending in s (for example, focus became focu).
+    const noun = invariant ? source : cached?.normalized_word || await normalizeWord(spelling)
     if (hasCache && !cached) {
       database.query('INSERT OR IGNORE INTO wordnet_normalizations(word,normalized_word) VALUES(?,?)')
         .run(spelling, noun)

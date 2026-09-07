@@ -9,6 +9,7 @@ test('normalizes adjective and adverb forms to their WordNet noun topic', async 
 
 test('leaves words and non-English hashtag text without a noun derivation intact', async () => {
   expect(await normalizeWord('philosophy')).toBe('philosophy')
+  expect(await normalizeWord('focus')).toBe('focus')
   expect(await normalizeWord('φιλοσοφία')).toBe('φιλοσοφία')
 })
 

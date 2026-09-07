@@ -153,6 +153,25 @@ test('WordNet forms share a cached noun topic across posts and tag routes', asyn
   ])
 })
 
+test('WordNet preserves singular nouns ending in s', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  const created = await executeDatabaseDomain(database, 'api.createPost', {
+    userId: 1,
+    body: '#focus',
+    parentId: null,
+    origin: 'https://example.com',
+  })
+  expect(created.status).toBe('ready')
+  expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'focus' }])
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'focus' })).toBe('focus')
+  expect(database.query(`SELECT normalized_word normalizedWord FROM wordnet_normalizations
+    WHERE word='focus'`).get()).toEqual({ normalizedWord: 'focus' })
+})
+
 test('admin invariants preserve tags that must not be singularized', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
