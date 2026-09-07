@@ -1946,8 +1946,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(hashtagHelperHtml).toContain('>replay this draft</textarea>')
   expect(hashtagHelperHtml).toMatch(/name="hashtag_query"[^>]*value="route"/)
   expect(hashtagHelperHtml).toContain('#<mark>route</mark>helper')
-  expect(hashtagHelperHtml).toContain('id="write-posting-help" type="checkbox"')
-  expect(hashtagHelperHtml).toContain('aria-controls="write-posting-help-content" checked=""')
+  expect(hashtagHelperHtml).toContain('id="embedded-posting-help" type="checkbox"')
+  expect(hashtagHelperHtml).toContain('aria-controls="embedded-posting-help-content" checked=""')
+  expect(hashtagHelperHtml).not.toContain('name="embedded"')
+  expect(hashtagHelperHtml).toContain(
+    'name="action" value="preview" title="Preview this post before publishing">preview</button>',
+  )
   const mentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,
