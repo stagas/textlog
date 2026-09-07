@@ -3463,6 +3463,37 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 200,
+    name: 'restore_additional_singular_s_tags',
+    up(database) {
+      const repairs = [['emac', 'emacs'], ['diagnosi', 'diagnosis']] as const
+      for (const [corrupted, restored] of repairs) {
+        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+          database.query(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
+            SELECT post_id,? FROM post_hashtags WHERE tag=?`).run(restored, corrupted)
+          database.query('DELETE FROM post_hashtags WHERE tag=?').run(corrupted)
+        }
+        for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+          if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+          database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+            SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(restored, corrupted)
+          database.query(`DELETE FROM ${table} WHERE tag=?`).run(corrupted)
+        }
+        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+          database.query(`INSERT OR IGNORE INTO tag_display_names(tag,display_name,created_at)
+            SELECT ?,display_name,created_at FROM tag_display_names WHERE tag=?`).run(restored, corrupted)
+          database.query('DELETE FROM tag_display_names WHERE tag=?').run(corrupted)
+        }
+        if (database.query(
+          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='wordnet_normalizations'",
+        ).get()) {
+          database.query('UPDATE wordnet_normalizations SET normalized_word=? WHERE normalized_word=?')
+            .run(restored, corrupted)
+        }
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

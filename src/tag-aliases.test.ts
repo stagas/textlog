@@ -161,13 +161,19 @@ test('WordNet preserves singular nouns ending in s', async () => {
 
   const created = await executeDatabaseDomain(database, 'api.createPost', {
     userId: 1,
-    body: '#focus',
+    body: '#focus #diagnosis #emacs',
     parentId: null,
     origin: 'https://example.com',
   })
   expect(created.status).toBe('ready')
-  expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'focus' }])
+  expect(database.query('SELECT tag FROM post_hashtags ORDER BY tag').all()).toEqual([
+    { tag: 'diagnosis' },
+    { tag: 'emacs' },
+    { tag: 'focus' },
+  ])
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'focus' })).toBe('focus')
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'diagnosis' })).toBe('diagnosis')
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'emacs' })).toBe('emacs')
   expect(database.query(`SELECT normalized_word normalizedWord FROM wordnet_normalizations
     WHERE word='focus'`).get()).toEqual({ normalizedWord: 'focus' })
 })
@@ -197,15 +203,15 @@ test('adding an invariant restores existing tags from their authored spelling', 
   runMigrations(database)
   database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
 
-  const post = createPost(database, 1, '#emacs', null, false)
+  const post = createPost(database, 1, '#atlas', null, false)
   expect('id' in post).toBeTrue()
   if (!('id' in post)) throw new Error('Expected the test post to be created')
-  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'emac' })
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'atla' })
 
-  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'emacs' })
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'atlas' })
 
-  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'emacs' })
-  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'emacs' })).toBe('emacs')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(post.id)).toEqual({ tag: 'atlas' })
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'atlas' })).toBe('atlas')
 })
 
 test('admin invariants bypass WordNet normalization', async () => {

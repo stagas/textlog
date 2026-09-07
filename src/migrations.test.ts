@@ -27,6 +27,31 @@ describe('database migrations', () => {
       .toEqual({ normalizedWord: 'focus' })
   })
 
+  test('restores emacs and diagnosis after the focus repair has already run', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'#emacs #diagnosis');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'emac'),(1,'diagnosi');
+      INSERT INTO hashtag_follows(user_id,tag) VALUES(1,'emac');
+      INSERT INTO blocked_hashtags(user_id,tag) VALUES(1,'diagnosi');
+      INSERT INTO wordnet_normalizations(word,normalized_word)
+        VALUES('emacs','emac'),('diagnosis','diagnosi');
+      PRAGMA user_version=199;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT tag FROM post_hashtags ORDER BY tag').all())
+      .toEqual([{ tag: 'diagnosis' }, { tag: 'emacs' }])
+    expect(database.query('SELECT tag FROM hashtag_follows').all()).toEqual([{ tag: 'emacs' }])
+    expect(database.query('SELECT tag FROM blocked_hashtags').all()).toEqual([{ tag: 'diagnosis' }])
+    expect(database.query(`SELECT word,normalized_word normalizedWord FROM wordnet_normalizations
+      ORDER BY word`).all()).toEqual([
+      { word: 'diagnosis', normalizedWord: 'diagnosis' },
+      { word: 'emacs', normalizedWord: 'emacs' },
+    ])
+  })
+
   test('requeues historical people-picker follows for personalized feeds', () => {
     const database = new Database(':memory:')
     runMigrations(database)
