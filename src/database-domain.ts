@@ -3641,6 +3641,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { html: cached ? hydrateMaterializedFeed(cached.html, database, viewerId) : null, generation,
         stale } as DatabaseDomainOutput<K>
     }
+    case 'cache.materializedFeedGeneration': {
+      const { kind, viewerId } = input as DatabaseDomainInput<'cache.materializedFeedGeneration'>
+      return materializedFeedGeneration(database, kind, viewerId) as DatabaseDomainOutput<K>
+    }
     case 'cache.hydrateMaterializedFeed': {
       const { html, viewerId } = input as DatabaseDomainInput<'cache.hydrateMaterializedFeed'>
       return hydrateMaterializedFeed(html, database, viewerId) as DatabaseDomainOutput<K>

@@ -8,6 +8,7 @@ type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'ab
 type MaterializedResponse = {
   body: string
   memoryBody?: string
+  generation: number
   headers: [string, string][]
   status: number
 }
@@ -127,7 +128,17 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
   const key = `${kind}\0${viewerId}\0${variant}`
-  const memory = memoryCacheEnabled() ? memoryMaterializations.get(key) : undefined
+  let memory = memoryCacheEnabled() ? memoryMaterializations.get(key) : undefined
+  if (memory) {
+    // Notifications only cover writes routed through this process. A post can also arrive through another server
+    // process (or an administrative/database job), so validate the database-backed generation before serving the
+    // process-local LRU.
+    const currentGeneration = await call('cache.materializedFeedGeneration', { kind, viewerId })
+    if (currentGeneration !== memory.generation) {
+      memoryMaterializations.delete(key)
+      memory = undefined
+    }
+  }
   if (memory) {
     memoryMaterializations.delete(key)
     memoryMaterializations.set(key, memory)
@@ -190,7 +201,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             if (revalidations.get(key) === revalidation) revalidations.delete(key)
           }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
         }
-        return { body: kind === 'latest' ? cached.html : cachedHtml, status: 200,
+        return { body: kind === 'latest' ? cached.html : cachedHtml, generation: cached.generation, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'], [
             'x-feed-cache',
             cached.stale ? 'stale' : 'durable',
@@ -212,7 +223,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
         if (Bun.env.NODE_ENV === 'test') await persistence()
         else void deferredCacheWork(persistence).catch(error => console.error(`Could not persist ${kind} feed`, error))
       }
-      return { body: html, memoryBody, status: response.status,
+      return { body: html, memoryBody, generation: cached.generation, status: response.status,
         headers: [...response.headers.entries(), ['x-feed-cache', 'miss']] }
     })()
     materializations.set(key, materialization)

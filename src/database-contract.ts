@@ -525,6 +525,10 @@ export type DatabaseDomainOperations = {
     input: { kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string }
     output: { html: string | null; generation: number; stale: boolean }
   }
+  'cache.materializedFeedGeneration': {
+    input: { kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number }
+    output: number
+  }
   'cache.hydrateMaterializedFeed': { input: { html: string; viewerId: number }; output: string }
   'cache.materializedFeedPut': {
     input: { kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'; viewerId: number; variant: string;
