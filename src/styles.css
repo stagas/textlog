@@ -2739,6 +2739,7 @@ body.corners-round a.button {
 .post-share-link {
   cursor: pointer;
   border-bottom: var(--hairline) solid var(--link-border);
+  user-select: none;
 }
 
 .post-share-toggle:focus-visible ~ .postfoot .post-share-link {
