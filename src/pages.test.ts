@@ -2851,6 +2851,8 @@ describe('Auth', () => {
     const html = renderToStaticMarkup(React.createElement(Auth as React.FunctionComponent, {}))
 
     expect(html).toContain('<h1>New here or returning?</h1>')
+    expect(html).toContain('class="enter-brand-row"')
+    expect(html).toContain('class="enter-about-link" href="/about" target="_blank" rel="noopener noreferrer">about</a>')
     expect(html).toContain('action="/enter"')
     expect(html).toContain('email address or handle')
     expect(html).toContain('name="identifier"')
@@ -2863,6 +2865,15 @@ describe('Auth', () => {
 
     expect(html).toContain('<h1>Welcome back.</h1>')
     expect(html).not.toContain('New here or returning?')
+  })
+
+  test('enter explains a pending action below its heading', () => {
+    const html = renderToStaticMarkup(React.createElement(Auth, {
+      pendingNotice: 'You will follow @reader after entering',
+    }))
+
+    expect(html).toContain('<h1>New here or returning?</h1><p class="auth-pending-notice" role="status">'
+      + 'You will follow @reader after entering</p>')
   })
 
   test('handle choice explains validation without blocking the server submission', () => {
@@ -2911,6 +2922,16 @@ describe('Auth', () => {
     expect(html).toContain('class="panel-shell auth-shell enter-shell"')
     expect(html).not.toContain('<header')
     expect(html).not.toContain('<footer')
+  })
+
+  test('password login explains a pending action below its heading', () => {
+    const html = renderToStaticMarkup(React.createElement(PasswordLogin, {
+      nonce: 'password-nonce',
+      pendingNotice: 'Your answer will be posted after entering',
+    }))
+
+    expect(html).toContain('<h1>Log in</h1><p class="auth-pending-notice" role="status">'
+      + 'Your answer will be posted after entering</p>')
   })
 
   test('password login renders a server-issued CAPTCHA when requested', () => {

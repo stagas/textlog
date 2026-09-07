@@ -5,7 +5,7 @@ import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, Reset
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
 import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie, returningVisitor,
-  returningVisitorCookie, sessionCookie } from '../http'
+  pendingFollow, pendingPoll, pendingPost, returningVisitorCookie, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { fontSizeCookie } from '../theme'
@@ -22,24 +22,38 @@ import type { Hono } from 'hono'
 
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const dummyPasswordHash = hashPassword(crypto.randomUUID())
+
+function pendingEntryNotice(request: Request, next: string) {
+  if (next === '/pending-post' && pendingPost(request)) return 'Your note will be posted after entering'
+  if (next === '/pending-poll' && pendingPoll(request)) return 'Your answer will be posted after entering'
+  if (next !== '/pending-follow') return undefined
+  const follow = pendingFollow(request)
+  if (!follow) return undefined
+  const prefix = follow.kind === 'user' ? '@' : '#'
+  return `You will follow ${prefix}${follow.target.replace(/^[@#]/, '')} after entering`
+}
+
 export function registerAuthRoutes(app: Hono) {
-  app.get('/enter', c =>
-    currentUser(c.req.raw)
-      ? redirect('/')
-      : page(<Auth next={safeNext(c.req.query('next'))} returning={returningVisitor(c.req.raw)} />))
+  app.get('/enter', c => {
+    if (currentUser(c.req.raw)) return redirect('/')
+    const next = safeNext(c.req.query('next'))
+    return page(<Auth next={next} returning={returningVisitor(c.req.raw)}
+      pendingNotice={pendingEntryNotice(c.req.raw, next)} />)
+  })
   app.get('/login',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
   app.get('/signup',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
 
   app.get('/enter/password', async c => {
+    const next = safeNext(c.req.query('next'))
     const challenge = await databaseService().call('auth.passwordLoginChallenge', {
       address: clientAddress(c),
       now: Date.now(),
     })
     return page(
-      <PasswordLogin nonce={challenge.nonce} captcha={challenge.captcha} next={safeNext(c.req.query('next'))}
-        reset={c.req.query('reset') === '1'} />,
+      <PasswordLogin nonce={challenge.nonce} captcha={challenge.captcha} next={next}
+        pendingNotice={pendingEntryNotice(c.req.raw, next)} reset={c.req.query('reset') === '1'} />,
     )
   })
   app.post('/enter/password', async c => {
@@ -47,6 +61,7 @@ export function registerAuthRoutes(app: Hono) {
     const identifier = (f.identifier || '').trim().toLowerCase().replace(/^@/, '')
     const password = f.password || ''
     const next = safeNext(f.next)
+    const pendingNotice = pendingEntryNotice(c.req.raw, next)
     const address = clientAddress(c)
     const validation = await databaseService().call('auth.validatePasswordLoginForm', {
       address,
@@ -59,7 +74,7 @@ export function registerAuthRoutes(app: Hono) {
       const challenge = await databaseService().call('auth.passwordLoginChallenge', { address, now: Date.now() })
       return page(
         <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
-          error="This login form has expired or was already used. Please try again." />,
+          pendingNotice={pendingNotice} error="This login form has expired or was already used. Please try again." />,
         400,
       )
     }
@@ -71,7 +86,7 @@ export function registerAuthRoutes(app: Hono) {
       })
       return page(
         <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
-          error={PASSWORD_LOGIN_FAILURE} />,
+          pendingNotice={pendingNotice} error={PASSWORD_LOGIN_FAILURE} />,
         400,
       )
     }
@@ -83,7 +98,7 @@ export function registerAuthRoutes(app: Hono) {
       return retryPage(
         page(
           <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
-            error={authRateLimitMessage(limited.retryAfter)} />,
+            pendingNotice={pendingNotice} error={authRateLimitMessage(limited.retryAfter)} />,
           429,
         ),
         limited.retryAfter,
@@ -101,7 +116,7 @@ export function registerAuthRoutes(app: Hono) {
       const challenge = await databaseService().call('auth.passwordLoginChallenge', { address, now: Date.now() })
       return page(
         <PasswordLogin nonce={challenge.nonce} identifier={identifier} next={next} captcha={challenge.captcha}
-          error={PASSWORD_LOGIN_FAILURE} />,
+          pendingNotice={pendingNotice} error={PASSWORD_LOGIN_FAILURE} />,
         400,
       )
     }
@@ -207,6 +222,7 @@ export function registerAuthRoutes(app: Hono) {
     const f = await form(c.req.raw)
     const identifier = (f.identifier || f.email || '').trim().toLowerCase()
     const next = safeNext(f.next)
+    const pendingNotice = pendingEntryNotice(c.req.raw, next)
     const signedInUser = currentUser(c.req.raw)
     const normalizedIdentifier = identifier.replace(/^@/, '')
     if (signedInUser && normalizedIdentifier !== signedInUser.handle
@@ -219,7 +235,7 @@ export function registerAuthRoutes(app: Hono) {
       return retryPage(
         page(
           <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-            error={authRateLimitMessage(limited.retryAfter)} />,
+            pendingNotice={pendingNotice} error={authRateLimitMessage(limited.retryAfter)} />,
           429,
         ),
         limited.retryAfter,
@@ -236,7 +252,7 @@ export function registerAuthRoutes(app: Hono) {
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
       return page(
         <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-          error="Enter a valid email address or handle." />,
+          pendingNotice={pendingNotice} error="Enter a valid email address or handle." />,
         400,
       )
     }
@@ -251,7 +267,7 @@ export function registerAuthRoutes(app: Hono) {
       await databaseService().call('auth.deleteMagicLink', { tokenHash: link.tokenHash })
       return page(
         <Auth email={email} next={next} returning={returningVisitor(c.req.raw)}
-          error="The magic link could not be sent. Please try again later." />,
+          pendingNotice={pendingNotice} error="The magic link could not be sent. Please try again later." />,
         503,
       )
     }

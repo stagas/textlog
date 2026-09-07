@@ -3462,8 +3462,19 @@ body.corners-round a.button {
 }
 
 .auth-panel h1+form,
+.auth-panel .auth-pending-notice+form,
 .auth-panel .status-error+form {
   margin-top: var(--space-6);
+}
+
+.auth-pending-notice {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: var(--tag-bg);
+  font-size: var(--font-size-12);
+  line-height: 1.5;
+  border-left: 3px solid var(--accent);
 }
 
 .auth-panel label {
@@ -3538,6 +3549,10 @@ body.corners-round a.button {
   margin-bottom: var(--space-5);
   font-size: clamp(1.375rem, 5vw, 1.875rem);
   letter-spacing: -1px;
+}
+
+.password-panel > .auth-secondary {
+  text-align: left;
 }
 
 .forgot-password-copy {
@@ -8496,6 +8511,22 @@ body.full-screen-page.full-screen-scrollable { overflow-y: auto; }
 
 .enter-brand {
   margin-bottom: var(--space-5);
+}
+
+.enter-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.enter-brand-row .enter-brand {
+  margin-bottom: 0;
+}
+
+.enter-about-link {
+  color: var(--muted);
+  font-size: var(--font-size-11);
 }
 
 @media (max-width: 520px) {

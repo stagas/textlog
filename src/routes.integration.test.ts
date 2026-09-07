@@ -399,6 +399,10 @@ test('an anonymous feed note is published after signup chooses a handle', async 
   expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-post')
   const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
   expect(pendingCookie).toStartWith('pending_post=')
+  expect(await (await request('/enter?next=%2Fpending-post', { cookie: pendingCookie, ip })).text())
+    .toContain('Your note will be posted after entering')
+  expect(await (await request('/enter/password?next=%2Fpending-post', { cookie: pendingCookie, ip })).text())
+    .toContain('Your note will be posted after entering')
 
   const email = 'pending-post-signup@example.com'
   const sent = await request('/enter', {
@@ -523,6 +527,13 @@ test('an anonymous hovercard follow survives signup and completes before onboard
   expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-follow')
   const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
   expect(pendingCookie).toStartWith('pending_follow=')
+  expect(await (await request('/enter?next=%2Fpending-follow', { cookie: pendingCookie, ip })).text())
+    .toContain('You will follow @pending_follow_target after entering')
+
+  const pendingTag = await request('/pending-follow/tag/gardening?from=%2Fhot', { ip })
+  const pendingTagCookie = pendingTag.headers.get('set-cookie')!.split(';', 1)[0]
+  expect(await (await request('/enter?next=%2Fpending-follow', { cookie: pendingTagCookie, ip })).text())
+    .toContain('You will follow #gardening after entering')
 
   const email = 'pending-follow-signup@example.com'
   await request('/enter', {
@@ -583,6 +594,8 @@ test('an anonymous poll response survives signup and returns to the poll after o
   expect(started.headers.get('location')).toBe('/enter?next=%2Fpending-poll')
   const pendingCookie = started.headers.get('set-cookie')!.split(';', 1)[0]
   expect(pendingCookie).toStartWith('pending_poll=')
+  expect(await (await request('/enter?next=%2Fpending-poll', { cookie: pendingCookie, ip })).text())
+    .toContain('Your answer will be posted after entering')
 
   const email = 'pending-poll-signup@example.com'
   await request('/enter', {

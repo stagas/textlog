@@ -17,17 +17,22 @@ export function AuthBrand() {
   )
 }
 
-export function Auth({ error, email = '', next, returning = false }: {
+export function Auth({ error, email = '', next, returning = false, pendingNotice }: {
   error?: string
   email?: string
   next?: string
   returning?: boolean
+  pendingNotice?: string
 }) {
   return (
     <Layout title="enter" fullScreen fullScreenScrollable>
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel">
-        <AuthBrand />
+        <div className="enter-brand-row">
+          <AuthBrand />
+          <a className="enter-about-link" href="/about" target="_blank" rel="noopener noreferrer">about</a>
+        </div>
         <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
+        {pendingNotice && <p className="auth-pending-notice" role="status">{pendingNotice}</p>}
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         <form method="post" action="/enter" autoComplete="on">
           {next && <input type="hidden" name="next" value={next} />}
@@ -55,19 +60,21 @@ export function Auth({ error, email = '', next, returning = false }: {
   )
 }
 
-export function PasswordLogin({ nonce, error, identifier = '', next, reset = false, captcha }: {
+export function PasswordLogin({ nonce, error, identifier = '', next, reset = false, captcha, pendingNotice }: {
   nonce: string
   error?: string
   identifier?: string
   next?: string
   reset?: boolean
   captcha?: { token: string; image: string }
+  pendingNotice?: string
 }) {
   return (
     <Layout title="password login" fullScreen fullScreenScrollable>
       <CenteredPanel shellClassName="auth-shell enter-shell" className="auth-panel enter-panel password-panel">
         <AuthBrand />
         <h1>Log in</h1>
+        {pendingNotice && <p className="auth-pending-notice" role="status">{pendingNotice}</p>}
         {reset && <p className="status-message status-success" role="status">Password reset. You can log in now.</p>}
         {error && <p className="status-message status-error" role="alert">{error}</p>}
         <form method="post" action="/enter/password" autoComplete="on">
