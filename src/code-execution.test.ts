@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { displayedExecutionOutput, executableCode, executePostCode, mermaidDiagram } from './code-execution'
 
 describe('executable notes', () => {
@@ -24,10 +27,22 @@ describe('executable notes', () => {
     expect(mermaidDiagram('hello #mermaids\n```mermaid\ngraph LR\nA --> B\n```')).toBeNull()
   })
 
-  test('renders mermaid diagrams as ASCII output', async () => {
-    const output = await executePostCode('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```', 'development')
-    expect(output).toContain('A')
-    expect(output).toContain('B')
+  test('invokes the Mermaid renderer with the diagram file and fixed layout flags', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'textlog-mermaid-test-'))
+    const renderer = join(directory, 'mermaid-ascii')
+    await writeFile(renderer, '#!/bin/sh\n'
+      + '[ "$1" = "--file" ] && [ "$3" = "-p" ] && [ "$4" = "0" ] '
+      + '&& [ "$5" = "-x" ] && [ "$6" = "5" ] && [ "$7" = "-y" ] && [ "$8" = "1" ] || exit 2\n'
+      + 'cat "$2"\n')
+    await chmod(renderer, 0o700)
+    try {
+      const output = await executePostCode('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```', 'development',
+        undefined, renderer)
+      expect(output).toBe('graph LR\n  A --> B')
+    }
+    finally {
+      await rm(directory, { recursive: true, force: true })
+    }
   })
 
   test('executes JavaScript locally and captures console output', async () => {
