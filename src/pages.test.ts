@@ -3448,9 +3448,7 @@ test('Following and followers paginate every 8 people', () => {
     }))
 
     expect(html).toContain(
-      `href="/u/reader?tab=${kind}&amp;page=2${
-        kind === 'following' ? '&amp;_scroll=instant' : ''
-      }#connections-people-heading"`,
+      `href="/u/reader?tab=${kind}&amp;page=2&amp;_scroll=instant#connections-people-heading"`,
     )
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))

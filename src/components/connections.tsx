@@ -184,15 +184,15 @@ export function Connections(
                   <h2 id="connections-people-heading">People</h2>
                   {sortToggle}
                 </div>
-                <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-                  path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination" compact
-                  anchor="connections-people-heading" />
+              <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+                path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination" compact
+                anchor="connections-people-heading" instantScroll />
               </div>
               <ConnectionPeople user={user} people={people} showMood showNoteCount={false} showPopover={false}
                 returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
               <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
                 path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-                compact anchor="connections-people-heading" />
+                compact anchor="connections-people-heading" instantScroll />
             </section>
           </div>
         )
