@@ -1228,7 +1228,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(authenticatedHomeHtml).toContain('class="account-nav"')
   expect(authenticatedHomeHtml).toContain('@alice')
-  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2Fmy-feed">account</a>')
+  expect(authenticatedHomeHtml).toContain('href="/account/edit?from=%2Fmy-feed">settings</a>')
   expect(authenticatedHomeHtml).not.toContain('href="/login">login</a>')
   expect(authenticatedHomeHtml).toContain('class="notification-banner"')
   const accountFromLatest = await request('/account/edit?from=%2Flatest%3Fpage%3D2', { cookie: aliceCookie })
