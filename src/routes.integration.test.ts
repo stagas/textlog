@@ -932,26 +932,20 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   }
 
   const edit = await request('/account/edit', { cookie: primaryCookie })
-  expect(await edit.text()).toContain(
-    'class="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>',
-  )
+  expect(await edit.text()).not.toContain('profile-switch-link')
   const initialList = await request('/account/accounts', { cookie: primaryCookie })
-  const initialHtml = await initialList.text()
-  expect(initialHtml).toContain('@persona_primary')
-  expect(initialHtml).toContain('<span>primary</span>')
-  expect(initialHtml).toContain('<span>current</span>')
-  expect(initialHtml).toContain('action="/account/accounts/new"')
+  expect(initialList.status).toBe(404)
 
   const created = await request('/account/accounts/new', { method: 'POST', cookie: primaryCookie })
   expect(created.status).toBe(303)
-  expect(created.headers.get('location')).toBe('/choose-handle?next=%2Faccount%2Faccounts')
+  expect(created.headers.get('location')).toBe(`/choose-handle?next=%2Faccount%2Fedit&previousAccountId=${primary.id}`)
   const chosen = await request('/choose-handle', {
     method: 'POST',
     cookie: primaryCookie,
-    form: { handle: 'persona_bot', next: '/account/accounts' },
+    form: { handle: 'persona_bot', next: '/account/edit' },
   })
   expect(chosen.status).toBe(303)
-  expect(chosen.headers.get('location')).toBe('/account/accounts')
+  expect(chosen.headers.get('location')).toBe('/account/edit')
   const bot = database.query('SELECT id,email,account_group_id FROM users WHERE handle=?').get('persona_bot') as {
     id: number
     email: string
@@ -1068,23 +1062,46 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   const secondChosen = await request('/choose-handle', {
     method: 'POST',
     cookie: selectedCookie,
-    form: { handle: 'persona_second', next: '/account/accounts' },
+    form: { handle: 'persona_second', next: '/account/edit' },
   })
   expect(secondChosen.status).toBe(303)
+  const second = database.query('SELECT id FROM users WHERE handle=?').get('persona_second') as { id: number }
   const thirdCreated = await request('/account/accounts/new', { method: 'POST', cookie: selectedCookie })
   expect(thirdCreated.status).toBe(303)
-  expect(thirdCreated.headers.get('location')).toBe('/choose-handle?next=%2Faccount%2Faccounts')
+  expect(thirdCreated.headers.get('location')).toBe(
+    `/choose-handle?next=%2Faccount%2Fedit&previousAccountId=${second.id}`,
+  )
   const limited = await request('/choose-handle', {
     method: 'POST',
     cookie: selectedCookie,
-    form: { handle: 'persona_third', next: '/account/accounts' },
+    form: { handle: 'persona_third', next: '/account/edit', previousAccountId: String(second.id) },
   })
   expect(limited.status).toBe(429)
   const limitedHtml = await limited.text()
   expect(limitedHtml).toContain('You can create up to two new accounts per month.')
   expect(limitedHtml).toContain('Choose a handle from one of your deleted accounts to reclaim it')
+  expect(limitedHtml).toContain('formaction="/choose-handle/cancel"')
+  expect(limitedHtml).toContain(`name="previousAccountId" value="${second.id}"`)
   expect(database.query('SELECT COUNT(*) count FROM account_creation_events WHERE account_group_id=?')
     .get(primary.account_group_id)).toEqual({ count: 2 })
+
+  const provisional = database.query(`SELECT id FROM users WHERE account_group_id=? AND handle_chosen_at IS NULL`)
+    .get(primary.account_group_id) as { id: number }
+  await signup('persona_outsider', 'persona-outsider@example.com', 'unused', 'persona-outsider-signup')
+  const outsider = database.query('SELECT id FROM users WHERE handle=?').get('persona_outsider') as { id: number }
+  const forgedCancel = await request('/choose-handle/cancel', {
+    method: 'POST', cookie: selectedCookie, form: { previousAccountId: String(outsider.id) },
+  })
+  expect(forgedCancel.headers.get('location')).toBe('/choose-handle')
+  expect(database.query('SELECT id FROM users WHERE id=?').get(provisional.id)).toEqual({ id: provisional.id })
+  expect(database.query('SELECT id FROM users WHERE id=?').get(outsider.id)).toEqual({ id: outsider.id })
+
+  const cancelled = await request('/choose-handle/cancel', {
+    method: 'POST', cookie: selectedCookie, form: { previousAccountId: String(second.id) },
+  })
+  expect(cancelled.headers.get('location')).toBe('/account/edit')
+  expect(database.query('SELECT id FROM users WHERE id=?').get(provisional.id)).toBeNull()
+  expect(await (await request('/account/edit', { cookie: selectedCookie })).text()).toContain('@persona_second')
 })
 
 test('handle choice accepts invalid submissions and reports their character count', async () => {
@@ -1094,6 +1111,9 @@ test('handle choice accepts invalid submissions and reports their character coun
   expect(message).toBeDefined()
   const magic = await request(`/enter/magic?token=${encodeURIComponent(linkToken(message!))}`)
   const cookie = sessionCookie(magic)
+
+  const forgedCancelScreen = await request('/choose-handle?previousAccountId=999999', { cookie })
+  expect(await forgedCancelScreen.text()).not.toContain('formaction="/choose-handle/cancel"')
 
   const response = await request('/choose-handle', {
     method: 'POST',

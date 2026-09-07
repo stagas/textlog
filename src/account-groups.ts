@@ -145,7 +145,7 @@ export function accountChoices(database: Database, userId: number) {
       u.id=g.primary_user_id is_primary,u.id=g.selected_user_id is_selected
     FROM users u JOIN account_groups g ON g.id=u.account_group_id
     WHERE g.id=? AND u.deleted_at IS NULL AND u.suspended_at IS NULL
-    ORDER BY is_primary DESC,u.created_at,u.id`).all(group.id) as AccountChoiceRow[])
+    ORDER BY u.created_at,u.id`).all(group.id) as AccountChoiceRow[])
     .map(({ is_primary, is_selected, ...account }) => ({ ...account, primary: Boolean(is_primary),
       selected: Boolean(is_selected) })
     )

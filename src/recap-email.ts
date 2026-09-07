@@ -47,7 +47,7 @@ const milestones = [
     path: null,
     copy: (origin: string) =>
       `${emailLink('Notifications', '/account/edit/notifications', origin)}, ${
-        emailLink('multiple accounts', '/account/accounts', origin)
+        emailLink('multiple accounts', '/account/edit', origin)
       }, and ${
         emailLink('password or magic-link entry and private personalized feeds', '/account/security', origin)
       } keep you in the loop.`,

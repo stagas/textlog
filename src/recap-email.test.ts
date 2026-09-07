@@ -32,7 +32,7 @@ test('recap email renders the launch highlights as a standalone email document',
   expect(html).toContain('/account/edit/notifications"')
   expect(html).toContain('account/edit/notifications" style="color:#55734a')
   expect(html).toContain('>Notifications</a>')
-  expect(html).toContain('/account/accounts"')
+  expect(html).toContain('/account/edit"')
   expect(html).toContain('/account/security"')
   expect(html).toContain('/all.rss"')
   expect(html).toContain('/all.atom"')

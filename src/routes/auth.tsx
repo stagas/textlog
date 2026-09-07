@@ -15,7 +15,7 @@ const PASSWORD_LOGIN_FAILURE = 'Login was unsuccessful. Check your details and t
 import { databaseService } from '../database-service'
 import { sendPushForSignup } from '../push'
 import { sessionHash } from '../sessions'
-import { currentUser, hash, hashPassword, token, verifyPassword } from '../utils'
+import { currentUser, hash, hashPassword, sessionToken, token, verifyPassword } from '../utils'
 import { authLimit, clientAddress, form, issueMagicLink, page, redirect, retryPage, safeNext } from './shared'
 
 import type { Hono } from 'hono'
@@ -350,11 +350,32 @@ export function registerAuthRoutes(app: Hono) {
     return response
   })
 
-  app.get('/choose-handle', c => {
+  app.get('/choose-handle', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (user.handle_chosen_at) return redirect(safeNext(c.req.query('next')))
-    return page(<ChooseHandle next={safeNext(c.req.query('next'))} />)
+    const requestedPreviousId = /^\d+$/.test(c.req.query('previousAccountId') || '')
+      ? Number(c.req.query('previousAccountId')) : undefined
+    const accounts = requestedPreviousId
+      ? await databaseService().call('account.choices', { userId: user.id }) : []
+    const current = accounts.find(account => account.id === user.id)
+    const previousAccountId = current && !current.primary && !current.handle_chosen_at
+      && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
+      ? requestedPreviousId : undefined
+    return page(<ChooseHandle next={safeNext(c.req.query('next'))} previousAccountId={previousAccountId} />)
+  })
+
+  app.post('/choose-handle/cancel', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter')
+    const f = await form(c.req.raw)
+    if (!/^\d+$/.test(f.previousAccountId || '')) return redirect('/choose-handle')
+    const cancelled = await databaseService().call('account.cancelLinkedCreation', {
+      userId: user.id,
+      previousUserId: Number(f.previousAccountId),
+      sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
+    })
+    return redirect(cancelled ? '/account/edit' : '/choose-handle')
   })
 
   app.post('/choose-handle', async c => {
@@ -365,10 +386,17 @@ export function registerAuthRoutes(app: Hono) {
     const submittedHandle = f.handle || ''
     const handle = submittedHandle.trim().toLowerCase().replace(/^@/, '')
     const next = safeNext(f.next)
+    const requestedPreviousId = /^\d+$/.test(f.previousAccountId || '') ? Number(f.previousAccountId) : undefined
+    const accounts = requestedPreviousId
+      ? await databaseService().call('account.choices', { userId: user.id }) : []
+    const current = accounts.find(account => account.id === user.id)
+    const previousAccountId = current && !current.primary && !current.handle_chosen_at
+      && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
+      ? requestedPreviousId : undefined
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) {
       const characters = Array.from(submittedHandle).length
       return page(
-        <ChooseHandle handle={submittedHandle} next={next}
+        <ChooseHandle handle={submittedHandle} next={next} previousAccountId={previousAccountId}
           error={`You typed ${characters} ${
             characters === 1 ? 'character' : 'characters'
           }. Use 2–24 letters, numbers, or underscores.`} />,
@@ -377,7 +405,8 @@ export function registerAuthRoutes(app: Hono) {
     }
     const moderation = await moderateText(`handle: ${handle}`)
     if (!moderation.ok) {
-      return page(<ChooseHandle handle={handle} next={next} error={moderation.reason === 'flagged'
+      return page(<ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
+        error={moderation.reason === 'flagged'
         ? 'That handle may violate our content rules. Please choose another.'
         : moderationMessage(moderation)} />, moderation.reason === 'flagged' ? 422 : 503)
     }
@@ -385,12 +414,13 @@ export function registerAuthRoutes(app: Hono) {
     if (claimed.status !== 'ready') {
       if (claimed.status === 'monthly_limit') {
         return page(
-          <ChooseHandle handle={handle} next={next}
+          <ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
             error="You can create up to two new accounts per month. Choose a handle from one of your deleted accounts to reclaim it, or try again later." />,
           429,
         )
       }
-      return page(<ChooseHandle handle={handle} next={next} error="That handle is unavailable." />, 400)
+      return page(<ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
+        error="That handle is unavailable." />, 400)
     }
     const campaign = campaignAttribution(c.req.raw)
     if (campaign) await databaseService().call('stats.recordCampaignSignup', { campaign, userId: user.id })

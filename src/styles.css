@@ -239,7 +239,7 @@ body.corners-round :where(
   .pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,
   .posting-help-section, .posting-help-tabs, .posting-help-tab-panel > div, .compose-post-preview,
   .compose-post-preview h2, .profile-presence-section, .profile-presence-tabs, .connections-empty,
-  .bio-form > .composefoot, .account-choice, .account-create-persona, .notification-toggle,
+  .bio-form > .composefoot, .notification-toggle,
   .appearance-tabs, .explore-tag-chips, .activity-header, .admin-section, .admin-report,
   .admin-actions-log article, .admin-user-list article, .admin-ip-list article, .section-empty,
   .admin-tag-groups article, .admin-tag-display-list form,
@@ -579,6 +579,10 @@ header>nav>a:not(.button),
 .account-menu-popover button.account-menu-account {
   display: flex;
   align-items: center;
+}
+
+.account-menu-check {
+  margin-left: auto;
 }
 
 .account-menu-popover form {
@@ -5754,11 +5758,6 @@ form.report-panel {
   border-bottom: 1px solid var(--soft);
 }
 
-.profile-switch-link {
-  margin-right: auto;
-}
-
-
 .profile-logout {
   appearance: none;
 }
@@ -6016,80 +6015,6 @@ form.report-panel {
   font-weight: 700;
   line-height: 1;
   letter-spacing: 1px;
-}
-
-.account-switcher-page {
-  max-width: none;
-  margin-top: var(--space-7);
-}
-
-.account-switcher-intro {
-  max-width: 62ch;
-  margin: var(--space-5) 0;
-  color: var(--muted);
-  font-size: var(--font-size-12);
-}
-
-.account-choice-list {
-  border: 1px solid var(--soft);
-}
-
-.account-choice,
-.account-create-persona {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4);
-}
-
-.account-choice + .account-choice {
-  border-top: 1px solid var(--soft);
-}
-
-.account-choice > div,
-.account-create-persona > div {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.account-choice-handle {
-  width: fit-content;
-  font-weight: 600;
-}
-
-.account-choice-labels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  color: var(--muted);
-  font-size: var(--font-size-10);
-}
-
-.account-choice-labels span + span::before {
-  content: '·';
-  margin-right: var(--space-2);
-}
-
-.account-choice-current {
-  color: var(--muted);
-  font-size: var(--font-size-11);
-}
-
-.account-create-persona {
-  margin-top: var(--space-5);
-  border-top: 1px solid var(--soft);
-  border-bottom: 1px solid var(--soft);
-}
-
-.account-create-persona strong {
-  font-size: var(--font-size-12);
-}
-
-.account-create-persona span {
-  color: var(--muted);
-  font-size: var(--font-size-10);
 }
 
 .notification-preferences {
@@ -6685,11 +6610,6 @@ form.report-panel {
 
   .notification-actions {
     justify-content: flex-end;
-  }
-
-  .account-choice > form,
-  .account-create-persona > form {
-    margin-left: auto;
   }
 
 }
@@ -8771,6 +8691,16 @@ body.full-screen-page.full-screen-scrollable { overflow-y: auto; }
   justify-self: center;
   min-height: 48px;
   margin-top: var(--space-4);
+}
+
+.handle-picker-card .handle-picker-actions {
+  justify-content: center;
+  align-items: center;
+  margin-top: var(--space-4);
+}
+
+.handle-picker-card .handle-picker-actions .button {
+  margin-top: 0;
 }
 
 .mood-picker-options {

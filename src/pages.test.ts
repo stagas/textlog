@@ -6,7 +6,6 @@ import {
   AccountMagicLink,
   AccountPassword,
   AccountSecurity,
-  AccountSwitcher,
   AdminDashboard,
   AdminPostModeration,
   ApiDocs,
@@ -171,7 +170,10 @@ test('account menu lists linked accounts immediately before logout for one-click
     () =>
       renderToStaticMarkup(React.createElement(Layout, {
         user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
-          linked_accounts: [{ id: 2, handle: 'another', mood: '🌞', handle_chosen_at: '2026-02-01' }] },
+          linked_accounts: [
+            { id: 1, handle: 'reader', handle_chosen_at: '2026-01-01', selected: true },
+            { id: 2, handle: 'another', mood: '🌞', handle_chosen_at: '2026-02-01', selected: false },
+          ] },
         children: React.createElement('p', null, 'Hello'),
       })))
 
@@ -180,6 +182,17 @@ test('account menu lists linked accounts immediately before logout for one-click
     + '<input type="hidden" name="next" value="/latest?page=2"/>'
     + '<button class="account-menu-account" type="submit"><span>@another</span><span class="nav-mood">🌞</span></button></form>'
   expect(html).toContain(switchForm)
+  expect(html).toContain(
+    '<button class="account-menu-account account-menu-account-selected" type="button" aria-current="true">'
+    + '<span>@reader</span><span class="account-menu-check" aria-label="selected">✓</span></button>',
+  )
+  expect(html).toContain('>settings</a>')
+  expect(html).not.toContain('>account</a>')
+  expect(html).toContain(
+    '<form method="post" action="/account/accounts/new"><button class="account-menu-account" type="submit">+new</button>',
+  )
+  expect(html).not.toContain('>ACCOUNTS</span>')
+  expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/account/accounts/new"'))
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/logout"'))
   const separators = [...html.matchAll(/<hr class="account-menu-separator"\/>/g)].map(match => match.index!)
   expect(separators).toHaveLength(2)
@@ -357,19 +370,6 @@ test('replying to a threaded reply keeps the root page and places the composer a
 
 test('post anchors embedded in return paths identify the inline reply target', () => {
   expect(postAnchorId('/all?expand=209#post-2922')).toBe(2922)
-})
-
-test('account switcher errors use the shared error notice', () => {
-  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const html = renderToStaticMarkup(React.createElement(AccountSwitcher, {
-    user,
-    accounts: [{ id: 1, handle: 'reader', handle_chosen_at: '2026-08-12 10:00:00', primary: true, selected: true }],
-    error: 'Could not switch accounts.',
-  }))
-
-  expect(html).toContain('class="status-message status-error" role="alert"><span>Could not switch accounts.</span>')
-  expect(html).toContain('class="status-message-dismiss" title="Dismiss error"')
-  expect(html).not.toContain('class="error"')
 })
 
 test('auth pages render through the shared centered panel', () => {
@@ -3319,7 +3319,7 @@ test('Profile places owner actions in the handle row', () => {
     + '<span class="nav-mood">🤸</span></a>')
   expect(html).toContain('class="account-menu-popover"')
   expect(html).toContain('href="/u/reader?from=%2F">profile</a>')
-  expect(html).toContain('href="/account/edit?from=%2F">account</a>')
+  expect(html).toContain('href="/account/edit?from=%2F">settings</a>')
   expect(html).not.toContain('href="/admin">admin</a>')
   expect(html).not.toContain('class="mobile-account-footer"')
   expect(html.indexOf('class="account-menu-handle" href="/u/reader?from=%2F"')).toBeLessThan(

@@ -2,6 +2,7 @@ import { appName } from '../brand'
 import { activeThemeLogoSvg } from '../theme'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
+import { FormActions } from './page-shared'
 import { CenteredPanel } from './panel'
 
 export { maskEmail } from './email-address'
@@ -171,7 +172,12 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
   )
 }
 
-export function ChooseHandle({ error, handle = '', next }: { error?: string; handle?: string; next?: string }) {
+export function ChooseHandle({ error, handle = '', next, previousAccountId }: {
+  error?: string
+  handle?: string
+  next?: string
+  previousAccountId?: number
+}) {
   return (
     <Layout title="choose your handle" fullScreen>
       <section className="handle-picker" aria-labelledby="handle-picker-title">
@@ -181,13 +187,20 @@ export function ChooseHandle({ error, handle = '', next }: { error?: string; han
           {error && <p className="status-message status-error" role="alert">{error}</p>}
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
+            {previousAccountId && <input type="hidden" name="previousAccountId" value={previousAccountId} />}
             <input className="form-control" name="handle" aria-label="handle" aria-describedby="handle-help" autoFocus
               autoComplete="username" inputMode="text" enterkeyhint="done" autoCapitalize="none" spellcheck={false}
               defaultValue={handle} placeholder="your_handle" />
             <p id="handle-help" className="form-hint">
               Handles must be 2–24 characters and use only letters, numbers, or underscores. You can change it later.
             </p>
-            <button className="button">continue →</button>
+            <FormActions className="handle-picker-actions"
+              secondary={previousAccountId && (
+                <button className="secondary-action cancel-action" type="submit" formAction="/choose-handle/cancel"
+                  formNoValidate>cancel</button>
+              )}
+              primary={<button className="button">continue →</button>}
+            />
           </form>
         </div>
       </section>

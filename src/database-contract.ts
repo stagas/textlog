@@ -105,6 +105,8 @@ export type DatabaseDomainOperations = {
   'account.select': { input: { userId: number; targetId: number; sessionHash: string };
     output: { status: 'not_found' } | { status: 'ready'; handleChosen: boolean } }
   'account.createLinked': { input: { userId: number; sessionHash: string }; output: boolean }
+  'account.cancelLinkedCreation': { input: { userId: number; previousUserId: number; sessionHash: string };
+    output: boolean }
   'account.pushPreferences': { input: { userId: number; endpoint: string; includeSignups: boolean };
     output: Record<string, number> | null }
   'account.savePushSubscription': {

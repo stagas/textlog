@@ -477,7 +477,7 @@ app.use('*', async (c, next) => {
   await next()
 })
 app.use('*', async (c, next) => {
-  if (c.req.method !== 'POST' || ['/enter', '/choose-handle', '/logout'].includes(c.req.path)
+  if (c.req.method !== 'POST' || ['/enter', '/choose-handle', '/choose-handle/cancel', '/logout'].includes(c.req.path)
     || publicEmailPreferencePaths.has(c.req.path)) return next()
   const user = currentUser(c.req.raw)
   if (user && !user.handle_chosen_at) {

@@ -138,7 +138,6 @@ export function Profile(
               </a>
               {profile.mood && <span className="profile-mood">{profile.mood}</span>}
             </h1>
-            {editing && <a className="profile-edit-link profile-switch-link" href="/account/accounts">switch</a>}
             {!editing && user?.id !== profile.id
               && (
                 <ProfileControls user={user} profile={profile} following={following} followsViewer={followsViewer}

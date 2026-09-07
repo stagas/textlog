@@ -51,7 +51,10 @@ test('recent feed visitors retain mood and linked accounts for startup warming',
 
   expect(visitors.find(visitor => visitor.user.id === primary.id)?.user).toEqual(expect.objectContaining({
     mood: '🌙',
-    linked_accounts: [expect.objectContaining({ id: persona.id, mood: '☀️' })],
+    linked_accounts: [
+      expect.objectContaining({ id: primary.id, mood: '🌙', selected: true }),
+      expect.objectContaining({ id: persona.id, mood: '☀️', selected: false }),
+    ],
   }))
 })
 
@@ -83,6 +86,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(before.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: true }),
   ])
   const cachedMenu = materializedFeedTemplate(`<a class="account-menu-handle" href="/u/primary">
@@ -113,6 +117,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterSwitching.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: true }),
   ])
 
@@ -124,6 +129,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterReading.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
   expect(hydrateMaterializedFeed(cachedMenu, database, primary.id)).not.toContain('aria-label="unread activity"')
@@ -141,6 +147,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterToMeOnlyActivity.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: true }),
   ])
   markAllForYouRead(persona.id, true, database)
@@ -157,6 +164,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterAllOnlyActivity.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
   markLatestPostsRead(persona.id, [unrelated.id], database)
@@ -167,6 +175,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterReadingAllOnlyActivity.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: false }),
   ])
 
@@ -179,6 +188,7 @@ test('linked-account unread activity reflects only My Feed and @', async () => {
     now,
   })
   expect(afterNewActivity.sessionUser?.linked_accounts).toEqual([
+    expect.objectContaining({ id: primary.id, selected: true, has_unread: false }),
     expect.objectContaining({ id: persona.id, has_unread: true }),
   ])
 })

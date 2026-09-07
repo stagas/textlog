@@ -366,7 +366,8 @@ export type User = { id: number; handle: string; email: string; bio: string; sus
   interaction_emails?: number; show_moderated_content?: number; hide_people_follow_activity?: number;
   hide_hashtag_follow_activity?: number; show_note_streak?: number; show_timestamps?: number; draft_count?: number;
   linked_accounts?: Array<
-    { id: number; handle: string; mood?: string | null; handle_chosen_at: string | null; has_unread?: boolean }
+    { id: number; handle: string; mood?: string | null; handle_chosen_at: string | null; selected?: boolean;
+      has_unread?: boolean }
   > }
 
 export type DraftView = { id: number; public_id: string; body: string; parent_id: number | null; created_at: string;

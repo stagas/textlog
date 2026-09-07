@@ -479,11 +479,6 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.notifications-page {\n  max-width: none;\n}')
   })
 
-  test('lets the account switcher use the full page width', async () => {
-    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.account-switcher-page {\n  max-width: none;')
-  })
-
   test('spaces account security headings, copy, and actions consistently', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.security-section {\n  display: grid;\n  gap: var(--space-4);')

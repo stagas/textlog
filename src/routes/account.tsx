@@ -15,7 +15,6 @@ import {
   AccountFeedKeyCreate,
   AccountMagicLink,
   AccountPassword,
-  AccountSwitcher,
   ChangeAppearance,
   ConfirmAccountDelete,
   ConfirmEmail,
@@ -136,26 +135,19 @@ export function registerAccountRoutes(app: Hono) {
     return page(<InviteFriends user={user} sent={emails.length} returnPath={returnPath} />)
   })
 
-  app.get('/account/accounts', async c => {
-    const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/accounts'))
-    const accounts = await databaseService().call('account.choices', { userId: user.id })
-    return page(<AccountSwitcher user={user} accounts={accounts} />)
-  })
-
   app.post('/account/accounts/select', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
-    if (!/^\d+$/.test(f.accountId || '')) return redirect('/account/accounts')
+    if (!/^\d+$/.test(f.accountId || '')) return redirect('/account/edit')
     const targetId = Number(f.accountId)
     const selected = await databaseService().call('account.select', {
       userId: user.id,
       targetId,
       sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
-    if (selected.status === 'not_found') return redirect('/account/accounts')
-    return redirect(selected.handleChosen ? safeNext(f.next) : '/choose-handle?next=%2Faccount%2Faccounts')
+    if (selected.status === 'not_found') return redirect('/account/edit')
+    return redirect(selected.handleChosen ? safeNext(f.next) : '/choose-handle?next=%2Faccount%2Fedit')
   })
 
   app.post('/account/accounts/new', async c => {
@@ -165,8 +157,8 @@ export function registerAccountRoutes(app: Hono) {
       userId: user.id,
       sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
-    if (!created) return redirect('/account/accounts')
-    return redirect('/choose-handle?next=%2Faccount%2Faccounts')
+    if (!created) return redirect('/account/edit')
+    return redirect(`/choose-handle?next=%2Faccount%2Fedit&previousAccountId=${user.id}`)
   })
 
   app.get('/account/edit/notifications', c => {

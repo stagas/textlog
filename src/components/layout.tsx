@@ -79,7 +79,7 @@ export function Layout({
     ? requestUrl.searchParams.get('from') || `/u/${user?.handle || ''}`
     : currentPath
   const accountHref = '/account/edit?from=' + encodeURIComponent(accountFrom)
-  const linkedAccountHasUnread = !!user?.linked_accounts?.some(account => account.has_unread)
+  const linkedAccountHasUnread = !!user?.linked_accounts?.some(account => account.id !== user.id && account.has_unread)
   const share = social || {
     description: 'The quieter social microblogging platform.',
     image: `${origin}/og.png?v=2`,
@@ -95,20 +95,34 @@ export function Layout({
     <div className="account-menu-popover">
       {isAdmin(user) && <a href="/admin">admin</a>}
       <a href={profileHref}>profile</a>
-      <a href={accountHref}>account</a>
+      <a href={accountHref}>settings</a>
       <a href="/bookmarks">bookmarks</a>
-      {!!user.linked_accounts?.length && <hr className="account-menu-separator" />}
+      <hr className="account-menu-separator" />
       {user.linked_accounts?.map(account => (
-        <form method="post" action="/account/accounts/select" key={account.id}>
-          <input type="hidden" name="accountId" value={account.id} />
-          <input type="hidden" name="next" value={currentPath} />
-          <button className="account-menu-account" type="submit">
+        account.selected
+          ? (
+            <button className="account-menu-account account-menu-account-selected" type="button" aria-current="true"
+              key={account.id}>
+              <span>@{account.handle}</span>
+              {account.mood && <span className="nav-mood">{account.mood}</span>}
+              <span className="account-menu-check" aria-label="selected">✓</span>
+            </button>
+          )
+          : (
+            <form method="post" action="/account/accounts/select" key={account.id}>
+              <input type="hidden" name="accountId" value={account.id} />
+              <input type="hidden" name="next" value={currentPath} />
+              <button className="account-menu-account" type="submit">
             {account.has_unread && <span className="unread-dot" aria-label="unread activity" />}
             <span>@{account.handle}</span>
             {account.mood && <span className="nav-mood">{account.mood}</span>}
-          </button>
-        </form>
+              </button>
+            </form>
+          )
       ))}
+      <form method="post" action="/account/accounts/new">
+        <button className="account-menu-account" type="submit">+new</button>
+      </form>
       <hr className="account-menu-separator" />
       <LogoutForm>
         <button type="submit">logout</button>
@@ -207,7 +221,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1521" />
+        <link rel="stylesheet" href="/styles.css?v=1526" />
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body

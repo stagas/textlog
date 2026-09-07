@@ -779,9 +779,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const signedIn = sessionUser(database, cookieToken)
       if (signedIn) {
         signedIn.linked_accounts = accountChoices(database, signedIn.id)
-          .filter(account => account.id !== signedIn.id && account.handle_chosen_at !== null)
-          .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
-            has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) })
+          .filter(account => account.handle_chosen_at !== null)
+          .map(({ id, handle, mood, handle_chosen_at, selected }) => ({ id, handle, mood, handle_chosen_at, selected,
+            has_unread: id !== signedIn.id && (hasUnreadForYou(id, database) || hasUnreadToMe(id, database)) })
           )
       }
       const bearerUser = apiUser(database, bearerToken, now) || sessionUser(database, bearerToken)
@@ -845,6 +845,26 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         if (!newUserId || !selectAccount(database, newUserId)) throw new Error('Could not create account')
         database.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
           .run(newUserId, currentSessionHash, userId)
+      })()
+      return true as DatabaseDomainOutput<K>
+    }
+    case 'account.cancelLinkedCreation': {
+      const { userId, previousUserId, sessionHash: currentSessionHash } = input as DatabaseDomainInput<
+        'account.cancelLinkedCreation'
+      >
+      const group = accountGroupForUser(database, userId)
+      const provisional = group && database.query(`SELECT 1 FROM users
+        WHERE id=? AND account_group_id=? AND handle_chosen_at IS NULL AND deleted_at IS NULL`)
+        .get(userId, group.id)
+      const previous = group && database.query(`SELECT 1 FROM users
+        WHERE id=? AND id!=? AND account_group_id=? AND handle_chosen_at IS NOT NULL
+          AND deleted_at IS NULL AND suspended_at IS NULL`).get(previousUserId, userId, group.id)
+      if (!provisional || !previous) return false as DatabaseDomainOutput<K>
+      database.transaction(() => {
+        if (!selectAccount(database, previousUserId)) throw new Error('Previous account is unavailable')
+        database.query('UPDATE sessions SET user_id=? WHERE token_hash=? AND user_id=?')
+          .run(previousUserId, currentSessionHash, userId)
+        database.query('DELETE FROM users WHERE id=?').run(userId)
       })()
       return true as DatabaseDomainOutput<K>
     }
@@ -3724,9 +3744,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           user.draft_count = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?')
             .get(user.id) as { count: number }).count
           user.linked_accounts = accountChoices(database, user.id)
-            .filter(account => account.id !== user.id && account.handle_chosen_at !== null)
-            .map(({ id, handle, mood, handle_chosen_at }) => ({ id, handle, mood, handle_chosen_at,
-              has_unread: hasUnreadForYou(id, database) || hasUnreadToMe(id, database) }))
+            .filter(account => account.handle_chosen_at !== null)
+            .map(({ id, handle, mood, handle_chosen_at, selected }) => ({ id, handle, mood, handle_chosen_at, selected,
+              has_unread: id !== user.id && (hasUnreadForYou(id, database) || hasUnreadToMe(id, database)) }))
         }
         return user
           ? [{ user, requestUrl: row.request_url, cookie: row.cookie, userAgent: row.user_agent,
