@@ -340,6 +340,21 @@ describe('post persistence', () => {
       .toBe('<code class="code-fence">const answer = 42</code>')
   })
 
+  test('hides executable source fences behind a show-code disclosure', () => {
+    const exec = linkify('#exec\n```js\nconsole.log(42)\n```')
+    expect(exec).toContain('<span class="post-spoiler execution-source-spoiler">')
+    expect(exec).toContain('<span>show code</span>')
+    expect(exec).toContain('<code class="code-fence hljs language-javascript">')
+
+    const mermaid = linkify('#mermaid\n```mermaid\ngraph LR\nA --> B\n```')
+    expect(mermaid).toContain('<span class="post-spoiler execution-source-spoiler">')
+    expect(mermaid).toContain('<span>show code</span>')
+    expect(mermaid).toContain('<code class="code-fence hljs language-mermaid">')
+
+    expect(linkify('```js\nconsole.log(42)\n```')).not.toContain('execution-source-spoiler')
+    expect(linkify('```text\n#exec\n```\n```js\nconsole.log(42)\n```')).not.toContain('execution-source-spoiler')
+  })
+
   test('renders inline TeX as native MathML', () => {
     const html = linkify('Energy: $E = mc^2$.')
     expect(html).toStartWith('Energy: <math xmlns="http://www.w3.org/1998/Math/MathML">')

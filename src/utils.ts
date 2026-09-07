@@ -525,6 +525,19 @@ export function postReferenceIds(body: string) {
     .map(token => Number(token.raw.slice(1)))
 }
 
+function executableFenceIndexes(body: string, tokens: LinkToken[]) {
+  const fences = tokens.filter(token => token.kind === 'code-fence')
+  const fencedRanges = tokens.filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
+  const indexes = new Set<number>()
+  for (const marker of body.matchAll(/(?:^|\s)#(exec|mermaid)\s*$/gm)) {
+    if (fencedRanges.some(token => marker.index! >= token.index && marker.index! < token.lastIndex)) continue
+    const fence = fences.find(token => token.index >= marker.index! + marker[0].length
+      && (marker[1] === 'exec' ? !!token.language : token.language === 'mermaid'))
+    if (fence) indexes.add(fence.index)
+  }
+  return indexes
+}
+
 function renderedText(value: string, highlightTerms: string[]) {
   let html = ''
   let start = 0
@@ -895,6 +908,7 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   })()
   const tokens = [...linkTokens(body, flags), ...(locationToken ? [locationToken] : [])]
     .sort((a, b) => a.index - b.index || (a.kind === 'location' ? -1 : 1))
+  const hiddenCodeFences = executableFenceIndexes(body, tokens)
   for (const match of tokens) {
     if (match.index < end) continue
     html += renderedText(body.slice(end, match.index), highlightTerms)
@@ -902,11 +916,17 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     if (match.kind === 'code' || match.kind === 'code-fence') {
       const language = match.language && highlightedCodeLanguages[match.language]
       const code = language ? hljs.highlight(match.label!, { language }).value : esc(match.label)
-      html += `<code${
+      const renderedCode = `<code${
         match.kind === 'code-fence'
           ? ` class="code-fence${language ? ` hljs language-${language}` : ''}"`
           : ''
       }>${code}</code>`
+      html += match.kind === 'code-fence' && hiddenCodeFences.has(match.index)
+        ? `<span class="post-spoiler execution-source-spoiler"><label class="post-spoiler-summary">`
+          + `<input class="post-spoiler-input" type="checkbox"><span>show code</span></label>`
+          + `<span class="post-spoiler-content"><span class="post-spoiler-content-inner">${renderedCode}`
+          + `</span></span></span>`
+        : renderedCode
     }
     else if (match.kind === 'latex-fence') {
       html += renderedMath(match.label!, true) || `<code class="code-fence">${esc(match.label)}</code>`

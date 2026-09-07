@@ -3014,6 +3014,10 @@ body.corners-round a.button {
   animation: disclosure-overflow 0s 200ms forwards;
 }
 
+.post .execution-source-spoiler .code-fence {
+  margin-top: 0;
+}
+
 .post-body a,
 .parent-quote a {
   color: var(--accent);

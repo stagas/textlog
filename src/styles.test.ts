@@ -151,6 +151,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.post .code-fence.execution-output.ascii-art {\n  line-height: 1.15;\n}')
   })
 
+  test('keeps revealed executable source close to its show-code control', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.post .execution-source-spoiler .code-fence {\n  margin-top: 0;\n}')
+  })
+
   test('keeps code fences above the tappable post hit area so they can scroll horizontally', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.post .code-fence {\n  position: relative;\n  z-index: 2;')
