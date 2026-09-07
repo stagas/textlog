@@ -16,7 +16,7 @@ import {
 export function Connections(
   { user, profile, people, tags = [], kind, page, total, tagsPage = 1, tagsTotal = 0, sort = 'recent', noteCount,
     followerCount, followingCount, followingTagCount, following, followsViewer = false, social, replyCount = 0,
-    blockedPeopleCount = 0, blockedTagCount = 0, returnPath, bioReference }: {
+    blockedPeopleCount = 0, blockedTagCount = 0, returnPath, bioReference, noteStreakDates = [] }: {
       user: User | null
       profile: ProfileRow
       people: PersonView[]
@@ -38,6 +38,7 @@ export function Connections(
       blockedTagCount?: number
       returnPath?: string
       bioReference?: BioReferenceData
+      noteStreakDates?: string[]
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -66,7 +67,7 @@ export function Connections(
   return (
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer}
-        returnPath={returnPath} bioReference={bioReference} />
+        returnPath={returnPath} bioReference={bioReference} noteStreakDates={noteStreakDates} />
       <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
         following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
         blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
@@ -176,21 +177,24 @@ export function Connections(
         )
         : people.length
         ? (
-          <>
-            <div className="connections-heading connections-heading-wide">
-              <h2 id="connections-people-heading">People</h2>
-              {sortToggle}
-            </div>
-            <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-              path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-              anchor="connections-people-heading" instantScroll={kind === 'following'} />
-            <ConnectionPeople user={user} people={people} className="connections-list connections-list-headed"
-              showMood={kind === 'following'} showNoteCount={false} showPopover={false}
-              returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
-            <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
-              path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
-              anchor="connections-people-heading" instantScroll={kind === 'following'} />
-          </>
+          <div className="columns connections-columns connections-columns-stacked">
+            <section>
+              <div className={paginationHeadingClass()}>
+                <div className="connections-heading">
+                  <h2 id="connections-people-heading">People</h2>
+                  {sortToggle}
+                </div>
+                <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+                  path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination" compact
+                  anchor="connections-people-heading" />
+              </div>
+              <ConnectionPeople user={user} people={people} showMood showNoteCount={false} showPopover={false}
+                returnPath={person => connectionReturnPath(`#person-${person.id}`)} />
+              <Pagination page={page} totalPages={Math.ceil(total / CONNECTION_PAGE_SIZE)}
+                path={withFrom(`/u/${profile.handle}?tab=${kind}${sortQuery}`)} label="People pagination"
+                compact anchor="connections-people-heading" />
+            </section>
+          </div>
         )
         : (
           <div className={`empty${user?.id === profile.id && kind === 'following' ? ' empty-actions' : ''}`}>

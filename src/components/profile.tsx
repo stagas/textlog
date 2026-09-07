@@ -7,7 +7,7 @@ import { displayBio, linkify, referenceFormId } from '../utils'
 import { InviteShare } from './invite-share'
 import { Layout } from './layout'
 import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
-  type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
+  NoteStreak, type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'
 import { writeHref } from './write-link'
 
@@ -329,39 +329,5 @@ export function Profile(
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
       {!user && !editing && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
-  )
-}
-
-function NoteStreak({ activeDates }: { activeDates: string[] }) {
-  const active = new Set(activeDates)
-  const naturalDate = new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-  const days = Array.from({ length: 365 }, (_, index) => {
-    const date = new Date(today)
-    date.setUTCDate(today.getUTCDate() - 364 + index)
-    return date.toISOString().slice(0, 10)
-  })
-  const leadingDays = new Date(`${days[0]}T00:00:00Z`).getUTCDay()
-  return (
-    <section className="note-streak" aria-label="Posting activity for the past year">
-      <svg className="note-streak-grid" viewBox="0 0 530 70" role="img">
-        {days.map((date, index) => {
-          const position = leadingDays + index
-          return (
-            <rect key={date} className={active.has(date) ? 'active' : undefined} x={Math.floor(position / 7) * 10 + 1}
-              y={(position % 7) * 10 + 1} width="8" height="8"
-            >
-              <title>{naturalDate.format(new Date(`${date}T00:00:00Z`))}</title>
-            </rect>
-          )
-        })}
-      </svg>
-    </section>
   )
 }

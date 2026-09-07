@@ -3405,9 +3405,33 @@ test('An empty following tab offers its owner a way to explore', () => {
   expect(html).toContain('<a class="button" href="/explore">explore tags &amp; people</a>')
 })
 
+test('Connection tabs show an enabled note streak on the owner profile', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_note_streak: 1 }
+  for (const kind of ['following', 'followers', 'blocked'] as const) {
+    const html = renderToStaticMarkup(React.createElement(Connections, {
+      user,
+      profile: user,
+      people: [],
+      kind,
+      page: 1,
+      total: 0,
+      noteCount: 1,
+      followerCount: 0,
+      followingCount: 0,
+      followingTagCount: 0,
+      following: false,
+      noteStreakDates: ['2026-09-07'],
+    }))
+
+    expect(html).toContain('class="note-streak"')
+    expect(html).toContain('class="active"')
+  }
+})
+
 test('Following and followers paginate every 8 people', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
-  const person = { id: 2, handle: 'writer', email: 'writer@example.com', bio: '', posts: 1, viewerFollowing: false }
+  const person = { id: 2, handle: 'writer', mood: '🌞', email: 'writer@example.com', bio: '', posts: 1,
+    viewerFollowing: false }
   for (const kind of ['following', 'followers'] as const) {
     const html = renderToStaticMarkup(React.createElement(Connections, {
       user: null,
@@ -3430,6 +3454,13 @@ test('Following and followers paginate every 8 people', () => {
     )
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
+    if (kind === 'followers') {
+      expect(html).toContain('class="columns connections-columns connections-columns-stacked"')
+      expect(html.indexOf('<h2 id="connections-people-heading">People</h2>')).toBeLessThan(
+        html.indexOf('aria-label="People pagination"'),
+      )
+      expect(html).toContain('class="post-mood"')
+    }
   }
 })
 
