@@ -4704,6 +4704,21 @@ test('Report form renders as a dedicated page with no preselected reason', () =>
   expect(html).toContain('>@writer</a>')
   expect(html).toContain('<option value="" disabled="" selected="">choose a reason</option>')
   expect(html).toContain('action="/post/2/report"')
+  expect(html).toContain('class="secondary-action cancel-action" href="/post/2">cancel</a>')
+})
+
+test('Report cancel returns to the post before its originating feed', () => {
+  const html = renderToStaticMarkup(React.createElement(ReportPost, {
+    user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
+    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
+      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    returnPath: '/latest#post-2',
+  }))
+
+  expect(html).toContain(
+    'class="secondary-action cancel-action" href="/post/2?from=%2Flatest%23post-2">cancel</a>',
+  )
+  expect(html).not.toContain('class="secondary-action cancel-action" href="/latest#post-2"')
 })
 
 test('stored post translations render in the note', () => {
