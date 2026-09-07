@@ -335,6 +335,23 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              Draw this <b>#mermaid</b>
+              <br />
+              <b>```mermaid</b>
+              <br />
+              graph LR<br />
+              A --&gt; B<br />
+              <b>```</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Mermaid diagrams</span>
+            <small>Renders the next Mermaid code fence as an ASCII diagram beneath the note.</small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               Keep this visible <b>#pin</b>
             </code>
           </dd>

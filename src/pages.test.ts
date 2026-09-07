@@ -674,6 +674,11 @@ test('posting helpers use the compact action and show copyable highlighted resul
   )
   expect(html).toContain('Run this <b>#exec</b><br/><b>```js</b><br/>console.log(6 * 7)<br/><b>```</b>')
   expect(html).toContain(
+    '<span class="posting-help-modifier-heading">Mermaid diagrams</span><small>Renders the next Mermaid code fence '
+      + 'as an ASCII diagram beneath the note.</small>',
+  )
+  expect(html).toContain('Draw this <b>#mermaid</b><br/><b>```mermaid</b><br/>graph LR<br/>A --> B<br/><b>```</b>')
+  expect(html).toContain(
     '<span class="posting-help-modifier-heading">Pinned notes</span><small>Your latest #pin is shown first on your profile',
   )
   expect(html).toContain('Keep this visible <b>#pin</b>')
