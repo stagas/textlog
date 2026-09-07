@@ -153,12 +153,15 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/accounts/new', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
+    const f = c.req.header('content-type')?.includes('application/x-www-form-urlencoded')
+      ? await form(c.req.raw) : {}
+    const next = f.next ? safeNext(f.next) : '/account/edit'
     const created = await databaseService().call('account.createLinked', {
       userId: user.id,
       sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
     if (!created) return redirect('/account/edit')
-    return redirect(`/choose-handle?next=%2Faccount%2Fedit&previousAccountId=${user.id}`)
+    return redirect(`/choose-handle?next=${encodeURIComponent(next)}&previousAccountId=${user.id}`)
   })
 
   app.get('/account/edit/notifications', c => {

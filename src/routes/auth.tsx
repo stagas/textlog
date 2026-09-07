@@ -375,7 +375,7 @@ export function registerAuthRoutes(app: Hono) {
       previousUserId: Number(f.previousAccountId),
       sessionHash: sessionHash(sessionToken(c.req.raw)) || '',
     })
-    return redirect(cancelled ? '/account/edit' : '/choose-handle')
+    return redirect(cancelled ? safeNext(f.next) : '/choose-handle')
   })
 
   app.post('/choose-handle', async c => {

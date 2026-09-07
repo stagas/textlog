@@ -121,6 +121,7 @@ export function Layout({
           )
       ))}
       <form method="post" action="/account/accounts/new">
+        <input type="hidden" name="next" value={currentPath} />
         <button className="account-menu-account" type="submit">+new</button>
       </form>
       <hr className="account-menu-separator" />

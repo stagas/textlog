@@ -1097,7 +1097,8 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   expect(database.query('SELECT id FROM users WHERE id=?').get(outsider.id)).toEqual({ id: outsider.id })
 
   const cancelled = await request('/choose-handle/cancel', {
-    method: 'POST', cookie: selectedCookie, form: { previousAccountId: String(second.id) },
+    method: 'POST', cookie: selectedCookie,
+    form: { previousAccountId: String(second.id), next: '/account/edit' },
   })
   expect(cancelled.headers.get('location')).toBe('/account/edit')
   expect(database.query('SELECT id FROM users WHERE id=?').get(provisional.id)).toBeNull()
