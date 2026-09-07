@@ -26,6 +26,7 @@ export const COMPOSE_PLACEHOLDERS = [
   'Anything interesting going on, @{handle}?',
   'What’s floating around in your head, @{handle}?',
   'What would you like to say, @{handle}?',
+  'What’s new with you, @{handle}?',
   'How’s your day treating you, @{handle}?',
 ] as const
 
