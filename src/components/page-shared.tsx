@@ -24,10 +24,10 @@ export function paginationHeadingClass() {
 export function TabHighlight({ active }: { active: boolean }) {
   if (!active) return null
   return (
-    <svg className="feed-tab-highlight" viewBox="0 0 100 3" preserveAspectRatio="none" shapeRendering="crispEdges"
+    <svg className="feed-tab-highlight" viewBox="0 0 100 2.5" preserveAspectRatio="none" shapeRendering="crispEdges"
       aria-hidden="true" focusable="false"
     >
-      <rect width="100" height="3" />
+      <rect width="100" height="2.5" />
     </svg>
   )
 }
