@@ -194,6 +194,16 @@ body.corners-round :is(button, .button) {
   border-radius: var(--corner-radius);
 }
 
+body.corners-round .secondary-action {
+  border-radius: 0 !important;
+}
+
+body.corners-round :is(.write-compose, .reply-compose) .posting-help-actions {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 body.corners-round table :is(th, td) {
   border-radius: 0;
 }
@@ -379,6 +389,10 @@ header {
   column-gap: var(--space-4);
   row-gap: var(--space-3);
   border-bottom: 1px solid var(--soft);
+}
+
+body:has(#main-content .write-compose:not(.edit-write-compose)) > header {
+  border-bottom: 0;
 }
 
 header>nav {
@@ -3602,6 +3616,10 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
 
 .write-compose:not(.embedded-write-compose) {
   flex: 1;
+}
+
+.write-compose:not(.edit-write-compose) .compose-editor-row {
+  border-top: 1px solid var(--soft);
 }
 
 .replybox.reply-compose {
