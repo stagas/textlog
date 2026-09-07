@@ -805,8 +805,11 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('body.corners-round {')
     expect(css).toContain('--corner-radius: 8px;')
     expect(css).toContain('body.corners-round * {\n  border-radius: var(--corner-radius);')
-    expect(css).toContain('body.corners-round :is(a, .quiet, .reference-menu, .danger, .content-warning-action,')
+    expect(css).toContain('body.corners-round :is(a:not(.button), .quiet, .reference-menu, .danger, .content-warning-action,')
     expect(css).toContain('body.corners-round :is(button, .button) {\n  border-radius: var(--corner-radius);')
+    expect(css).toContain('body.corners-round .accent-swatch {\n  border-radius: 50%;')
+    expect(css).toContain('.font-sample { color: var(--ink); font-size: var(--font-size-14);')
+    expect(css).toContain('.raw-link, .compose-preview-heading, .to-me-count, .profile-edit-link) {\n  border-radius: 0 !important;')
     expect(css).toContain('body.corners-round table :is(th, td) {\n  border-radius: 0;')
     expect(css).toContain(
       'body.corners-round table thead:first-child tr:first-child th:first-child {\n  border-top-left-radius: var(--corner-radius);',

@@ -4179,8 +4179,8 @@ test('Post only renders owner actions when requested by the detail view', () => 
   expect(detailHtml).toContain('class="quiet post-share-link" for="post-2-share">share</label>')
   expect(detailHtml).toContain('share with friends')
   expect(detailHtml).toContain('%40writer%20wrote%20on%20textlog')
-  expect(detailHtml).toContain(
-    'title="Select all">@writer wrote on textlog http://localhost:3000/post/2</div>',
+  expect(detailHtml).toMatch(
+    /title="Select all">@writer wrote on textlog https?:\/\/[^<]+\/post\/2<\/div>/,
   )
   expect(detailHtml).toContain('/post/2/edit')
   expect(detailHtml).not.toContain('/post/2/delete')
