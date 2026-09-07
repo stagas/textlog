@@ -2368,6 +2368,29 @@ test('posts describe whether their author wrote or replied', () => {
     + '<span class="reference-menu"><a class="reference-menu-trigger postauthor" href="/u/deleted-363')
 })
 
+test('quizzes show the answer count after the viewer answers', () => {
+  const base = { id: 13, user_id: 1, parent_id: null, body: 'Capital? #quiz',
+    created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'quizzer', reply_count: 0 }
+  const options = [
+    { id: 1, label: 'Rome', votes: 1, selected: false, correct: false },
+    { id: 2, label: 'Athens', votes: 23, selected: true, correct: true },
+  ]
+  const answered = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, poll: { kind: 'quiz' as const, options, totalVotes: 24,
+      expired: false, expiresAt: null, viewerVoted: true, explanation: 'Athens is the capital.' } },
+    user: null,
+  }))
+  const unanswered = renderToStaticMarkup(React.createElement(Post, {
+    p: { ...base, poll: { kind: 'quiz' as const, options, totalVotes: 24,
+      expired: false, expiresAt: null, viewerVoted: false } },
+    user: null,
+  }))
+
+  expect(answered).toContain('<span class="poll-meta">24 answered</span>')
+  expect(answered.indexOf('24 answered')).toBeLessThan(answered.indexOf('class="quiz-explanation"'))
+  expect(unanswered).not.toContain('answered</span>')
+})
+
 test('moderators see a hidden-post label beside anonymized handles', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
     p: { id: 9, user_id: 1, parent_id: null, body: 'hidden body', created_at: '2026-08-20 12:00:00',

@@ -89,10 +89,14 @@ function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>
             </form>
           )
       })}
+      {p.poll.expired
+        ? <span className="poll-meta">{p.poll.totalVotes} voted</span>
+        : kind === 'quiz' && p.poll.viewerVoted
+        ? <span className="poll-meta">{p.poll.totalVotes} answered</span>
+        : null}
       {showResults && explanationHtml && (
         <div className="quiz-explanation" dangerouslySetInnerHTML={{ __html: explanationHtml }} />
       )}
-      {p.poll.expired && <span className="poll-meta">{p.poll.totalVotes} voted</span>}
     </div>
   )
 }
