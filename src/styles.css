@@ -1876,10 +1876,6 @@ body.corners-round a.button {
   color: var(--api-post-ink);
 }
 
-.post .language-mermaid .hljs-keyword {
-  color: var(--api-patch-ink);
-}
-
 .embed-example-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
