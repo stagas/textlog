@@ -25,24 +25,23 @@ afterAll(() => {
   database.close()
 })
 
-test('memory feed is invalidated when another process advances its generation', async () => {
-  const request = new Request('http://localhost/new')
+test('all feed memory is invalidated when another process advances its generation', async () => {
+  const request = new Request('http://localhost/all')
   let renders = 0
   const render = () => new Response(`<main>${++renders}</main>`, {
     headers: { 'content-type': 'text/html;charset=utf-8' },
   })
   const cacheVersion = 2_000_000_000 + Math.floor(Math.random() * 100_000_000)
 
-  const first = await rpcMaterializedFeedPage(request, 'new', -1, render, false, cacheVersion)
+  const first = await rpcMaterializedFeedPage(request, 'latest', -1, render, false, cacheVersion)
   expect(await first.text()).toBe('<main>1</main>')
-  const memory = await rpcMaterializedFeedPage(request, 'new', -1, render, false, cacheVersion)
+  const memory = await rpcMaterializedFeedPage(request, 'latest', -1, render, false, cacheVersion)
   expect(memory.headers.get('x-feed-cache')).toBe('memory')
 
   // Bypass the configured service to model a post committed by a different application process.
   database.run("INSERT INTO posts(id,user_id,body) VALUES(2,1,'second')")
 
-  const refreshed = await rpcMaterializedFeedPage(request, 'new', -1, render, false, cacheVersion)
-  expect(refreshed.headers.get('x-feed-cache')).not.toBe('memory')
-  // Let the deliberately stale durable artifact finish its scheduled refresh before closing this fixture.
-  await Bun.sleep(100)
+  const refreshed = await rpcMaterializedFeedPage(request, 'latest', -1, render, false, cacheVersion)
+  expect(refreshed.headers.get('x-feed-cache')).toBe('miss')
+  expect(await refreshed.text()).toBe('<main>2</main>')
 })

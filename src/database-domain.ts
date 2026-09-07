@@ -3642,29 +3642,18 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'cache.materializedFeedGet': {
       const { kind, viewerId, variant } = input as DatabaseDomainInput<'cache.materializedFeedGet'>
       const generation = materializedFeedGeneration(database, kind, viewerId)
-      const strictGeneration = materializedStrictGeneration(database, kind)
       let cached = cacheDb.query(`SELECT html,generation FROM materialized_feed_pages_v2
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?`).get(kind, viewerId, variant, generation) as {
         html: string
         generation: number
       } | null
-      let stale = false
-      if (!cached && (kind === 'latest' || kind === 'new')) {
-        cached = cacheDb.query(`SELECT html,generation FROM materialized_feed_pages_v2
-          WHERE kind=? AND viewer_id=? AND variant=? AND strict_generation=?
-          ORDER BY generation DESC LIMIT 1`).get(kind, viewerId, variant, strictGeneration) as {
-          html: string
-          generation: number
-        } | null
-        stale = !!cached
-      }
       if (cached) {
         cacheDb.query(`UPDATE materialized_feed_pages_v2 SET created_at=CURRENT_TIMESTAMP
         WHERE kind=? AND viewer_id=? AND variant=? AND generation=?
           AND created_at < datetime('now','-5 minutes')`).run(kind, viewerId, variant, cached.generation)
       }
       return { html: cached ? hydrateMaterializedFeed(cached.html, database, viewerId) : null, generation,
-        stale } as DatabaseDomainOutput<K>
+        stale: false } as DatabaseDomainOutput<K>
     }
     case 'cache.materializedFeedGeneration': {
       const { kind, viewerId } = input as DatabaseDomainInput<'cache.materializedFeedGeneration'>

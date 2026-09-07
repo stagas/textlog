@@ -14,7 +14,6 @@ type MaterializedResponse = {
 }
 
 const materializations = new Map<string, Promise<MaterializedResponse>>()
-const revalidations = new Map<string, Promise<void>>()
 type MemoryMaterialization = MaterializedResponse & {
   hitActionDone: boolean
 }
@@ -184,27 +183,10 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             html: cachedHtml,
           })
         }
-        if (cached.stale && !revalidations.has(key)) {
-          const revalidation = deferredCacheWork(async () => {
-            const response = await render()
-            if (response.status !== 200) return
-            const html = await response.text()
-            const cachedHtml = renderForCache
-              ? await (await renderForCache()).text()
-              : rerenderForCache
-              ? await (await render()).text()
-              : html
-            await persistMaterialization(kind, viewerId, variant, cached.generation, cachedHtml)
-          })
-          revalidations.set(key, revalidation)
-          void revalidation.finally(() => {
-            if (revalidations.get(key) === revalidation) revalidations.delete(key)
-          }).catch(error => console.error(`Could not refresh stale ${kind} feed`, error))
-        }
-        return { body: kind === 'latest' ? cached.html : cachedHtml, generation: cached.generation, status: 200,
+        return { body: cachedHtml, generation: cached.generation, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'], [
             'x-feed-cache',
-            cached.stale ? 'stale' : 'durable',
+            'durable',
           ]] }
       }
       const response = await render()
@@ -233,9 +215,6 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   }
   const result = await materialization
   if (!memoryCacheEnabled()) return new Response(result.body, { status: result.status, headers: result.headers })
-  if (result.headers.some(([name, value]) => name.toLowerCase() === 'x-feed-cache' && value === 'stale')) {
-    return new Response(result.body, { status: result.status, headers: result.headers })
-  }
   // A publication may have completed while this page was rendering. Never let that older render repopulate the LRU.
   if (startedAtMemoryGeneration !== memoryGeneration) {
     return new Response(result.body, { status: result.status, headers: result.headers })

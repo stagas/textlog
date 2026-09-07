@@ -5,7 +5,7 @@ import { executeDatabaseDomain } from './database-domain'
 import { runMigrations } from './migrations'
 
 for (const kind of ['latest', 'new'] as const) {
-  test(`${kind} serves the prior artifact after additions but not after strict mutations`, async () => {
+  test(`${kind} invalidates its artifact after additions and strict mutations`, async () => {
     const database = new Database(':memory:', { strict: true })
     database.run('PRAGMA foreign_keys=ON')
     runMigrations(database)
@@ -34,8 +34,8 @@ for (const kind of ['latest', 'new'] as const) {
         viewerId: -1,
         variant,
       })
-      expect(additive.html).toBe('<main>first</main>')
-      expect(additive.stale).toBeTrue()
+      expect(additive.html).toBeNull()
+      expect(additive.stale).toBeFalse()
       expect(additive.generation).toBeGreaterThan(initial.generation)
 
       database.run('UPDATE posts SET body=\'edited\' WHERE id=1')
