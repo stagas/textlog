@@ -27,6 +27,8 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
   expect(cachedAnonymousPostPage('/post/42')).toBeNull()
   expect(cachedOgResponse('post:42')).toBeNull()
   await databaseService().call('admin.translatePost', { id: 42, translation: 'Translated text' })
+  await databaseService().call('admin.addTagInvariant', { tag: 'status' })
+  await databaseService().call('admin.removeTagInvariant', { tag: 'status' })
   unsubscribe()
 
   expect(mutations).toEqual([
@@ -41,5 +43,7 @@ test('HTML mutations that change cached feed chrome invalidate in-memory pages',
     'admin.moderateUser',
     'admin.deletePost',
     'admin.translatePost',
+    'admin.addTagInvariant',
+    'admin.removeTagInvariant',
   ])
 })

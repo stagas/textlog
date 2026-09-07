@@ -10,7 +10,7 @@ import { apiActivities } from './api-activity'
 import { issueApiKey } from './api-keys'
 import { consumeAuthAttempt, consumeBucketedAttempt, rateLimitKey } from './auth-rate-limit'
 import { runAutomatedBackup } from './backup-automation'
-import { cacheDb } from './cache-db'
+import { cacheDb, clearCacheDatabase } from './cache-db'
 import { extractAuthoredHashtags, extractHashtags, normalizeHashtag, normalizeHashtagSpelling } from './content'
 import { exportUserData } from './data-export'
 import { createBootDatabaseBackup } from './database-backup'
@@ -500,6 +500,29 @@ function invalidatePostFeedCaches() {
     cacheDb.query('DELETE FROM feed_snapshots').run()
     cacheDb.query('DELETE FROM materialized_feed_pages_v2').run()
   })()
+}
+
+function invalidateTagCaches(database: Database) {
+  clearCacheDatabase(cacheDb, true)
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshots'").get()) {
+    database.query('DELETE FROM feed_snapshots').run()
+  }
+  if (database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+  ).get()) {
+    database.query('UPDATE personalized_feed_generations SET generation=generation+1').run()
+  }
+  if (database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_snapshot_generation'",
+  ).get()) {
+    database.query('UPDATE feed_snapshot_generation SET generation=generation+1 WHERE id=1').run()
+  }
+  if (database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_publication_state'",
+  ).get()) {
+    database.query(`UPDATE feed_publication_state SET additive_generation=additive_generation+1,
+      strict_generation=strict_generation+1 WHERE id=1`).run()
+  }
 }
 
 function viewerIsModerator(database: Database, viewerId: number) {
@@ -1486,7 +1509,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           database.query(`DELETE FROM ${table} WHERE tag=?`).run(previouslyNormalized)
         }
       })()
-      cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      invalidateTagCaches(database)
       return null as DatabaseDomainOutput<K>
     }
     case 'admin.removeTagInvariant': {
@@ -1503,7 +1526,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         }
         return removed
       })()
-      if (result.changes) cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      if (result.changes) invalidateTagCaches(database)
       return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'admin.addTagAliases': {
@@ -1530,7 +1553,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           }
         }
       })()
-      cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      invalidateTagCaches(database)
       return { status: 'ready' } as DatabaseDomainOutput<K>
     }
     case 'admin.removeTagAlias': {
@@ -1540,7 +1563,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         if (removed.changes) reindexPostHashtags(database)
         return removed
       })()
-      if (result.changes) cacheDb.run('DELETE FROM materialized_feed_pages_v2')
+      if (result.changes) invalidateTagCaches(database)
       return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'admin.tagDisplayNames': {
@@ -1553,11 +1576,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { tag, displayName } = input as DatabaseDomainInput<'admin.setTagDisplayName'>
       database.query(`INSERT INTO tag_display_names(tag,display_name) VALUES(?,?)
         ON CONFLICT(tag) DO UPDATE SET display_name=excluded.display_name`).run(tag, displayName)
+      invalidateTagCaches(database)
       return null as DatabaseDomainOutput<K>
     }
     case 'admin.removeTagDisplayName': {
       const result = database.query('DELETE FROM tag_display_names WHERE tag=?')
         .run((input as DatabaseDomainInput<'admin.removeTagDisplayName'>).tag)
+      if (result.changes) invalidateTagCaches(database)
       return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'stats.dashboard':
