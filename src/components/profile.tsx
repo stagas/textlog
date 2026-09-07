@@ -290,17 +290,26 @@ export function Profile(
           {!editing && noteStreak}
         </div>
       </ProfileHeader>
-      {hiddenByBlock
-        ? (
-          <div className="empty relationship-notice">
-            {blocked ? 'You blocked this user. Unblock them to see their notes.' : 'This profile is unavailable.'}
-          </div>
-        )
-        : !editing && (
-          <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount} followers={followerCount}
-            following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
-            blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
-        )}
+      {!editing && (
+        <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount} followers={followerCount}
+          following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
+          blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
+      )}
+      {hiddenByBlock && (
+        <div className="empty relationship-notice">
+          {blocked
+            ? (
+              <>
+                You blocked this user.{' '}
+                <form method="post" action={'/block/' + profile.handle}>
+                  <button className="relationship-notice-action">Unblock them</button>
+                </form>
+                {' '}to see their notes.
+              </>
+            )
+            : 'This profile is unavailable.'}
+        </div>
+      )}
       {!editing && !hiddenByBlock && page > 1
         && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
       {!editing && !hiddenByBlock

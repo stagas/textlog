@@ -51,7 +51,9 @@ export function TagFeed(
                   </form>
                 )}
                 <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
-                  <button className={blocked ? 'button' : 'quiet danger'}>{blocked ? 'unblock' : 'block'}</button>
+                  <button className={`quiet danger${blocked ? ' quiet-accent' : ''}`}>
+                    {blocked ? 'unblock' : 'block'}
+                  </button>
                 </form>
               </div>
             )
@@ -88,7 +90,15 @@ export function TagFeed(
           )
           : <div className="empty">No one follows this tag yet.</div>
         : blocked
-        ? <div className="empty relationship-notice">You blocked this tag. Unblock it to see its notes.</div>
+        ? (
+          <div className="empty relationship-notice">
+            You blocked this tag.{' '}
+            <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
+              <button className="relationship-notice-action">Unblock it</button>
+            </form>
+            {' '}to see its notes.
+          </div>
+        )
         : posts.length
         ? <FeedThreads posts={posts} user={user} returnPath={feedPath} />
         : <div className="empty">No notes use this hashtag yet.</div>}

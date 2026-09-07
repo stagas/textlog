@@ -102,11 +102,12 @@ export function registerProfilesRoutes(app: Hono) {
       type: 'profile' as const,
       imageAlt: `Profile for @${profile.handle}: ${description}`,
     }
-    if ((blocked || blockedByProfile) && !moderatorBypass) {
+    if ((blocked || blockedByProfile) && !moderatorBypass && tab !== 'following' && tab !== 'followers') {
       return page(
         <Profile user={user} profile={profile} posts={[]} following={false} blocked={blocked}
-          blockedByProfile={blockedByProfile} total={0} followerCount={0} followingCount={0} followingTagCount={0}
-          social={social} returnPath={returnPath} bioReference={bioReference} />,
+          blockedByProfile={blockedByProfile} total={0} noteCount={noteCount} replyCount={replyCount}
+          tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount} followingCount={followingCount}
+          followingTagCount={followingTagCount} social={social} returnPath={returnPath} bioReference={bioReference} />,
       )
     }
     if (tab === 'blocked') {
@@ -164,6 +165,7 @@ export function registerProfilesRoutes(app: Hono) {
           sort={connectionSort} total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount}
           noteCount={noteCount} replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
           followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}
+          blocked={blocked}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
           returnPath={returnPath} bioReference={bioReference} noteStreakDates={noteStreakDates} />,
       )

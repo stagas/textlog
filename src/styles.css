@@ -2326,6 +2326,14 @@ body.corners-round a.button {
   font-size: var(--font-size-11);
 }
 
+.quiet.danger.quiet-accent {
+  color: var(--accent);
+}
+
+.quiet.danger.quiet-accent:hover {
+  color: var(--accent-dark);
+}
+
 .feedhead,
 .post {
   padding: var(--space-5) var(--gutter);
@@ -2343,6 +2351,21 @@ body.corners-round a.button {
 
 .feed-relationship-content {
   min-width: 0;
+}
+
+.relationship-notice form {
+  display: inline;
+}
+
+.relationship-notice-action {
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border-bottom: var(--hairline) solid var(--link-border);
+}
+
+.relationship-notice-action:hover {
+  color: var(--accent-dark);
 }
 
 .feed-relationship-main {
@@ -5624,6 +5647,10 @@ form.report-panel {
   gap: var(--space-4);
 }
 
+.profile-handle-actions:has(.quiet-accent) {
+  min-height: calc(var(--space-3) + var(--space-3) + 1.125rem);
+}
+
 .profile-handle-actions form:has(> .follows-you) {
   position: relative;
 }
@@ -5818,6 +5845,10 @@ form.report-panel {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+}
+
+.tag-handle-actions:has(.quiet-accent) {
+  min-height: calc(var(--space-3) + var(--space-3) + 1.21875rem);
 }
 
 .tag-back-link {

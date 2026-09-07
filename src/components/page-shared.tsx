@@ -758,7 +758,7 @@ export function ProfileControls({ user, profile, following, followsViewer = fals
             </form>
           )}
           <form method="post" action={'/block/' + profile.handle}>
-            <button className={blocked ? 'button' : 'quiet danger'}
+            <button className={`quiet danger${blocked ? ' quiet-accent' : ''}`}
               aria-label={`${blocked ? 'unblock' : 'block'} @${profile.handle}`}
             >
               {blocked ? 'unblock' : 'block'}
