@@ -148,6 +148,13 @@ describe('API writes', () => {
   test('autotag requires authentication and validates text before contacting the provider', async () => {
     const { app } = fixture()
     expect((await call(app, '/api/v1/autotag', { method: 'POST', body: { body: 'hello' } })).status).toBe(401)
+    const empty = await call(app, '/api/v1/autotag', {
+      method: 'POST',
+      token: 'alice-token',
+      body: { body: '  \n ' },
+    })
+    expect(empty.status).toBe(400)
+    expect(await empty.json()).toMatchObject({ error: { code: 'invalid_body' } })
     const invalid = await call(app, '/api/v1/autotag', {
       method: 'POST',
       token: 'alice-token',

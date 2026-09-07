@@ -99,23 +99,24 @@ test('write page omits the redundant header write action', () => {
   expect(html).toContain('<body class="density-regular write-page">')
 })
 
-test('write page shows a back button above the form when a return path is available', () => {
+test('write page uses dedicated chrome and an embedded form', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-01-01',
     handle_chosen_at: '2026-01-01' }
   const html = renderToStaticMarkup(
     React.createElement(Compose, { user, returnPath: '/latest?page=2', showBack: true }),
   )
 
+  expect(html).not.toContain('<header')
+  expect(html).not.toContain('<footer')
+  expect(html).toContain('class="write-page-bar"')
   expect(html).toContain('class="profile-edit-link compose-back-link" href="/latest?page=2">back</a>')
-  expect(html).toContain('<div class="page-header compose-heading-row compose-heading-row-with-back"><h2>'
-    + 'What’s on your mind, <span class="compose-heading-at">@</span>reader?</h2>'
-    + '<a class="profile-edit-link compose-back-link"')
+  expect(html).toContain('class="panel panel-surface panel-medium compose write-compose embedded-write-compose"')
   expect(html).toContain('type="hidden" name="show_back" value="1"')
-  expect(html).not.toContain('placeholder="What’s on your mind, @reader?"')
+  expect(html).toContain('placeholder="What’s on your mind, @reader?"')
   expect(html.indexOf('>back</a>')).toBeLessThan(html.indexOf('write-compose'))
 })
 
-test('write preview places its heading and back link in the same row', () => {
+test('write preview remains inside the dedicated write shell', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-01-01',
     handle_chosen_at: '2026-01-01' }
   const html = renderToStaticMarkup(React.createElement(Compose, {
@@ -126,8 +127,9 @@ test('write preview places its heading and back link in the same row', () => {
     showBack: true,
   }))
 
-  expect(html).toContain('<div class="compose-preview-heading"><h2>preview</h2>'
-    + '<a class="profile-edit-link compose-back-link" href="/latest">back</a></div>')
+  expect(html).toContain('class="write-page-bar"')
+  expect(html).toContain('<div class="compose-preview-heading"><h2>preview</h2></div>')
+  expect(html).toContain('compose write-compose embedded-write-compose')
   expect(html).not.toContain('class="page-header compose-heading-row')
 })
 
@@ -365,7 +367,8 @@ test('account switcher errors use the shared error notice', () => {
     error: 'Could not switch accounts.',
   }))
 
-  expect(html).toContain('class="status-message status-error" role="alert">Could not switch accounts.</p>')
+  expect(html).toContain('class="status-message status-error" role="alert"><span>Could not switch accounts.</span>')
+  expect(html).toContain('class="status-message-dismiss" title="Dismiss error"')
   expect(html).not.toContain('class="error"')
 })
 
@@ -390,6 +393,7 @@ test('compose offers a server-rendered post preview', () => {
   }))
 
   expect(form).toContain('name="action" value="preview" title="Preview this post before publishing">preview</button>')
+  expect(form).not.toContain('name="embedded"')
   expect(form).toContain('name="action" value="autotag" title="Enrich post with hashtags">autotag')
   expect(form).not.toContain('compose-new-badge')
   expect(form.indexOf('>autotag')).toBeLessThan(form.indexOf('>preview</button>'))
@@ -399,13 +403,13 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).toContain('What’s on your mind')
   expect(preview.indexOf('<h2>preview</h2>')).toBeLessThan(preview.indexOf('<form method="post" action="/post">'))
   expect(preview).not.toContain('<h1 class="compose-heading">')
-  expect(preview).not.toContain('placeholder="What’s on your mind, @writer?"')
-  expect(preview.indexOf('<form action="/post" method="post">')).toBeLessThan(preview.indexOf('<textarea'))
+  expect(preview).toContain('placeholder="What’s on your mind, @writer?"')
+  expect(preview.indexOf('<form method="post" action="/post">')).toBeLessThan(preview.indexOf('<textarea'))
   expect(preview.indexOf('<div class="compose-post-preview">')).toBeLessThan(
-    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
+    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose embedded-write-compose">'),
   )
   expect(preview.slice(
-    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose">'),
+    preview.indexOf('<div class="panel panel-surface panel-medium compose write-compose embedded-write-compose">'),
   )).not.toContain('<div class="compose-post-preview">')
   expect(preview).toContain('Hello <a href="/u/reader">@reader</a>, see <a href="/tag/world"')
   expect(preview).toContain('<a class="raw-link" href="https://example.com"')
@@ -616,12 +620,12 @@ test('posting helpers use the compact action and show copyable highlighted resul
     suggestionSearch: { kind: 'hashtags', query: 'type', results: ['typescript', 'typestyle'], truncated: true },
   }))
 
-  expect(html).toContain('<label class="secondary-action posting-help-action" for="write-posting-help"')
+  expect(html).toContain('<label class="secondary-action posting-help-action" for="embedded-posting-help"')
   expect(html).toContain('title="Toggle writing actions and help"')
   expect(html).toContain('/><span class="posting-help-more">more</span>')
   expect(html).toContain('<span class="posting-help-less">less</span></label>')
   expect(html).toContain(
-    'id="write-posting-help" type="checkbox" aria-controls="write-posting-help-content" checked=""',
+    'id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content" checked=""',
   )
   expect(html).toContain('class="posting-help-actions"')
   expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
@@ -708,7 +712,8 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
   expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
   expect(html).toContain(
-    'autofocus="" aria-label="What’s on your mind, @writer?" autocomplete="off" inputmode="text" '
+    'autofocus="" accesskey="w" placeholder="What’s on your mind, @writer?" '
+      + 'aria-label="What’s on your mind, @writer?" autocomplete="off" inputmode="text" '
       + 'enterkeyhint="enter">A draft worth keeping</textarea>',
   )
   expect(html).toContain('#<mark>type</mark>script')

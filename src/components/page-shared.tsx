@@ -44,7 +44,14 @@ export function FormMessage({ error, success }: { error?: string; success?: stri
   if (!error && !success) return null
   return (
     <p className={`status-message ${error ? 'status-error' : 'status-success'}`} role={error ? 'alert' : 'status'}>
-      {error || success}
+      <span>{error || success}</span>
+      {error && (
+        <label className="status-message-dismiss" title="Dismiss error">
+          <input className="visually-hidden" type="checkbox" />
+          <span className="status-message-dismiss-icon" aria-hidden="true" />
+          <span className="visually-hidden">Dismiss error</span>
+        </label>
+      )}
     </p>
   )
 }

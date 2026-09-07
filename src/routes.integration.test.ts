@@ -390,6 +390,16 @@ test('an anonymous feed note is published after signup chooses a handle', async 
   expect(autotagHtml).toContain('anonymous-write-compose')
   expect(autotag.headers.get('location')).toBeNull()
 
+  const emptyAutotag = await request('/post', {
+    method: 'POST',
+    ip,
+    form: { body: '  \n ', from: '/hot', embedded: '1', action: 'autotag' },
+  })
+  expect(emptyAutotag.status).toBe(400)
+  const emptyAutotagHtml = await emptyAutotag.text()
+  expect(emptyAutotagHtml).toContain('The note cannot be empty')
+  expect(emptyAutotagHtml).not.toContain('Autotag is not configured.')
+
   const started = await request('/post', {
     method: 'POST',
     ip,
@@ -1823,7 +1833,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(embeddedErrorHtml).toContain(
     'class="panel panel-surface panel-medium compose write-compose embedded-write-compose"',
   )
-  expect(embeddedErrorHtml).toContain('The note must contain between 1 and 500 characters.')
+  expect(embeddedErrorHtml).toContain('The note cannot be empty')
   expect(embeddedErrorHtml).not.toContain('<title>write ·')
   const embeddedPreviewBody = 'Preview this note without leaving the feed'
   const embeddedPreview = await request('/all', {

@@ -398,6 +398,12 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(f.body || '')
     if (!user) {
       if (f.action === 'autotag') {
+        if (!body.trim()) {
+          return page(
+            <AnonymousCompose body={body} returnPath={returnPath} error={postBodyValidationMessage(body)} />,
+            400,
+          )
+        }
         const result = await autotagText(body)
         const enrichedBody = result.ok ? normalizePostBody(result.body) : body
         const valid = result.ok && validPostBody(enrichedBody)
@@ -441,6 +447,13 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'autotag') {
+      if (!body.trim()) {
+        return page(
+          <Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
+            showBack={showBack} error={postBodyValidationMessage(body)} />,
+          400,
+        )
+      }
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
@@ -662,6 +675,13 @@ export function registerPostsRoutes(app: Hono) {
       )
     }
     if (f.action === 'autotag') {
+      if (!body.trim()) {
+        return page(
+          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
+            moderator={moderating} error={postBodyValidationMessage(body)} />,
+          400,
+        )
+      }
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)
@@ -797,6 +817,10 @@ export function registerPostsRoutes(app: Hono) {
       return renderReplyState({ body, draftId: editingDraftId, returnPath, suggestionSearch })
     }
     if (f.action === 'autotag') {
+      if (!body.trim()) {
+        return renderReplyState({ error: postBodyValidationMessage(body), body, draftId: editingDraftId, returnPath },
+          400)
+      }
       const result = await autotagText(body)
       const enrichedBody = result.ok ? normalizePostBody(result.body) : body
       const valid = result.ok && validPostBody(enrichedBody)

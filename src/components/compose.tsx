@@ -1,5 +1,7 @@
 import { POST_MAX } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
+import { appName } from '../brand'
+import { activeThemeLogoSvg } from '../theme'
 import type { User } from '../types'
 import type { LocationView, PostView } from '../types'
 import { Layout } from './layout'
@@ -32,29 +34,41 @@ export function Compose(
 ) {
   if (!canPublishPosts(user)) {
     return (
-      <Layout user={user} title="write">
-        <VerificationRequired />
+      <Layout user={user} title="write" fullScreen fullScreenScrollable>
+        <WritePageShell returnPath={returnPath}>
+          <VerificationRequired />
+        </WritePageShell>
       </Layout>
     )
   }
   return (
-    <Layout user={user} title="write">
-      {preview && (
-        <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput} location={previewLocation}
-          backPath={showBack ? returnPath : undefined} />
-      )}
-      {!preview && (
-        <div className={`page-header compose-heading-row${showBack ? ' compose-heading-row-with-back' : ''}`}>
-          <h2>
-            What’s on your mind, <span className="compose-heading-at">@</span>
-            {user.handle}?
-          </h2>
-          {showBack && <a className="profile-edit-link compose-back-link" href={returnPath}>back</a>}
-        </div>
-      )}
-      <WriteForm user={user} error={error} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch}
-        draftId={draftId} autoFocus showBack={showBack} />
+    <Layout user={user} title="write" fullScreen fullScreenScrollable>
+      <WritePageShell returnPath={returnPath}>
+        {preview && (
+          <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput} location={previewLocation} />
+        )}
+        <WriteForm user={user} error={error} body={body} returnPath={returnPath}
+          suggestionSearch={suggestionSearch} draftId={draftId} autoFocus={!preview} embedded standalone
+          showBack={showBack} />
+      </WritePageShell>
     </Layout>
+  )
+}
+
+function WritePageShell({ returnPath, children }: { returnPath: string; children: React.ReactNode }) {
+  const name = appName()
+  return (
+    <section className="write-page-shell">
+      <div className="write-page-bar">
+        <a className="brand" href="/" aria-label={`${name} home`}>
+          <span className="brand-logo" aria-hidden="true"
+            dangerouslySetInnerHTML={{ __html: activeThemeLogoSvg() }} />
+          <span>{name}</span>
+        </a>
+        <a className="profile-edit-link compose-back-link" href={returnPath}>back</a>
+      </div>
+      <div className="write-page-content">{children}</div>
+    </section>
   )
 }
 
@@ -110,7 +124,7 @@ export function ComposePreview({ user, body, executionOutput, location, backPath
 
 export function WriteForm(
   { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false,
-    showBack = false }: {
+    standalone = false, showBack = false }: {
       user: User
       error?: string
       body?: string
@@ -119,6 +133,7 @@ export function WriteForm(
       draftId?: string
       autoFocus?: boolean
       embedded?: boolean
+      standalone?: boolean
       showBack?: boolean
     },
 ) {
@@ -131,7 +146,8 @@ export function WriteForm(
       >
         autotag
       </button>
-      <button className="secondary-action" name="action" value="preview" formAction={embedded ? returnPath : undefined}
+      <button className="secondary-action" name="action" value="preview"
+        formAction={embedded && !standalone ? returnPath : undefined}
         title="Preview this post before publishing"
       >
         preview
@@ -158,7 +174,7 @@ export function WriteForm(
       <form method="post" action="/post">
         <input type="hidden" name="from" value={returnPath} />
         {showBack && <input type="hidden" name="show_back" value="1" />}
-        {embedded && <input type="hidden" name="embedded" value="1" />}
+        {embedded && !standalone && <input type="hidden" name="embedded" value="1" />}
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         <div className="compose-editor-row">

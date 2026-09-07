@@ -17,6 +17,7 @@ describe('post bodies', () => {
   test('still rejects empty and genuinely oversized bodies', () => {
     expect(validPostBody('   \n')).toBe(false)
     expect(validPostBody('x'.repeat(501))).toBe(false)
+    expect(postBodyValidationMessage('   \n')).toBe('The note cannot be empty')
   })
 
   test('allows up to fifteen lines and rejects sixteen', () => {
@@ -27,7 +28,7 @@ describe('post bodies', () => {
   test('reports exact counts for each exceeded limit', () => {
     const body = Array(16).fill('x').join('\n')
     expect(postBodyValidationMessage(body)).toBe('The note exceeds the limit: 16/15 lines.')
-    expect(postBodyValidationMessage('x'.repeat(501))).toBe('The note exceeds the limit: 501/500 characters.')
+    expect(postBodyValidationMessage('x'.repeat(501))).toBe('The note cannot exceed 500 characters')
 
     const overBothLimits = `${'x'.repeat(484)}\n${Array(16).fill('x').join('\n')}`
     expect(postBodyValidationMessage(overBothLimits)).toBe(
