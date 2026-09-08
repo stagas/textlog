@@ -3,7 +3,8 @@ import { isAdminEmail } from './admin'
 import { activityAnchor } from './activity-anchor'
 import { isAdmin } from './admin'
 import { databaseIdentity } from './database-identity'
-import { feedSnapshotPage } from './feed-snapshots'
+import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
+import { materializedPersonalizedGroupPage, personalizedFeedUnreadCount } from './feed-state'
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { excludesDroppedUsernameUsers, resolveHandle } from './handles'
 import { projectRecentConversation } from './latest-conversation'
@@ -28,6 +29,9 @@ function rememberUnreadCount(key: string, count: number) {
 }
 
 export function personalizedUnreadCount(database: Database, userId: number, toMe: boolean) {
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) {
+    return personalizedFeedUnreadCount(database, userId, toMe ? 'to-me' : 'for-you')
+  }
   const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
   const reads = toMe ? 'to_me_reads' : 'for_you_reads'
   const pending = database.query(`SELECT 1 FROM sqlite_master
@@ -83,34 +87,35 @@ export function personalizedUnreadCount(database: Database, userId: number, toMe
   return count
 }
 
-const descendsFromViewer = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  WHERE ancestry.post_id=p.id AND ancestry.ancestor_user_id=$viewer)`
-
-const descendsFromFollowedUser = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN follows ON follows.following_id=ancestry.ancestor_user_id
-  WHERE ancestry.post_id=p.id AND follows.follower_id=$viewer AND p.created_at>=follows.created_at)`
-
-const descendsFromFollowedTag = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN post_hashtags ph ON ph.post_id=ancestry.ancestor_id
-  JOIN hashtag_follows hf ON hf.tag=ph.tag
-  WHERE ancestry.post_id=p.id AND hf.user_id=$viewer AND p.created_at>=hf.created_at)`
-
-const hasVisibleDescendantFromAnotherUser = `EXISTS (SELECT 1 FROM post_ancestors ancestry
-  JOIN posts d ON d.id=ancestry.post_id WHERE ancestry.ancestor_id=p.id
-  AND d.user_id!=$viewer AND d.deleted_at IS NULL
-  AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-    (b.blocker_id=$viewer AND b.blocked_id=d.user_id) OR (b.blocker_id=d.user_id AND b.blocked_id=$viewer)))
-  AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-    WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
-
 export function loadPersonalizedFeed(database: Database, user: User, page: number, pageSize: number, toMe: boolean,
   path: string, markRead = true): PersonalizedFeedData
 {
   const hiddenAuthorVisibility = isAdminEmail(user.email) ? '1' : excludesDroppedUsernameUsers(database)
   const readsTable = toMe ? 'to_me_reads' : 'for_you_reads'
   const filter = toMe ? 'WHERE timeline.targeted_to_viewer=1' : ''
-  const snapshotKind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
-  const snapshot = feedSnapshotPage<PersonalizedTimelineRow[]>(database, snapshotKind, user.id, page, () => {
+  const materializedGroups = materializedPersonalizedGroupPage(database, user.id, toMe ? 'to-me' : 'for-you', page,
+    pageSize, personalizedFeedGeneration(database, user.id))
+  const selectedGroups = materializedGroups?.groups || []
+  const moderator = isAdmin(user)
+  const postCandidates = `SELECT viewer_id,source_post_id post_id,reason FROM personalized_feed_entries
+    WHERE feed=$feed AND eligible=1`
+  const userFollowEvents = `SELECT actor_id follower_id,target_user_id following_id,created_at,event_key
+      FROM personalized_feed_entries WHERE viewer_id=$viewer AND feed=$feed AND eligible=1
+        AND event_kind='user_follow'`
+  const tagFollowEvents = `SELECT actor_id user_id,target_tag tag,created_at,event_key FROM personalized_feed_entries
+    WHERE viewer_id=$viewer AND feed=$feed AND eligible=1 AND event_kind='tag_follow'`
+  const blockVisibility = moderator ? '1' : `NOT EXISTS (SELECT 1 FROM blocks b
+    WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
+      OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer))`
+  const userFollowQualification = '1'
+  const tagFollowQualification = '1'
+  const actorTargetBlockVisibility = moderator ? '1' : `NOT EXISTS (SELECT 1 FROM blocks b
+    WHERE (b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id))
+      OR (b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id)))`
+  const actorBlockVisibility = moderator ? '1' : `NOT EXISTS (SELECT 1 FROM blocks b
+    WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
+      OR (b.blocked_id=$viewer AND b.blocker_id=actor.id))`
+  const buildTimeline = () => {
     const rows = database.query(`SELECT timeline.*,
       NOT EXISTS(SELECT 1 FROM ${readsTable} seen WHERE seen.user_id=$viewer
         AND seen.event_key=timeline.event_key) unread FROM (
@@ -121,21 +126,15 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         u.handle actor_handle,u.bio actor_bio,NULL target_handle,NULL target_tag,NULL target_bio,
         0 target_is_viewer,
         0 targeted_to_viewer,NULL posts
-      FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+      FROM (${postCandidates}) candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility}
-        AND ((NOT ${isWhisperThread()} AND
-        ((p.user_id=$viewer AND (parent.user_id!=$viewer OR
-        ${hasVisibleDescendantFromAnotherUser})) OR p.user_id IN
-        (SELECT following_id FROM follows WHERE follower_id=$viewer AND p.created_at>=created_at) OR ${descendsFromViewer}
-        OR ${descendsFromFollowedUser} OR ${descendsFromFollowedTag} OR p.id IN
-        (SELECT ph.post_id FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
-          WHERE hf.user_id=$viewer AND p.created_at>=hf.created_at)))
-        OR ${whisperThreadRelevantToViewer()})
-        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
-          WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
-          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer)))
+        AND ($materializedGroups=0 OR 'conversation:' || printf('%020d',coalesce(
+          (SELECT conversation_id FROM post_conversations WHERE post_id=p.id),p.id))
+          IN (SELECT value FROM json_each($groups)))
+        AND (NOT ${isWhisperThread()} OR ${whisperThreadRelevantToViewer()})
+        AND ${blockVisibility}
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
         AND (p.user_id=$viewer OR (parent.user_id IS NOT $viewer AND pm.user_id IS NULL
@@ -147,72 +146,64 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         CASE WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END activity_kind,
         'post:' || printf('%020d',p.id) event_key,p.user_id actor_id,u.handle actor_handle,u.bio actor_bio,
         NULL target_handle,NULL target_tag,NULL target_bio,0 target_is_viewer,1 targeted_to_viewer,NULL posts
-      FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+      FROM (${postCandidates}) candidate JOIN posts p ON p.id=candidate.post_id
       JOIN users u ON u.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=$viewer
       WHERE candidate.viewer_id=$viewer AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility}
+        AND ($materializedGroups=0 OR 'conversation:' || printf('%020d',coalesce(
+          (SELECT conversation_id FROM post_conversations WHERE post_id=p.id),p.id))
+          IN (SELECT value FROM json_each($groups)))
         AND p.user_id!=$viewer
-        AND (parent.user_id=$viewer OR pm.user_id IS NOT NULL OR ${whisperThreadTargetsViewer()})
-        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
-          WHERE (b.blocker_id=$viewer AND b.blocked_id=p.user_id)
-          OR (b.blocker_id=p.user_id AND b.blocked_id=$viewer)))
+        AND (candidate.reason & 56)!=0
+        AND ${blockVisibility}
         AND NOT EXISTS (SELECT 1 FROM post_hashtags tph JOIN blocked_hashtags bh ON bh.tag=tph.tag
           WHERE tph.post_id=p.id AND bh.user_id=$viewer)
       UNION ALL
       SELECT NULL id,actor.id user_id,NULL body,NULL translation,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,NULL execution_output,NULL moderation_category,NULL moderation_score,actor.handle,
         EXISTS(SELECT 1 FROM follows tf WHERE tf.follower_id=$viewer AND tf.following_id=target.id) following,
-        'user_follow' activity_kind,
-        'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',target.id) || ':' || f.created_at event_key,
+        'user_follow' activity_kind,f.event_key,
         actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,
         target.handle target_handle,NULL target_tag,
         target.bio target_bio,target.id=$viewer target_is_viewer,target.id=$viewer targeted_to_viewer,
         (SELECT count(*) FROM posts tp WHERE tp.user_id=target.id AND tp.deleted_at IS NULL) posts
-      FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
-      WHERE f.created_at IS NOT NULL AND actor.id!=$viewer AND EXISTS
-        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
-          AND f.created_at>=vf.created_at) AND target.id!=$viewer
+      FROM (${userFollowEvents}) f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
+      WHERE f.created_at IS NOT NULL AND actor.id!=$viewer
+        AND ($materializedGroups=0 OR f.event_key IN (SELECT value FROM json_each($groups)))
+        AND ${userFollowQualification} AND target.id!=$viewer
         AND $hidePeopleFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
         AND target.deleted_at IS NULL AND target.suspended_at IS NULL
-        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
-          WHERE b.blocker_id=$viewer AND b.blocked_id IN (actor.id,target.id)
-          OR b.blocked_id=$viewer AND b.blocker_id IN (actor.id,target.id)))
+        AND ${actorTargetBlockVisibility}
       UNION ALL
       SELECT NULL id,actor.id user_id,NULL body,NULL translation,hf.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,NULL execution_output,NULL moderation_category,NULL moderation_score,actor.handle,
         EXISTS(SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag) following,
-        'tag_follow' activity_kind,
-        'tag-follow:' || printf('%020d',actor.id) || ':' || hf.tag || ':' || hf.created_at event_key,
+        'tag_follow' activity_kind,hf.event_key,
         actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,
         NULL target_handle,hf.tag target_tag,NULL target_bio,
         0 target_is_viewer,0 targeted_to_viewer,(SELECT count(*) FROM post_hashtags ph JOIN posts hp ON hp.id=ph.post_id
           WHERE ph.tag=hf.tag AND hp.deleted_at IS NULL) posts
-      FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id
-      WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer AND (EXISTS
-        (SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id
-          AND hf.created_at>=vf.created_at) OR EXISTS
-        (SELECT 1 FROM hashtag_follows vt WHERE vt.user_id=$viewer AND vt.tag=hf.tag
-          AND hf.created_at>=vt.created_at))
+      FROM (${tagFollowEvents}) hf JOIN users actor ON actor.id=hf.user_id
+      WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND actor.id!=$viewer
+        AND ($materializedGroups=0 OR hf.event_key IN (SELECT value FROM json_each($groups)))
+        AND ${tagFollowQualification}
         AND $hideHashtagFollowActivity=0 AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
-        AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b
-          WHERE (b.blocker_id=$viewer AND b.blocked_id=actor.id)
-          OR (b.blocker_id=actor.id AND b.blocked_id=$viewer)))
+        AND ${actorBlockVisibility}
         AND NOT EXISTS (SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=$viewer AND bh.tag=hf.tag)
       UNION ALL
       SELECT NULL id,actor.id user_id,NULL body,NULL translation,f.created_at,NULL parent_id,NULL deleted_at,NULL has_latex,
         NULL has_links,NULL has_code,NULL execution_output,NULL moderation_category,NULL moderation_score,actor.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=actor.id) following,
-        'user_follow' activity_kind,
-        'user-follow:' || printf('%020d',actor.id) || ':' || printf('%020d',$viewer) || ':' || f.created_at event_key,
+        'user_follow' activity_kind,f.event_key,
         actor.id actor_id,actor.handle actor_handle,actor.bio actor_bio,
         NULL target_handle,NULL target_tag,
         actor.bio target_bio,1 target_is_viewer,1 targeted_to_viewer,
         (SELECT count(*) FROM posts fp WHERE fp.user_id=actor.id AND fp.deleted_at IS NULL) posts
-      FROM follows f JOIN users actor ON actor.id=f.follower_id
+      FROM (${userFollowEvents}) f JOIN users actor ON actor.id=f.follower_id
       WHERE f.following_id=$viewer AND f.created_at IS NOT NULL AND actor.deleted_at IS NULL
+        AND ($materializedGroups=0 OR f.event_key IN (SELECT value FROM json_each($groups)))
         AND ($toMe=1 OR $hidePeopleFollowActivity=0)
-        AND actor.suspended_at IS NULL AND ($bypassBlocks=1 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-          (b.blocker_id=$viewer AND b.blocked_id=actor.id) OR (b.blocker_id=actor.id AND b.blocked_id=$viewer)))
+        AND actor.suspended_at IS NULL AND ${actorBlockVisibility}
       UNION ALL
       SELECT NULL id,u.id user_id,NULL body,NULL translation,u.handle_chosen_at created_at,NULL parent_id,NULL deleted_at,
         NULL has_latex,NULL has_links,NULL has_code,NULL execution_output,NULL moderation_category,NULL moderation_score,
@@ -223,13 +214,18 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         NULL target_handle,NULL target_tag,u.bio target_bio,
         0 target_is_viewer,0 targeted_to_viewer,
         (SELECT count(*) FROM posts sp WHERE sp.user_id=u.id AND sp.deleted_at IS NULL) posts
-      FROM users u WHERE $admin=1 AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL
-        AND u.suspended_at IS NULL
+      FROM personalized_feed_entries signup JOIN users u ON u.id=signup.actor_id
+      WHERE $admin=1 AND signup.viewer_id=$viewer AND signup.feed='for-you'
+        AND signup.event_kind='signup' AND signup.eligible=1
+        AND ($materializedGroups=0 OR signup.event_key IN (SELECT value FROM json_each($groups)))
+        AND u.handle_chosen_at IS NOT NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ) timeline ${filter} ORDER BY timeline.created_at DESC,timeline.event_key DESC`).all({
       viewer: user.id,
+      feed: toMe ? 'to-me' : 'for-you',
+      groups: JSON.stringify(selectedGroups),
+      materializedGroups: Number(!!materializedGroups),
       toMe: Number(toMe),
       admin: Number(isAdmin(user)),
-      bypassBlocks: Number(isAdmin(user)),
       hidePeopleFollowActivity: user.hide_people_follow_activity || 0,
       hideHashtagFollowActivity: user.hide_hashtag_follow_activity || 0,
     }) as PersonalizedTimelineRow[]
@@ -308,7 +304,9 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     }
     return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
       .map(entry => entry.rows)
-  }, pageSize)
+  }
+  const snapshot = { snapshotId: 0, items: buildTimeline(), page: materializedGroups.page,
+    totalItems: materializedGroups.totalItems, totalPages: materializedGroups.totalPages }
 
   const snapshotRows = snapshot.items.flat()
   const readKeys = snapshotRows.length
@@ -385,28 +383,40 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     tagFollowerCount: row.target_tag ? tagCounts[row.target_tag] || 0 : undefined })
   )
   const visitedCount = personalizedUnreadCount(database, user.id, toMe)
-  let removeReadSnapshot = false
   if (markRead) {
     const unreadTimeline = timeline.filter(row => row.unread)
     const eventKeys = unreadTimeline.map(row => row.event_key)
-    if (markForYouEntriesRead(user.id, eventKeys, toMe, database)) {
-      removeReadSnapshot = true
-    }
+    markForYouEntriesRead(user.id, eventKeys, toMe, database)
   }
   const toMeCount = toMe ? visitedCount : personalizedUnreadCount(database, user.id, true)
   const forYouCount = toMe ? personalizedUnreadCount(database, user.id, false) : visitedCount
   const forYouUnread = forYouCount > 0
   const toMeUnread = toMeCount > 0
   const hasUnread = toMe ? toMeUnread : forYouUnread
+  const materializedUnread = (descending: boolean) => database.query(`SELECT
+      (SELECT count(*) FROM personalized_feed_groups newer WHERE newer.viewer_id=entry.viewer_id
+        AND newer.feed=entry.feed AND newer.latest_sequence>entry.sequence) position,
+      json_object('event_key',entry.event_key,'activity_kind',entry.event_kind,'id',entry.source_post_id) payload
+    FROM personalized_feed_entries entry
+    LEFT JOIN ${readsTable} seen ON seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key
+    WHERE entry.viewer_id=$unreadViewer AND entry.feed=$unreadFeed AND entry.eligible=1 AND seen.event_key IS NULL
+      AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR $hidePeople=0)
+      AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR $hideTags=0)
+    ORDER BY entry.sequence ${descending ? 'DESC' : 'ASC'} LIMIT 1`).get({
+    unreadViewer: user.id,
+    unreadFeed: toMe ? 'to-me' : 'for-you',
+    hidePeople: user.hide_people_follow_activity || 0,
+    hideTags: user.hide_hashtag_follow_activity || 0,
+  }) as { position: number; payload: string } | null
   const firstUnread = hasUnread
-    ? database.query(`SELECT item.position,row.value payload
+    ? materializedGroups ? materializedUnread(true) : database.query(`SELECT item.position,row.value payload
     FROM feed_snapshot_items item,json_each(item.payload) row
       LEFT JOIN ${readsTable} seen ON seen.user_id=? AND seen.event_key=json_extract(row.value,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position,row.key LIMIT 1`)
       .get(user.id, snapshot.snapshotId) as { position: number; payload: string } | null
     : null
   const lastUnread = firstUnread
-    ? database.query(`SELECT item.position,row.value payload
+    ? materializedGroups ? materializedUnread(false) : database.query(`SELECT item.position,row.value payload
     FROM feed_snapshot_items item,json_each(item.payload) row
       LEFT JOIN ${readsTable} seen ON seen.user_id=? AND seen.event_key=json_extract(row.value,'$.event_key')
     WHERE item.snapshot_id=? AND seen.event_key IS NULL ORDER BY item.position DESC,row.key DESC LIMIT 1`)
@@ -420,11 +430,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       ? `post-${row.id}`
       : activityAnchor(row.event_key)
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
-  }
-  // The current page may have just been marked read, but its snapshot is still needed to locate unread entries on
-  // later pages. Remove it only after deriving those links so the first response can render the bulk-read action.
-  if (removeReadSnapshot) {
-    database.query('DELETE FROM feed_snapshots WHERE kind=? AND viewer_id=?').run(snapshotKind, user.id)
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages, toMeCount, forYouCount,
     latestCount: unreadLatestCount(user.id, database), forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),

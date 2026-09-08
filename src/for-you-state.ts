@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { refreshPersonalizedFeedState } from './feed-state'
 import { isAdminEmail } from './admin'
 import { markLatestPostsRead } from './latest-state'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
@@ -237,17 +238,14 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
   latestEventKeys = eventKeys)
 {
   if (!eventKeys.length) return 0
-  const insert = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
-  const insertToMe = toMe
-    ? database.query('INSERT OR IGNORE INTO to_me_reads(user_id,event_key) VALUES(?,?)')
-    : null
+  const insert = database.query(`INSERT OR IGNORE INTO ${toMe ? 'to_me_reads' : 'for_you_reads'}
+    (user_id,event_key) VALUES(?,?)`)
   const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
     VALUES(?,'post:' || CAST(? AS INTEGER))`)
   let changed = 0
   database.transaction(() =>
     eventKeys.forEach(eventKey => {
       changed += insert.run(userId, eventKey).changes
-      changed += insertToMe?.run(userId, eventKey).changes || 0
       const postId = eventKey.match(/^post:(\d+)$/)?.[1]
       if (postId) insertActivity.run(userId, postId)
     })
@@ -256,7 +254,10 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
     const postId = eventKey.match(/^post:(\d+)$/)?.[1]
     return postId ? [Number(postId)] : []
   })
-  markLatestPostsRead(userId, postIds, database)
+  if (!toMe) markLatestPostsRead(userId, postIds, database)
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) {
+    refreshPersonalizedFeedState(database, userId, toMe ? 'to-me' : 'for-you')
+  }
   return changed
 }
 
@@ -282,6 +283,10 @@ export function markVisibleForYouEntriesRead(userId: number, eventKeys: string[]
       if (postId) insertActivity.run(userId, postId)
     })
   )()
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) {
+    refreshPersonalizedFeedState(database, userId, 'for-you')
+    if (toMe) refreshPersonalizedFeedState(database, userId, 'to-me')
+  }
   return visible.length
 }
 
@@ -303,4 +308,8 @@ export function markAllForYouRead(userId: number, toMe: boolean, database: Datab
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()
   markLatestPostsRead(userId, latestPostIds, database)
+  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) {
+    refreshPersonalizedFeedState(database, userId, 'for-you')
+    if (toMe) refreshPersonalizedFeedState(database, userId, 'to-me')
+  }
 }

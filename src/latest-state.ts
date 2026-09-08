@@ -107,7 +107,7 @@ export function unreadLatestCount(userId: number, database: Database) {
     ? `p.id<=coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)
       OR EXISTS (SELECT 1 FROM latest_read_exceptions r WHERE r.user_id=? AND r.post_id=p.id)`
     : 'EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)'
-  return (database.query(`SELECT count(*) count FROM posts p ${authorVisibility.join}
+  return (database.query(`SELECT count(*) count FROM (SELECT 1 FROM posts p ${authorVisibility.join}
     WHERE p.deleted_at IS NULL
       AND ${authorVisibility.filter}
       AND ${excludesExistingWhispers(database)}
@@ -116,7 +116,8 @@ export function unreadLatestCount(userId: number, database: Database) {
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
-      WHERE ph.post_id=p.id AND bh.user_id=?)`).get(...(usesCompactReads(database)
+      WHERE ph.post_id=p.id AND bh.user_id=?)
+    ORDER BY p.id DESC LIMIT 99)`).get(...(usesCompactReads(database)
     ? [userId, userId, userId, userId, userId]
     : [userId, userId, userId, userId])) as { count: number }).count
 }

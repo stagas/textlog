@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test'
 import { markAllForYouRead, markForYouEntriesRead, unreadForYouCount } from './for-you-state'
 import { runMigrations } from './migrations'
 
-test('reading personalized post events also marks them read in latest', () => {
+test('reading @ post events does not consume My Feed or All', () => {
   const database = new Database(':memory:')
   database.run(`
     CREATE TABLE posts(id INTEGER PRIMARY KEY);
@@ -14,10 +14,11 @@ test('reading personalized post events also marks them read in latest', () => {
     INSERT INTO posts(id) VALUES(42);
   `)
 
-  expect(markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)).toBe(2)
+  expect(markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)).toBe(1)
   expect(markForYouEntriesRead(7, ['post:00000000000000000042'], true, database)).toBe(0)
 
-  expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=7').all()).toEqual([{ post_id: 42 }])
+  expect(database.query('SELECT post_id FROM latest_reads WHERE user_id=7').all()).toEqual([])
+  expect(database.query('SELECT event_key FROM for_you_reads WHERE user_id=7').all()).toEqual([])
   expect(database.query('SELECT event_key FROM to_me_reads WHERE user_id=7').all())
     .toEqual([{ event_key: 'post:00000000000000000042' }])
 })

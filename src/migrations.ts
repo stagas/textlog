@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { instance } from '../instance.config'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, pascalCaseHashtagDisplayName,
   pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
@@ -3494,6 +3495,1566 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 201,
+    name: 'materialized_personalized_feed_state',
+    up(database) {
+      const required = ['users', 'posts', 'follows', 'post_mentions', 'post_hashtags', 'hashtag_follows', 'blocks',
+        'blocked_hashtags', 'muted_posts', 'personalized_post_candidates', 'for_you_reads', 'to_me_reads']
+      if (required.some(table => !database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      ).get(table))) return
+      database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_entries (
+          sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          feed TEXT NOT NULL CHECK(feed IN ('for-you','to-me')),
+          event_key TEXT NOT NULL,
+          event_kind TEXT NOT NULL,
+          source_post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+          actor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          target_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          target_tag TEXT,
+          reason INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          UNIQUE(viewer_id,feed,event_key));
+        CREATE INDEX IF NOT EXISTS personalized_feed_entries_page
+          ON personalized_feed_entries(viewer_id,feed,sequence DESC);
+        CREATE INDEX IF NOT EXISTS personalized_feed_entries_post
+          ON personalized_feed_entries(viewer_id,source_post_id);
+        CREATE INDEX IF NOT EXISTS personalized_feed_entries_actor
+          ON personalized_feed_entries(viewer_id,actor_id);
+        CREATE INDEX IF NOT EXISTS personalized_feed_entries_target
+          ON personalized_feed_entries(viewer_id,target_user_id);
+        CREATE INDEX IF NOT EXISTS personalized_feed_entries_tag
+          ON personalized_feed_entries(viewer_id,target_tag);
+        CREATE TABLE IF NOT EXISTS feed_state (
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          feed TEXT NOT NULL,
+          last_seen_sequence INTEGER NOT NULL DEFAULT 0,
+          latest_sequence INTEGER NOT NULL DEFAULT 0,
+          unread_count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY(viewer_id,feed)) WITHOUT ROWID;
+        CREATE TABLE IF NOT EXISTS personalized_feed_page_cursors (
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          feed TEXT NOT NULL,
+          page_size INTEGER NOT NULL,
+          page INTEGER NOT NULL,
+          before_sequence INTEGER,
+          generation INTEGER NOT NULL,
+          PRIMARY KEY(viewer_id,feed,page_size,page)) WITHOUT ROWID;
+
+        INSERT OR IGNORE INTO feed_state(viewer_id,feed)
+          SELECT id,'for-you' FROM users UNION ALL SELECT id,'to-me' FROM users;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_users_insert AFTER INSERT ON users BEGIN
+          INSERT OR IGNORE INTO feed_state(viewer_id,feed) VALUES(NEW.id,'for-you'),(NEW.id,'to-me');
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            VALUES(NEW.viewer_id,NEW.feed,NEW.sequence,1)
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=max(latest_sequence,NEW.sequence),
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_entries_delete AFTER DELETE ON personalized_feed_entries BEGIN
+          UPDATE feed_state SET
+            latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries
+              WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed),0),
+            unread_count=(SELECT count(*) FROM personalized_feed_entries
+              WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed AND sequence>last_seen_sequence)
+          WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed;
+          DELETE FROM personalized_feed_page_cursors WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_block_insert AFTER INSERT ON blocks BEGIN
+          DELETE FROM personalized_feed_entries WHERE viewer_id IN (NEW.blocker_id,NEW.blocked_id)
+            AND (actor_id IN (NEW.blocker_id,NEW.blocked_id)
+              OR target_user_id IN (NEW.blocker_id,NEW.blocked_id));
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_blocked_tag_insert AFTER INSERT ON blocked_hashtags BEGIN
+          DELETE FROM personalized_feed_entries WHERE viewer_id=NEW.user_id AND (
+            target_tag=NEW.tag OR source_post_id IN
+              (SELECT post_id FROM post_hashtags WHERE tag=NEW.tag));
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_candidate_insert
+          AFTER INSERT ON personalized_post_candidates BEGIN
+          INSERT INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,actor_id,
+            reason,created_at)
+          SELECT NEW.viewer_id,'for-you','post:' || printf('%020d',p.id),
+            CASE WHEN pm.user_id IS NOT NULL THEN 'mention'
+              WHEN parent.user_id=NEW.viewer_id THEN 'reply' ELSE 'post' END,
+            p.id,p.user_id,
+            (CASE WHEN p.user_id=NEW.viewer_id THEN 1 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=NEW.viewer_id
+                AND f.following_id=p.user_id AND (f.created_at IS NULL OR p.created_at>=f.created_at))
+              THEN 2 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
+                WHERE ph.post_id=p.id AND hf.user_id=NEW.viewer_id AND p.created_at>=hf.created_at)
+              THEN 4 ELSE 0 END)
+            | (CASE WHEN pm.user_id IS NOT NULL THEN 8 ELSE 0 END)
+            | (CASE WHEN parent.user_id=NEW.viewer_id THEN 16 ELSE 0 END),p.created_at
+          FROM posts p JOIN users author ON author.id=p.user_id
+          LEFT JOIN posts parent ON parent.id=p.parent_id
+          LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=NEW.viewer_id
+          WHERE p.id=NEW.post_id AND p.deleted_at IS NULL
+            AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=NEW.viewer_id AND b.blocked_id=p.user_id)
+              OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=p.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=NEW.viewer_id)
+            AND (pm.user_id IS NOT NULL OR NOT EXISTS(WITH RECURSIVE ancestry(id,parent_id) AS (
+              SELECT p.id,p.parent_id UNION ALL SELECT parent.id,parent.parent_id
+              FROM posts parent JOIN ancestry ON parent.id=ancestry.parent_id)
+              SELECT 1 FROM ancestry JOIN muted_posts muted ON muted.post_id=ancestry.id
+              WHERE muted.user_id=NEW.viewer_id))
+          ON CONFLICT(viewer_id,feed,event_key) DO UPDATE SET reason=reason|excluded.reason,
+            event_kind=excluded.event_kind;
+          INSERT INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,actor_id,
+            reason,created_at)
+          SELECT NEW.viewer_id,'to-me','post:' || printf('%020d',p.id),
+            CASE WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END,p.id,p.user_id,
+            (CASE WHEN pm.user_id IS NOT NULL THEN 8 ELSE 0 END)
+              | (CASE WHEN parent.user_id=NEW.viewer_id THEN 16 ELSE 0 END),p.created_at
+          FROM posts p JOIN users author ON author.id=p.user_id
+          LEFT JOIN posts parent ON parent.id=p.parent_id
+          LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=NEW.viewer_id
+          WHERE p.id=NEW.post_id AND p.user_id!=NEW.viewer_id AND p.deleted_at IS NULL
+            AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND (parent.user_id=NEW.viewer_id OR pm.user_id IS NOT NULL)
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=NEW.viewer_id AND b.blocked_id=p.user_id)
+              OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=p.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=NEW.viewer_id)
+          ON CONFLICT(viewer_id,feed,event_key) DO UPDATE SET reason=reason|excluded.reason,
+            event_kind=excluded.event_kind;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_mention_insert AFTER INSERT ON post_mentions BEGIN
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT NEW.user_id,id,created_at FROM posts WHERE id=NEW.post_id;
+          UPDATE personalized_feed_entries SET reason=reason|8,event_kind='mention'
+            WHERE viewer_id=NEW.user_id AND source_post_id=NEW.post_id;
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,actor_id,
+            reason,created_at)
+            SELECT NEW.user_id,'to-me','post:' || printf('%020d',p.id),'mention',p.id,p.user_id,8,p.created_at
+            FROM posts p JOIN users author ON author.id=p.user_id
+            WHERE p.id=NEW.post_id AND p.user_id!=NEW.user_id AND p.deleted_at IS NULL
+              AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+              AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+                (b.blocker_id=NEW.user_id AND b.blocked_id=p.user_id)
+                OR (b.blocked_id=NEW.user_id AND b.blocker_id=p.user_id))
+              AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+                WHERE ph.post_id=p.id AND bh.user_id=NEW.user_id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_tag_insert AFTER INSERT ON post_hashtags BEGIN
+          DELETE FROM personalized_feed_entries WHERE source_post_id=NEW.post_id AND viewer_id IN
+            (SELECT user_id FROM blocked_hashtags WHERE tag=NEW.tag);
+          INSERT OR IGNORE INTO personalized_post_candidates(viewer_id,post_id,created_at)
+            SELECT hf.user_id,p.id,p.created_at FROM hashtag_follows hf JOIN posts p ON p.id=NEW.post_id
+            WHERE hf.tag=NEW.tag AND p.created_at>=hf.created_at;
+          UPDATE personalized_feed_entries SET reason=reason|4
+            WHERE source_post_id=NEW.post_id AND viewer_id IN
+              (SELECT user_id FROM hashtag_follows WHERE tag=NEW.tag);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_post_delete AFTER UPDATE OF deleted_at ON posts
+          WHEN NEW.deleted_at IS NOT NULL BEGIN
+          DELETE FROM personalized_feed_entries WHERE source_post_id=NEW.id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_post_hard_delete BEFORE DELETE ON posts BEGIN
+          DELETE FROM personalized_feed_entries WHERE source_post_id=OLD.id;
+        END;
+
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,actor_id,
+          reason,created_at)
+          SELECT candidate.viewer_id,'for-you','post:' || printf('%020d',p.id),
+            CASE WHEN pm.user_id IS NOT NULL THEN 'mention'
+              WHEN parent.user_id=candidate.viewer_id THEN 'reply' ELSE 'post' END,p.id,p.user_id,
+            (CASE WHEN p.user_id=candidate.viewer_id THEN 1 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=candidate.viewer_id
+                AND f.following_id=p.user_id AND (f.created_at IS NULL OR p.created_at>=f.created_at))
+              THEN 2 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
+                WHERE ph.post_id=p.id AND hf.user_id=candidate.viewer_id AND p.created_at>=hf.created_at)
+              THEN 4 ELSE 0 END)
+            | (CASE WHEN pm.user_id IS NOT NULL THEN 8 ELSE 0 END)
+            | (CASE WHEN parent.user_id=candidate.viewer_id THEN 16 ELSE 0 END),p.created_at
+          FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+          JOIN users author ON author.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+          LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=candidate.viewer_id
+          WHERE p.deleted_at IS NULL AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=candidate.viewer_id AND b.blocked_id=p.user_id)
+              OR (b.blocked_id=candidate.viewer_id AND b.blocker_id=p.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=candidate.viewer_id);
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,actor_id,
+          reason,created_at)
+          SELECT candidate.viewer_id,'to-me','post:' || printf('%020d',p.id),
+            CASE WHEN pm.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END,p.id,p.user_id,
+            (CASE WHEN pm.user_id IS NOT NULL THEN 8 ELSE 0 END)
+              | (CASE WHEN parent.user_id=candidate.viewer_id THEN 16 ELSE 0 END),p.created_at
+          FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+          JOIN users author ON author.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+          LEFT JOIN post_mentions pm ON pm.post_id=p.id AND pm.user_id=candidate.viewer_id
+          WHERE p.user_id!=candidate.viewer_id AND p.deleted_at IS NULL
+            AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND (parent.user_id=candidate.viewer_id OR pm.user_id IS NOT NULL)
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=candidate.viewer_id AND b.blocked_id=p.user_id)
+              OR (b.blocked_id=candidate.viewer_id AND b.blocker_id=p.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=candidate.viewer_id);
+
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed
+          AND NOT EXISTS(SELECT 1 FROM for_you_reads reads WHERE reads.user_id=entry.viewer_id
+            AND reads.event_key=entry.event_key)
+          AND (entry.feed!='to-me' OR NOT EXISTS(SELECT 1 FROM to_me_reads reads WHERE
+            reads.user_id=entry.viewer_id AND reads.event_key=entry.event_key))),
+          latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed),0);`)
+    },
+  },
+  {
+    version: 202,
+    name: 'materialized_relationship_feed_events',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_follow_insert;
+        DROP TRIGGER IF EXISTS materialized_feed_follow_delete;
+        DROP TRIGGER IF EXISTS materialized_feed_hashtag_follow_insert;
+        DROP TRIGGER IF EXISTS materialized_feed_hashtag_follow_delete;
+
+        CREATE TRIGGER materialized_feed_follow_insert AFTER INSERT ON follows
+          WHEN NEW.created_at IS NOT NULL BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+            target_user_id,reason,created_at)
+          SELECT viewer.id,'for-you','user-follow:' || printf('%020d',NEW.follower_id) || ':'
+            || printf('%020d',NEW.following_id) || ':' || NEW.created_at,'user_follow',NEW.follower_id,
+            NEW.following_id,0,NEW.created_at
+          FROM users viewer JOIN follows vf ON vf.follower_id=viewer.id AND vf.following_id=NEW.follower_id
+          JOIN users actor ON actor.id=NEW.follower_id JOIN users target ON target.id=NEW.following_id
+          WHERE viewer.id!=NEW.follower_id AND viewer.id!=NEW.following_id
+            AND (vf.created_at IS NULL OR NEW.created_at>=vf.created_at)
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+            AND target.deleted_at IS NULL AND target.suspended_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=viewer.id AND b.blocked_id IN (NEW.follower_id,NEW.following_id))
+              OR (b.blocked_id=viewer.id AND b.blocker_id IN (NEW.follower_id,NEW.following_id)));
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+            target_user_id,reason,created_at)
+          SELECT viewer.id,feed.name,'user-follow:' || printf('%020d',NEW.follower_id) || ':'
+            || printf('%020d',NEW.following_id) || ':' || NEW.created_at,'user_follow',NEW.follower_id,
+            NEW.following_id,0,NEW.created_at
+          FROM users viewer CROSS JOIN (SELECT 'for-you' name UNION ALL SELECT 'to-me') feed
+          JOIN users actor ON actor.id=NEW.follower_id
+          WHERE viewer.id=NEW.following_id
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=viewer.id AND b.blocked_id=NEW.follower_id)
+              OR (b.blocked_id=viewer.id AND b.blocker_id=NEW.follower_id));
+        END;
+        CREATE TRIGGER materialized_feed_follow_delete AFTER DELETE ON follows BEGIN
+          DELETE FROM personalized_feed_entries WHERE event_key=
+            'user-follow:' || printf('%020d',OLD.follower_id) || ':' || printf('%020d',OLD.following_id)
+              || ':' || OLD.created_at;
+        END;
+
+        CREATE TRIGGER materialized_feed_hashtag_follow_insert AFTER INSERT ON hashtag_follows
+          WHEN NEW.created_at IS NOT NULL AND NEW.created_at!='1970-01-01 00:00:00' BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_tag,
+            reason,created_at)
+          SELECT DISTINCT viewer.id,'for-you','tag-follow:' || printf('%020d',NEW.user_id) || ':' || NEW.tag
+            || ':' || NEW.created_at,'tag_follow',NEW.user_id,NEW.tag,0,NEW.created_at
+          FROM users viewer JOIN users actor ON actor.id=NEW.user_id
+          WHERE viewer.id!=NEW.user_id
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+            AND (EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=viewer.id
+              AND vf.following_id=NEW.user_id AND (vf.created_at IS NULL OR NEW.created_at>=vf.created_at))
+              OR EXISTS(SELECT 1 FROM hashtag_follows vh WHERE vh.user_id=viewer.id AND vh.tag=NEW.tag
+                AND NEW.created_at>=vh.created_at))
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=viewer.id AND b.blocked_id=NEW.user_id)
+              OR (b.blocked_id=viewer.id AND b.blocker_id=NEW.user_id))
+            AND NOT EXISTS(SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=viewer.id AND bh.tag=NEW.tag);
+        END;
+        CREATE TRIGGER materialized_feed_hashtag_follow_delete AFTER DELETE ON hashtag_follows BEGIN
+          DELETE FROM personalized_feed_entries WHERE event_key=
+            'tag-follow:' || printf('%020d',OLD.user_id) || ':' || OLD.tag || ':' || OLD.created_at;
+        END;
+
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_user_id,
+          reason,created_at)
+        SELECT viewer.id,'for-you','user-follow:' || printf('%020d',f.follower_id) || ':'
+          || printf('%020d',f.following_id) || ':' || f.created_at,'user_follow',f.follower_id,f.following_id,0,f.created_at
+        FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
+        JOIN follows vf ON vf.following_id=actor.id JOIN users viewer ON viewer.id=vf.follower_id
+        WHERE f.created_at IS NOT NULL AND viewer.id!=actor.id AND viewer.id!=target.id
+          AND (vf.created_at IS NULL OR f.created_at>=vf.created_at)
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+          AND target.deleted_at IS NULL AND target.suspended_at IS NULL
+          AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=viewer.id AND b.blocked_id IN (actor.id,target.id))
+            OR (b.blocked_id=viewer.id AND b.blocker_id IN (actor.id,target.id)));
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_user_id,
+          reason,created_at)
+        SELECT target.id,feed.name,'user-follow:' || printf('%020d',f.follower_id) || ':'
+          || printf('%020d',f.following_id) || ':' || f.created_at,'user_follow',actor.id,target.id,0,f.created_at
+        FROM follows f JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
+        CROSS JOIN (SELECT 'for-you' name UNION ALL SELECT 'to-me') feed
+        WHERE f.created_at IS NOT NULL
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+          AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=target.id AND b.blocked_id=actor.id)
+            OR (b.blocked_id=target.id AND b.blocker_id=actor.id));
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_tag,
+          reason,created_at)
+        SELECT DISTINCT viewer.id,'for-you','tag-follow:' || printf('%020d',hf.user_id) || ':' || hf.tag
+          || ':' || hf.created_at,'tag_follow',actor.id,hf.tag,0,hf.created_at
+        FROM hashtag_follows hf JOIN users actor ON actor.id=hf.user_id CROSS JOIN users viewer
+        WHERE hf.created_at IS NOT NULL AND hf.created_at!='1970-01-01 00:00:00' AND viewer.id!=actor.id
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+          AND (EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=viewer.id AND vf.following_id=actor.id
+            AND (vf.created_at IS NULL OR hf.created_at>=vf.created_at))
+            OR EXISTS(SELECT 1 FROM hashtag_follows vh WHERE vh.user_id=viewer.id AND vh.tag=hf.tag
+              AND hf.created_at>=vh.created_at))
+          AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=viewer.id AND b.blocked_id=actor.id)
+            OR (b.blocked_id=viewer.id AND b.blocker_id=actor.id))
+          AND NOT EXISTS(SELECT 1 FROM blocked_hashtags bh WHERE bh.user_id=viewer.id AND bh.tag=hf.tag);
+
+        DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
+        CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            SELECT NEW.viewer_id,NEW.feed,NEW.sequence,
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=max(latest_sequence,NEW.sequence),
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence) *
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_preferences_update
+          AFTER UPDATE OF hide_people_follow_activity,hide_hashtag_follow_activity ON users BEGIN
+          UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=NEW.id AND entry.feed=feed_state.feed
+              AND entry.sequence>feed_state.last_seen_sequence
+              AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR NEW.hide_people_follow_activity=0)
+              AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR NEW.hide_hashtag_follow_activity=0))
+            WHERE viewer_id=NEW.id;
+          DELETE FROM personalized_feed_page_cursors WHERE viewer_id=NEW.id;
+        END;
+
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed
+          AND NOT EXISTS(SELECT 1 FROM for_you_reads reads WHERE reads.user_id=entry.viewer_id
+            AND reads.event_key=entry.event_key)
+          AND (entry.feed!='to-me' OR NOT EXISTS(SELECT 1 FROM to_me_reads reads WHERE
+            reads.user_id=entry.viewer_id AND reads.event_key=entry.event_key))
+          AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+            coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+          AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+            coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)),
+          latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed),0);`)
+    },
+  },
+  {
+    version: 203,
+    name: 'preserve_materialized_page_boundaries',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
+        CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            SELECT NEW.viewer_id,NEW.feed,NEW.sequence,
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=max(latest_sequence,NEW.sequence),
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence) *
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END;
+        END;`)
+    },
+  },
+  {
+    version: 204,
+    name: 'materialized_post_eligibility',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      addColumn(database, 'personalized_feed_entries', 'eligible', 'INTEGER NOT NULL DEFAULT 1 CHECK(eligible IN (0,1))')
+      database.run(`UPDATE personalized_feed_entries AS entry SET eligible=0
+        WHERE event_kind='post' AND source_post_id IN (
+          SELECT p.id FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+          WHERE p.user_id=entry.viewer_id AND (p.parent_id IS NULL OR parent.user_id=p.user_id)
+            AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN posts descendant ON descendant.id=ancestry.post_id
+              WHERE ancestry.ancestor_id=p.id AND descendant.user_id!=p.user_id
+                AND descendant.deleted_at IS NULL));
+
+        DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
+        CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            SELECT NEW.viewer_id,NEW.feed,NEW.sequence,
+              CASE WHEN NEW.event_kind='post' AND NEW.source_post_id IS NOT NULL
+                AND EXISTS(SELECT 1 FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+                  WHERE p.id=NEW.source_post_id AND p.user_id=NEW.viewer_id
+                    AND (p.parent_id IS NULL OR parent.user_id=p.user_id)
+                    AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN posts descendant
+                      ON descendant.id=ancestry.post_id WHERE ancestry.ancestor_id=p.id
+                        AND descendant.user_id!=p.user_id AND descendant.deleted_at IS NULL)) THEN 0
+                ELSE NEW.eligible END *
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=max(latest_sequence,NEW.sequence),
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence) *
+              CASE WHEN NEW.event_kind='post' AND NEW.source_post_id IS NOT NULL
+                AND EXISTS(SELECT 1 FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+                  WHERE p.id=NEW.source_post_id AND p.user_id=NEW.viewer_id
+                    AND (p.parent_id IS NULL OR parent.user_id=p.user_id)
+                    AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN posts descendant
+                      ON descendant.id=ancestry.post_id WHERE ancestry.ancestor_id=p.id
+                        AND descendant.user_id!=p.user_id AND descendant.deleted_at IS NULL)) THEN 0
+                ELSE NEW.eligible END *
+              CASE WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_eligibility_update AFTER UPDATE OF eligible
+          ON personalized_feed_entries WHEN OLD.eligible!=NEW.eligible BEGIN
+          UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND entry.eligible=1
+              AND entry.sequence>feed_state.last_seen_sequence
+              AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+                coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+              AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+                coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0))
+            WHERE viewer_id=NEW.viewer_id AND feed=NEW.feed;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_self_eligibility
+          AFTER INSERT ON personalized_feed_entries
+          WHEN NEW.event_kind='post' AND NEW.source_post_id IS NOT NULL
+            AND EXISTS(SELECT 1 FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+              WHERE p.id=NEW.source_post_id AND p.user_id=NEW.viewer_id
+                AND (p.parent_id IS NULL OR parent.user_id=p.user_id)
+                AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry
+                  JOIN posts descendant ON descendant.id=ancestry.post_id
+                  WHERE ancestry.ancestor_id=p.id AND descendant.user_id!=p.user_id
+                    AND descendant.deleted_at IS NULL)) BEGIN
+          UPDATE personalized_feed_entries SET eligible=0 WHERE sequence=NEW.sequence;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_activate_ancestors AFTER INSERT ON posts
+          WHEN NEW.parent_id IS NOT NULL BEGIN
+          UPDATE personalized_feed_entries SET eligible=1 WHERE eligible=0 AND feed='for-you'
+            AND source_post_id IN (WITH RECURSIVE ancestors(id,parent_id,user_id) AS (
+              SELECT id,parent_id,user_id FROM posts WHERE id=NEW.parent_id
+              UNION ALL SELECT parent.id,parent.parent_id,parent.user_id FROM posts parent
+                JOIN ancestors ON parent.id=ancestors.parent_id
+            ) SELECT id FROM ancestors WHERE user_id!=NEW.user_id);
+        END;
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1
+            AND NOT EXISTS(SELECT 1 FROM for_you_reads reads WHERE reads.user_id=entry.viewer_id
+              AND reads.event_key=entry.event_key)
+            AND (entry.feed!='to-me' OR NOT EXISTS(SELECT 1 FROM to_me_reads reads
+              WHERE reads.user_id=entry.viewer_id AND reads.event_key=entry.event_key))
+            AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+              coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+            AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+              coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0));`)
+    },
+  },
+  {
+    version: 205,
+    name: 'materialized_whisper_targets',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const whisperTarget = (post: string, viewer: string) => `EXISTS (
+        WITH RECURSIVE targets(id,user_id,parent_id,whisper_root) AS (
+          SELECT seed.id,seed.user_id,seed.parent_id,EXISTS(SELECT 1 FROM post_hashtags tag
+            WHERE tag.post_id=seed.id AND tag.tag='whisper') FROM posts seed WHERE seed.id=${post}
+          UNION ALL SELECT parent.id,parent.user_id,parent.parent_id,
+            EXISTS(SELECT 1 FROM post_hashtags tag WHERE tag.post_id=parent.id AND tag.tag='whisper')
+            FROM posts parent JOIN targets child ON parent.id=child.parent_id WHERE child.whisper_root=0
+        ) SELECT 1 FROM targets target
+          LEFT JOIN posts whisper_parent ON whisper_parent.id=target.parent_id AND target.whisper_root=1
+          LEFT JOIN post_mentions mention ON mention.post_id=target.id AND mention.user_id=${viewer}
+          WHERE target.user_id=${viewer} OR whisper_parent.user_id=${viewer} OR mention.user_id IS NOT NULL)`
+      const whisperThread = (post: string) => `EXISTS(WITH RECURSIVE ancestry(id,parent_id) AS (
+        SELECT id,parent_id FROM posts WHERE id=${post}
+        UNION ALL SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestry ON parent.id=ancestry.parent_id
+      ) SELECT 1 FROM ancestry JOIN post_hashtags tag ON tag.post_id=ancestry.id WHERE tag.tag='whisper')`
+      const insert = `INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,
+          source_post_id,actor_id,reason,created_at)
+        SELECT candidate.viewer_id,'to-me','post:' || printf('%020d',p.id),'reply',p.id,p.user_id,32,p.created_at
+        FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id
+        JOIN users author ON author.id=p.user_id
+        WHERE p.user_id!=candidate.viewer_id AND p.deleted_at IS NULL
+          AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+          AND ${whisperThread('p.id')} AND ${whisperTarget('p.id', 'candidate.viewer_id')}
+          AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=candidate.viewer_id AND b.blocked_id=p.user_id)
+            OR (b.blocked_id=candidate.viewer_id AND b.blocker_id=p.user_id))
+          AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=candidate.viewer_id)`
+      database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_whisper_candidate
+        AFTER INSERT ON personalized_post_candidates BEGIN
+        ${insert.replaceAll('candidate.viewer_id', 'NEW.viewer_id')
+          .replace('FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id',
+            'FROM posts p')
+          .replace('WHERE p.user_id!=NEW.viewer_id', 'WHERE p.id=NEW.post_id AND p.user_id!=NEW.viewer_id')};
+      END;
+      ${insert};`)
+    },
+  },
+  {
+    version: 206,
+    name: 'materialized_personalized_feed_groups',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_groups (
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          feed TEXT NOT NULL,
+          group_key TEXT NOT NULL,
+          latest_sequence INTEGER NOT NULL,
+          activity_at TEXT NOT NULL,
+          PRIMARY KEY(viewer_id,feed,group_key)) WITHOUT ROWID;
+        CREATE INDEX IF NOT EXISTS personalized_feed_groups_page
+          ON personalized_feed_groups(viewer_id,feed,latest_sequence DESC,group_key DESC);
+        CREATE TABLE IF NOT EXISTS personalized_feed_group_cursors (
+          viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          feed TEXT NOT NULL,page_size INTEGER NOT NULL,page INTEGER NOT NULL,
+          before_sequence INTEGER,generation INTEGER NOT NULL,
+          PRIMARY KEY(viewer_id,feed,page_size,page)) WITHOUT ROWID;
+
+        INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+        SELECT entry.viewer_id,entry.feed,
+          CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+            coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+              entry.source_post_id)) END,
+          max(entry.sequence),max(entry.created_at)
+        FROM personalized_feed_entries entry WHERE entry.eligible=1
+        GROUP BY 1,2,3
+        ON CONFLICT(viewer_id,feed,group_key) DO UPDATE SET
+          latest_sequence=excluded.latest_sequence,activity_at=excluded.activity_at;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_group_insert
+          AFTER INSERT ON personalized_feed_entries WHEN NEW.eligible=1 BEGIN
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          VALUES(NEW.viewer_id,NEW.feed,
+            CASE WHEN NEW.source_post_id IS NULL THEN NEW.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=NEW.source_post_id),
+                NEW.source_post_id)) END,NEW.sequence,NEW.created_at)
+          ON CONFLICT(viewer_id,feed,group_key) DO UPDATE SET
+            latest_sequence=max(latest_sequence,excluded.latest_sequence),
+            activity_at=max(activity_at,excluded.activity_at);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_group_conversation
+          AFTER INSERT ON post_conversations WHEN NEW.conversation_id!=NEW.post_id BEGIN
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,'conversation:' || printf('%020d',NEW.conversation_id),
+            max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry
+          WHERE entry.source_post_id IN
+            (SELECT post_id FROM post_conversations WHERE conversation_id=NEW.conversation_id)
+            AND entry.eligible=1 GROUP BY entry.viewer_id,entry.feed
+          ON CONFLICT(viewer_id,feed,group_key) DO UPDATE SET
+            latest_sequence=max(latest_sequence,excluded.latest_sequence),
+            activity_at=max(activity_at,excluded.activity_at);
+          DELETE FROM personalized_feed_groups WHERE group_key='conversation:' || printf('%020d',NEW.post_id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_group_delete
+          AFTER DELETE ON personalized_feed_entries WHEN OLD.eligible=1 BEGIN
+          DELETE FROM personalized_feed_groups WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed AND group_key=
+            CASE WHEN OLD.source_post_id IS NULL THEN OLD.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=OLD.source_post_id),
+                OLD.source_post_id)) END;
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,
+            CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END,max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=OLD.viewer_id AND entry.feed=OLD.feed AND entry.eligible=1
+            AND (CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END)=
+              CASE WHEN OLD.source_post_id IS NULL THEN OLD.event_key ELSE 'conversation:' || printf('%020d',
+                coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=OLD.source_post_id),
+                  OLD.source_post_id)) END
+          GROUP BY entry.viewer_id,entry.feed;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_group_eligibility
+          AFTER UPDATE OF eligible ON personalized_feed_entries WHEN OLD.eligible!=NEW.eligible BEGIN
+          DELETE FROM personalized_feed_groups WHERE viewer_id=NEW.viewer_id AND feed=NEW.feed AND group_key=
+            CASE WHEN NEW.source_post_id IS NULL THEN NEW.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=NEW.source_post_id),
+                NEW.source_post_id)) END;
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,
+            CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END,max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND entry.eligible=1
+            AND (CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END)=
+              CASE WHEN NEW.source_post_id IS NULL THEN NEW.event_key ELSE 'conversation:' || printf('%020d',
+                coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=NEW.source_post_id),
+                  NEW.source_post_id)) END
+          GROUP BY entry.viewer_id,entry.feed;
+        END;`)
+    },
+  },
+  {
+    version: 207,
+    name: 'materialized_muted_thread_eligibility',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const muted = `EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+        SELECT p.id,p.parent_id FROM posts p WHERE p.id=personalized_feed_entries.source_post_id
+        UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+          JOIN ancestors child ON parent.id=child.parent_id
+      ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+        WHERE muted.user_id=personalized_feed_entries.viewer_id
+          AND muted.post_id!=personalized_feed_entries.source_post_id)`
+      database.run(`UPDATE personalized_feed_entries SET eligible=0
+        WHERE source_post_id IS NOT NULL AND (reason&8)=0 AND ${muted};
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_muted_candidate
+          AFTER INSERT ON personalized_post_candidates BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,
+            actor_id,reason,created_at,eligible)
+          SELECT NEW.viewer_id,'for-you','post:' || printf('%020d',p.id),'post',p.id,p.user_id,
+            (CASE WHEN p.user_id=NEW.viewer_id THEN 1 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=NEW.viewer_id
+                AND f.following_id=p.user_id AND (f.created_at IS NULL OR p.created_at>=f.created_at))
+              THEN 2 ELSE 0 END)
+            | (CASE WHEN EXISTS(SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
+                WHERE ph.post_id=p.id AND hf.user_id=NEW.viewer_id AND p.created_at>=hf.created_at)
+              THEN 4 ELSE 0 END),p.created_at,0
+          FROM posts p JOIN users author ON author.id=p.user_id
+          WHERE p.id=NEW.post_id AND p.deleted_at IS NULL
+            AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT p.id,p.parent_id UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=NEW.viewer_id AND muted.post_id!=p.id)
+            AND NOT EXISTS(SELECT 1 FROM post_mentions mention
+              WHERE mention.post_id=p.id AND mention.user_id=NEW.viewer_id)
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=NEW.viewer_id AND b.blocked_id=p.user_id)
+              OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=p.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=NEW.viewer_id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_mute_entry
+          AFTER INSERT ON personalized_feed_entries
+          WHEN NEW.source_post_id IS NOT NULL AND (NEW.reason&8)=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=0 WHERE sequence=NEW.sequence AND EXISTS (
+            WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT p.id,p.parent_id FROM posts p WHERE p.id=NEW.source_post_id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=NEW.viewer_id AND muted.post_id!=NEW.source_post_id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_mute_existing
+          AFTER INSERT ON muted_posts BEGIN
+          UPDATE personalized_feed_entries SET eligible=0
+          WHERE viewer_id=NEW.user_id AND source_post_id IS NOT NULL AND (reason&8)=0
+            AND source_post_id IN (WITH RECURSIVE descendants(id) AS (
+              SELECT p.id FROM posts p WHERE p.parent_id=NEW.post_id
+              UNION ALL SELECT p.id FROM posts p
+                JOIN descendants parent ON p.parent_id=parent.id
+            ) SELECT id FROM descendants);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_unmute_existing
+          AFTER DELETE ON muted_posts BEGIN
+          UPDATE personalized_feed_entries SET eligible=1
+          WHERE viewer_id=OLD.user_id AND source_post_id IS NOT NULL
+            AND source_post_id IN (WITH RECURSIVE descendants(id) AS (
+              SELECT OLD.post_id UNION ALL SELECT p.id FROM posts p
+                JOIN descendants parent ON p.parent_id=parent.id
+            ) SELECT id FROM descendants)
+            AND NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT p.id,p.parent_id FROM posts p WHERE p.id=personalized_feed_entries.source_post_id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=personalized_feed_entries.viewer_id
+                AND muted.post_id!=personalized_feed_entries.source_post_id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_mention_eligibility
+          AFTER UPDATE OF reason ON personalized_feed_entries
+          WHEN (OLD.reason&8)=0 AND (NEW.reason&8)!=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=1 WHERE sequence=NEW.sequence;
+        END;`)
+    },
+  },
+  {
+    version: 208,
+    name: 'materialized_post_restore_eligibility',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_post_delete;
+        CREATE TRIGGER materialized_feed_post_delete AFTER UPDATE OF deleted_at ON posts
+          WHEN OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL BEGIN
+          UPDATE personalized_feed_entries SET eligible=0 WHERE source_post_id=NEW.id;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_post_restore AFTER UPDATE OF deleted_at ON posts
+          WHEN OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS NULL BEGIN
+          UPDATE personalized_feed_entries SET eligible=1
+          WHERE source_post_id=NEW.id
+            AND EXISTS(SELECT 1 FROM users author WHERE author.id=NEW.user_id
+              AND author.deleted_at IS NULL AND author.suspended_at IS NULL)
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=viewer_id AND b.blocked_id=NEW.user_id)
+              OR (b.blocked_id=viewer_id AND b.blocker_id=NEW.user_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=NEW.id AND bh.user_id=viewer_id)
+            AND ((reason&8)!=0 OR NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT parent.id,parent.parent_id FROM posts child JOIN posts parent ON parent.id=child.parent_id
+                WHERE child.id=NEW.id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=viewer_id));
+        END;
+
+        DROP TRIGGER IF EXISTS materialized_feed_eligibility_update;
+        CREATE TRIGGER materialized_feed_eligibility_update AFTER UPDATE OF eligible
+          ON personalized_feed_entries WHEN OLD.eligible!=NEW.eligible BEGIN
+          UPDATE feed_state SET
+            latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+              WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND entry.eligible=1),0),
+            unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+              WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND entry.eligible=1
+                AND entry.sequence>feed_state.last_seen_sequence
+                AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+                  coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+                AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+                  coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0))
+          WHERE viewer_id=NEW.viewer_id AND feed=NEW.feed;
+        END;`)
+    },
+  },
+  {
+    version: 209,
+    name: 'materialized_account_visibility_eligibility',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_account_unavailable
+        AFTER UPDATE OF deleted_at,suspended_at ON users
+        WHEN (OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL)
+          OR (OLD.suspended_at IS NULL AND NEW.suspended_at IS NOT NULL) BEGIN
+        UPDATE personalized_feed_entries SET eligible=0
+          WHERE actor_id=NEW.id OR target_user_id=NEW.id;
+      END;
+      CREATE TRIGGER IF NOT EXISTS materialized_feed_account_available
+        AFTER UPDATE OF deleted_at,suspended_at ON users
+        WHEN NEW.deleted_at IS NULL AND NEW.suspended_at IS NULL
+          AND (OLD.deleted_at IS NOT NULL OR OLD.suspended_at IS NOT NULL) BEGIN
+        UPDATE personalized_feed_entries SET eligible=1
+        WHERE (actor_id=NEW.id OR target_user_id=NEW.id)
+          AND EXISTS(SELECT 1 FROM users actor WHERE actor.id=personalized_feed_entries.actor_id
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL)
+          AND (target_user_id IS NULL OR EXISTS(SELECT 1 FROM users target
+            WHERE target.id=personalized_feed_entries.target_user_id
+              AND target.deleted_at IS NULL AND target.suspended_at IS NULL))
+          AND (source_post_id IS NULL OR EXISTS(SELECT 1 FROM posts source
+            WHERE source.id=personalized_feed_entries.source_post_id AND source.deleted_at IS NULL))
+          AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+            (b.blocker_id=viewer_id AND b.blocked_id IN (actor_id,target_user_id))
+            OR (b.blocked_id=viewer_id AND b.blocker_id IN (actor_id,target_user_id)))
+          AND (source_post_id IS NULL OR NOT EXISTS(SELECT 1 FROM post_hashtags ph
+            JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=personalized_feed_entries.source_post_id AND bh.user_id=viewer_id))
+          AND (source_post_id IS NULL OR (reason&8)!=0 OR NOT EXISTS (
+            WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT parent.id,parent.parent_id FROM posts child JOIN posts parent ON parent.id=child.parent_id
+                WHERE child.id=personalized_feed_entries.source_post_id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=viewer_id));
+      END;`)
+    },
+  },
+  {
+    version: 210,
+    name: 'materialized_post_reason_maintenance',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const reasons = (viewer: string, post: string) => `(CASE WHEN EXISTS(SELECT 1 FROM posts p
+          WHERE p.id=${post} AND p.user_id=${viewer}) THEN 1 ELSE 0 END)
+        | (CASE WHEN EXISTS(SELECT 1 FROM posts p JOIN follows f ON f.following_id=p.user_id
+          WHERE p.id=${post} AND f.follower_id=${viewer}
+            AND (f.created_at IS NULL OR p.created_at>=f.created_at)) THEN 2 ELSE 0 END)
+        | (CASE WHEN EXISTS(SELECT 1 FROM posts p WHERE p.id=${post} AND (
+            EXISTS(SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
+              WHERE ph.post_id=p.id AND hf.user_id=${viewer} AND p.created_at>=hf.created_at)
+            OR EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN post_hashtags ph
+              ON ph.post_id=ancestry.ancestor_id JOIN hashtag_follows hf ON hf.tag=ph.tag
+              WHERE ancestry.post_id=p.id AND hf.user_id=${viewer} AND p.created_at>=hf.created_at)))
+          THEN 4 ELSE 0 END)
+        | (CASE WHEN EXISTS(SELECT 1 FROM post_mentions mention
+          WHERE mention.post_id=${post} AND mention.user_id=${viewer}) THEN 8 ELSE 0 END)
+        | (CASE WHEN EXISTS(SELECT 1 FROM posts p JOIN posts parent ON parent.id=p.parent_id
+          WHERE p.id=${post} AND parent.user_id=${viewer}) THEN 16 ELSE 0 END)
+        | (CASE WHEN EXISTS(SELECT 1 FROM posts p WHERE p.id=${post}
+          AND EXISTS(SELECT 1 FROM post_ancestors ancestry
+            WHERE ancestry.post_id=p.id AND (ancestry.ancestor_user_id=${viewer} OR EXISTS(
+              SELECT 1 FROM follows f WHERE f.follower_id=${viewer}
+                AND f.following_id=ancestry.ancestor_user_id
+                AND (f.created_at IS NULL OR p.created_at>=f.created_at))))) THEN 64 ELSE 0 END)
+        | (personalized_feed_entries.reason&32)`
+      database.run(`UPDATE personalized_feed_entries SET reason=${reasons(
+        'personalized_feed_entries.viewer_id',
+        'personalized_feed_entries.source_post_id',
+      )} WHERE source_post_id IS NOT NULL;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_entry_reason_fill
+          AFTER INSERT ON personalized_feed_entries WHEN NEW.source_post_id IS NOT NULL BEGIN
+          UPDATE personalized_feed_entries SET reason=${reasons('NEW.viewer_id', 'NEW.source_post_id')}
+            WHERE sequence=NEW.sequence;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_empty_reason
+          AFTER UPDATE OF reason ON personalized_feed_entries
+          WHEN NEW.source_post_id IS NOT NULL AND NEW.feed='for-you' AND NEW.reason=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=0 WHERE sequence=NEW.sequence;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_nonempty_reason
+          AFTER UPDATE OF reason ON personalized_feed_entries
+          WHEN NEW.source_post_id IS NOT NULL AND NEW.reason!=0 AND OLD.reason=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=1 WHERE sequence=NEW.sequence
+            AND EXISTS(SELECT 1 FROM posts source JOIN users actor ON actor.id=source.user_id
+              WHERE source.id=NEW.source_post_id AND source.deleted_at IS NULL
+                AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL)
+            AND NOT EXISTS(SELECT 1 FROM blocks b WHERE
+              (b.blocker_id=NEW.viewer_id AND b.blocked_id=NEW.actor_id)
+              OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=NEW.actor_id))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=NEW.source_post_id AND bh.user_id=NEW.viewer_id)
+            AND ((NEW.reason&8)!=0 OR NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT parent.id,parent.parent_id FROM posts child JOIN posts parent ON parent.id=child.parent_id
+                WHERE child.id=NEW.source_post_id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=NEW.viewer_id));
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_follow_reason_delete AFTER DELETE ON follows BEGIN
+          UPDATE personalized_feed_entries SET reason=${reasons('OLD.follower_id', 'source_post_id')}
+          WHERE viewer_id=OLD.follower_id AND feed='for-you' AND source_post_id IS NOT NULL;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_tag_follow_reason_delete
+          AFTER DELETE ON hashtag_follows BEGIN
+          UPDATE personalized_feed_entries SET reason=${reasons('OLD.user_id', 'source_post_id')}
+          WHERE viewer_id=OLD.user_id AND feed='for-you' AND source_post_id IS NOT NULL;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_post_tag_reason_delete
+          AFTER DELETE ON post_hashtags BEGIN
+          UPDATE personalized_feed_entries SET reason=${reasons('viewer_id', 'source_post_id')}
+          WHERE feed='for-you' AND source_post_id=OLD.post_id;
+        END;`)
+    },
+  },
+  {
+    version: 211,
+    name: 'materialized_admin_signup_events',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const administrators = instance.administrators.map(email => email.trim().toLowerCase())
+      if (!administrators.length) return
+      const adminSql = administrators.map(email => `'${email.replaceAll("'", "''")}'`).join(',')
+      database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_signup_complete
+        AFTER UPDATE OF handle_chosen_at ON users
+        WHEN OLD.handle_chosen_at IS NULL AND NEW.handle_chosen_at IS NOT NULL BEGIN
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          reason,created_at)
+        SELECT administrator.id,'for-you','signup:' || printf('%020d',NEW.id) || ':' || NEW.handle_chosen_at,
+          'signup',NEW.id,0,NEW.handle_chosen_at
+        FROM users administrator WHERE lower(administrator.email) IN (${adminSql})
+          AND administrator.deleted_at IS NULL AND administrator.suspended_at IS NULL;
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          reason,created_at)
+        SELECT NEW.id,'for-you','signup:' || printf('%020d',actor.id) || ':' || actor.handle_chosen_at,
+          'signup',actor.id,0,actor.handle_chosen_at
+        FROM users actor WHERE lower(NEW.email) IN (${adminSql}) AND actor.handle_chosen_at IS NOT NULL
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL;
+      END;
+      INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+        reason,created_at)
+      SELECT administrator.id,'for-you','signup:' || printf('%020d',actor.id) || ':' || actor.handle_chosen_at,
+        'signup',actor.id,0,actor.handle_chosen_at
+      FROM users administrator CROSS JOIN users actor
+      WHERE lower(administrator.email) IN (${adminSql}) AND actor.handle_chosen_at IS NOT NULL
+        AND administrator.deleted_at IS NULL AND administrator.suspended_at IS NULL
+        AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL;`)
+    },
+  },
+  {
+    version: 212,
+    name: 'materialized_legacy_read_exceptions',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const unread = `entry.eligible=1 AND entry.sequence>feed_state.last_seen_sequence
+        AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+          WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))
+          OR (entry.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+            WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)))
+        AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+          coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+        AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+          coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)`
+      database.run(`UPDATE feed_state SET
+        last_seen_sequence=coalesce((SELECT max(prefix.sequence) FROM personalized_feed_entries prefix
+          WHERE prefix.viewer_id=feed_state.viewer_id AND prefix.feed=feed_state.feed
+            AND prefix.eligible=1 AND NOT EXISTS(SELECT 1 FROM personalized_feed_entries earlier
+              WHERE earlier.viewer_id=feed_state.viewer_id AND earlier.feed=feed_state.feed
+                AND earlier.eligible=1 AND earlier.sequence<=prefix.sequence
+                AND ((earlier.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+                  WHERE seen.user_id=earlier.viewer_id AND seen.event_key=earlier.event_key))
+                  OR (earlier.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                    WHERE seen.user_id=earlier.viewer_id AND seen.event_key=earlier.event_key))))),0),
+        latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1),0);
+
+        DROP TRIGGER IF EXISTS materialized_feed_entries_delete;
+        CREATE TRIGGER materialized_feed_entries_delete AFTER DELETE ON personalized_feed_entries BEGIN
+          UPDATE feed_state SET
+            latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries
+              WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed AND eligible=1),0),
+            unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+              WHERE entry.viewer_id=OLD.viewer_id AND entry.feed=OLD.feed AND ${unread})
+          WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed;
+          DELETE FROM personalized_feed_page_cursors WHERE viewer_id=OLD.viewer_id AND feed=OLD.feed;
+        END;
+
+        DROP TRIGGER IF EXISTS materialized_feed_eligibility_update;
+        CREATE TRIGGER materialized_feed_eligibility_update AFTER UPDATE OF eligible
+          ON personalized_feed_entries WHEN OLD.eligible!=NEW.eligible BEGIN
+          UPDATE feed_state SET
+            latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+              WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND entry.eligible=1),0),
+            unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+              WHERE entry.viewer_id=NEW.viewer_id AND entry.feed=NEW.feed AND ${unread})
+          WHERE viewer_id=NEW.viewer_id AND feed=NEW.feed;
+        END;
+
+        DROP TRIGGER IF EXISTS materialized_feed_preferences_update;
+        CREATE TRIGGER materialized_feed_preferences_update
+          AFTER UPDATE OF hide_people_follow_activity,hide_hashtag_follow_activity ON users BEGIN
+          UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=NEW.id AND entry.feed=feed_state.feed AND ${unread})
+          WHERE viewer_id=NEW.id;
+          DELETE FROM personalized_feed_page_cursors WHERE viewer_id=NEW.id;
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_for_you_read_delete
+          AFTER DELETE ON for_you_reads BEGIN
+          UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=OLD.user_id AND entry.feed='for-you' AND ${unread})
+          WHERE viewer_id=OLD.user_id AND feed='for-you';
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_to_me_read_delete
+          AFTER DELETE ON to_me_reads BEGIN
+          UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=OLD.user_id AND entry.feed='to-me' AND ${unread})
+          WHERE viewer_id=OLD.user_id AND feed='to-me';
+        END;
+
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND ${unread});`)
+    },
+  },
+  {
+    version: 213,
+    name: 'repair_unqualified_materialized_posts',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`UPDATE personalized_feed_entries SET eligible=0
+        WHERE feed='for-you' AND source_post_id IS NOT NULL AND reason=0 AND eligible=1`)
+    },
+  },
+  {
+    version: 214,
+    name: 'materialized_moderator_feeds',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      const administrators = instance.administrators.map(email => email.trim().toLowerCase())
+      if (!administrators.length) return
+      const adminSql = administrators.map(email => `'${email.replaceAll("'", "''")}'`).join(',')
+      database.run(`CREATE TABLE IF NOT EXISTS moderator_feed_viewers (
+          viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE);
+        INSERT OR IGNORE INTO moderator_feed_viewers(viewer_id)
+          SELECT id FROM users WHERE lower(email) IN (${adminSql});
+        CREATE TRIGGER IF NOT EXISTS moderator_feed_viewer_insert AFTER INSERT ON users
+          WHEN lower(NEW.email) IN (${adminSql}) BEGIN
+          INSERT OR IGNORE INTO moderator_feed_viewers(viewer_id) VALUES(NEW.id);
+        END;
+        CREATE TRIGGER IF NOT EXISTS moderator_feed_viewer_email AFTER UPDATE OF email ON users BEGIN
+          DELETE FROM moderator_feed_viewers WHERE viewer_id=NEW.id AND lower(NEW.email) NOT IN (${adminSql});
+          INSERT OR IGNORE INTO moderator_feed_viewers(viewer_id)
+            SELECT NEW.id WHERE lower(NEW.email) IN (${adminSql});
+        END;
+
+        DROP TRIGGER IF EXISTS materialized_feed_block_insert;
+        CREATE TRIGGER materialized_feed_block_insert AFTER INSERT ON blocks BEGIN
+          DELETE FROM personalized_feed_entries WHERE viewer_id IN (NEW.blocker_id,NEW.blocked_id)
+            AND viewer_id NOT IN (SELECT viewer_id FROM moderator_feed_viewers)
+            AND (actor_id IN (NEW.blocker_id,NEW.blocked_id)
+              OR target_user_id IN (NEW.blocker_id,NEW.blocked_id));
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_moderator_candidate
+          AFTER INSERT ON personalized_post_candidates BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,
+            actor_id,reason,created_at)
+          SELECT moderator.viewer_id,'for-you','post:' || printf('%020d',p.id),'post',p.id,p.user_id,0,p.created_at
+          FROM moderator_feed_viewers moderator JOIN posts p ON p.id=NEW.post_id
+          JOIN users author ON author.id=p.user_id
+          WHERE moderator.viewer_id=NEW.viewer_id AND p.deleted_at IS NULL
+            AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=moderator.viewer_id);
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,
+            actor_id,reason,created_at)
+          SELECT moderator.viewer_id,'to-me','post:' || printf('%020d',p.id),
+            CASE WHEN mention.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END,p.id,p.user_id,
+            (CASE WHEN mention.user_id IS NOT NULL THEN 8 ELSE 0 END)
+              | (CASE WHEN parent.user_id=moderator.viewer_id THEN 16 ELSE 0 END),p.created_at
+          FROM moderator_feed_viewers moderator JOIN posts p ON p.id=NEW.post_id
+          JOIN users author ON author.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+          LEFT JOIN post_mentions mention ON mention.post_id=p.id AND mention.user_id=moderator.viewer_id
+          WHERE moderator.viewer_id=NEW.viewer_id AND p.user_id!=moderator.viewer_id
+            AND p.deleted_at IS NULL AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+            AND (parent.user_id=moderator.viewer_id OR mention.user_id IS NOT NULL)
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=p.id AND bh.user_id=moderator.viewer_id);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_moderator_follow
+          AFTER INSERT ON follows WHEN NEW.created_at IS NOT NULL BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+            target_user_id,reason,created_at)
+          SELECT moderator.viewer_id,'for-you','user-follow:' || printf('%020d',NEW.follower_id) || ':'
+            || printf('%020d',NEW.following_id) || ':' || NEW.created_at,'user_follow',NEW.follower_id,
+            NEW.following_id,0,NEW.created_at
+          FROM moderator_feed_viewers moderator JOIN follows watched
+            ON watched.follower_id=moderator.viewer_id AND watched.following_id=NEW.follower_id
+          JOIN users actor ON actor.id=NEW.follower_id JOIN users target ON target.id=NEW.following_id
+          WHERE moderator.viewer_id NOT IN (NEW.follower_id,NEW.following_id)
+            AND NEW.created_at>=watched.created_at
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+            AND target.deleted_at IS NULL AND target.suspended_at IS NULL;
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+            target_user_id,reason,created_at)
+          SELECT moderator.viewer_id,feed.name,'user-follow:' || printf('%020d',NEW.follower_id) || ':'
+            || printf('%020d',NEW.following_id) || ':' || NEW.created_at,'user_follow',NEW.follower_id,
+            NEW.following_id,0,NEW.created_at
+          FROM moderator_feed_viewers moderator
+          CROSS JOIN (SELECT 'for-you' name UNION ALL SELECT 'to-me') feed
+          JOIN users actor ON actor.id=NEW.follower_id
+          WHERE moderator.viewer_id=NEW.following_id
+            AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL;
+        END;
+        CREATE TRIGGER IF NOT EXISTS materialized_feed_moderator_tag_follow
+          AFTER INSERT ON hashtag_follows
+          WHEN NEW.created_at IS NOT NULL AND NEW.created_at!='1970-01-01 00:00:00' BEGIN
+          INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_tag,
+            reason,created_at)
+          SELECT DISTINCT moderator.viewer_id,'for-you','tag-follow:' || printf('%020d',NEW.user_id) || ':'
+            || NEW.tag || ':' || NEW.created_at,'tag_follow',NEW.user_id,NEW.tag,0,NEW.created_at
+          FROM moderator_feed_viewers moderator JOIN users actor ON actor.id=NEW.user_id
+          WHERE moderator.viewer_id!=NEW.user_id AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+            AND (EXISTS(SELECT 1 FROM follows watched WHERE watched.follower_id=moderator.viewer_id
+              AND watched.following_id=NEW.user_id AND NEW.created_at>=watched.created_at)
+              OR EXISTS(SELECT 1 FROM hashtag_follows watched WHERE watched.user_id=moderator.viewer_id
+                AND watched.tag=NEW.tag AND NEW.created_at>=watched.created_at))
+            AND NOT EXISTS(SELECT 1 FROM blocked_hashtags blocked
+              WHERE blocked.user_id=moderator.viewer_id AND blocked.tag=NEW.tag);
+        END;
+
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,
+          actor_id,reason,created_at)
+        SELECT moderator.viewer_id,'for-you','post:' || printf('%020d',p.id),'post',p.id,p.user_id,0,p.created_at
+        FROM moderator_feed_viewers moderator JOIN personalized_post_candidates candidate
+          ON candidate.viewer_id=moderator.viewer_id JOIN posts p ON p.id=candidate.post_id
+        JOIN users author ON author.id=p.user_id
+        WHERE p.deleted_at IS NULL AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+          AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=moderator.viewer_id);
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,source_post_id,
+          actor_id,reason,created_at)
+        SELECT moderator.viewer_id,'to-me','post:' || printf('%020d',p.id),
+          CASE WHEN mention.user_id IS NOT NULL THEN 'mention' ELSE 'reply' END,p.id,p.user_id,
+          (CASE WHEN mention.user_id IS NOT NULL THEN 8 ELSE 0 END)
+            | (CASE WHEN parent.user_id=moderator.viewer_id THEN 16 ELSE 0 END),p.created_at
+        FROM moderator_feed_viewers moderator JOIN personalized_post_candidates candidate
+          ON candidate.viewer_id=moderator.viewer_id JOIN posts p ON p.id=candidate.post_id
+        JOIN users author ON author.id=p.user_id LEFT JOIN posts parent ON parent.id=p.parent_id
+        LEFT JOIN post_mentions mention ON mention.post_id=p.id AND mention.user_id=moderator.viewer_id
+        WHERE p.user_id!=moderator.viewer_id AND p.deleted_at IS NULL
+          AND author.deleted_at IS NULL AND author.suspended_at IS NULL
+          AND (parent.user_id=moderator.viewer_id OR mention.user_id IS NOT NULL)
+          AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=moderator.viewer_id);
+
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          target_user_id,reason,created_at)
+        SELECT moderator.viewer_id,'for-you','user-follow:' || printf('%020d',f.follower_id) || ':'
+          || printf('%020d',f.following_id) || ':' || f.created_at,'user_follow',f.follower_id,
+          f.following_id,0,f.created_at
+        FROM moderator_feed_viewers moderator JOIN follows watched
+          ON watched.follower_id=moderator.viewer_id JOIN follows f ON f.follower_id=watched.following_id
+        JOIN users actor ON actor.id=f.follower_id JOIN users target ON target.id=f.following_id
+        WHERE f.created_at IS NOT NULL AND moderator.viewer_id!=f.follower_id
+          AND moderator.viewer_id!=f.following_id AND f.created_at>=watched.created_at
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+          AND target.deleted_at IS NULL AND target.suspended_at IS NULL;
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          target_user_id,reason,created_at)
+        SELECT moderator.viewer_id,feed.name,'user-follow:' || printf('%020d',f.follower_id) || ':'
+          || printf('%020d',f.following_id) || ':' || f.created_at,'user_follow',f.follower_id,
+          f.following_id,0,f.created_at
+        FROM moderator_feed_viewers moderator JOIN follows f ON f.following_id=moderator.viewer_id
+        CROSS JOIN (SELECT 'for-you' name UNION ALL SELECT 'to-me') feed
+        JOIN users actor ON actor.id=f.follower_id
+        WHERE f.created_at IS NOT NULL AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL;
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,target_tag,
+          reason,created_at)
+        SELECT DISTINCT moderator.viewer_id,'for-you','tag-follow:' || printf('%020d',activity.user_id) || ':'
+          || activity.tag || ':' || activity.created_at,'tag_follow',activity.user_id,activity.tag,0,
+          activity.created_at
+        FROM moderator_feed_viewers moderator JOIN hashtag_follows activity
+        JOIN users actor ON actor.id=activity.user_id
+        WHERE activity.created_at IS NOT NULL AND activity.created_at!='1970-01-01 00:00:00'
+          AND moderator.viewer_id!=activity.user_id AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL
+          AND (EXISTS(SELECT 1 FROM follows watched WHERE watched.follower_id=moderator.viewer_id
+            AND watched.following_id=activity.user_id AND activity.created_at>=watched.created_at)
+            OR EXISTS(SELECT 1 FROM hashtag_follows watched WHERE watched.user_id=moderator.viewer_id
+              AND watched.tag=activity.tag AND activity.created_at>=watched.created_at))
+          AND NOT EXISTS(SELECT 1 FROM blocked_hashtags blocked
+            WHERE blocked.user_id=moderator.viewer_id AND blocked.tag=activity.tag);`)
+    },
+  },
+  {
+    version: 215,
+    name: 'repair_materialized_read_counters',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
+        CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            SELECT NEW.viewer_id,NEW.feed,CASE WHEN NEW.eligible=1 THEN NEW.sequence ELSE 0 END,
+              CASE WHEN NEW.eligible=0 THEN 0
+                WHEN NEW.feed='for-you' AND EXISTS(SELECT 1 FROM for_you_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='to-me' AND EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=CASE WHEN NEW.eligible=1 THEN max(latest_sequence,NEW.sequence)
+              ELSE latest_sequence END,
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence) *
+              CASE WHEN NEW.eligible=0 THEN 0
+                WHEN NEW.feed='for-you' AND EXISTS(SELECT 1 FROM for_you_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='to-me' AND EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END;
+        END;
+
+        UPDATE feed_state SET
+          latest_sequence=coalesce((SELECT max(entry.sequence) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1),0),
+          unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed
+              AND entry.eligible=1 AND entry.sequence>feed_state.last_seen_sequence
+              AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+                WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))
+                OR (entry.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)))
+              AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+                coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+              AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+                coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0));`)
+    },
+  },
+  {
+    version: 216,
+    name: 'repair_materialized_event_chronology',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`CREATE TEMP TABLE materialized_feed_sequence_repair(
+          old_sequence INTEGER PRIMARY KEY,
+          new_sequence INTEGER NOT NULL UNIQUE);
+        INSERT INTO materialized_feed_sequence_repair(old_sequence,new_sequence)
+          SELECT sequence,row_number() OVER (ORDER BY created_at,event_key,viewer_id,feed)
+          FROM personalized_feed_entries;
+        UPDATE personalized_feed_entries SET sequence=-sequence;
+        UPDATE personalized_feed_entries SET sequence=(SELECT repair.new_sequence
+          FROM materialized_feed_sequence_repair repair
+          WHERE repair.old_sequence=-personalized_feed_entries.sequence);
+        DROP TABLE materialized_feed_sequence_repair;
+        UPDATE sqlite_sequence SET seq=coalesce((SELECT max(sequence) FROM personalized_feed_entries),0)
+          WHERE name='personalized_feed_entries';
+
+        DELETE FROM personalized_feed_groups;
+        INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,
+            CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END,max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry WHERE entry.eligible=1
+          GROUP BY entry.viewer_id,entry.feed,CASE WHEN entry.source_post_id IS NULL THEN entry.event_key
+            ELSE 'conversation:' || printf('%020d',coalesce(
+              (SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+              entry.source_post_id)) END;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+
+        UPDATE feed_state SET
+          last_seen_sequence=coalesce((SELECT max(prefix.sequence) FROM personalized_feed_entries prefix
+            WHERE prefix.viewer_id=feed_state.viewer_id AND prefix.feed=feed_state.feed AND prefix.eligible=1
+              AND NOT EXISTS(SELECT 1 FROM personalized_feed_entries earlier
+                WHERE earlier.viewer_id=feed_state.viewer_id AND earlier.feed=feed_state.feed
+                  AND earlier.eligible=1 AND earlier.sequence<=prefix.sequence
+                  AND ((earlier.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+                    WHERE seen.user_id=earlier.viewer_id AND seen.event_key=earlier.event_key))
+                    OR (earlier.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                      WHERE seen.user_id=earlier.viewer_id AND seen.event_key=earlier.event_key)))
+                  AND (earlier.feed!='for-you' OR earlier.event_kind!='user_follow' OR
+                    coalesce((SELECT hide_people_follow_activity FROM users
+                      WHERE id=earlier.viewer_id),0)=0)
+                  AND (earlier.feed!='for-you' OR earlier.event_kind!='tag_follow' OR
+                    coalesce((SELECT hide_hashtag_follow_activity FROM users
+                      WHERE id=earlier.viewer_id),0)=0))),0),
+          latest_sequence=coalesce((SELECT max(entry.sequence) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1),0);
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1
+            AND entry.sequence>feed_state.last_seen_sequence
+            AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+              WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))
+              OR (entry.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)))
+            AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+              coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+            AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+              coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0));`)
+    },
+  },
+  {
+    version: 217,
+    name: 'invalidate_reordered_personalized_feeds',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+      ).get()) return
+      database.run(`UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
+  {
+    version: 218,
+    name: 'keep_self_only_posts_dormant',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_nonempty_reason;
+        CREATE TRIGGER materialized_feed_nonempty_reason
+          AFTER UPDATE OF reason ON personalized_feed_entries
+          WHEN NEW.source_post_id IS NOT NULL AND NEW.reason!=0 AND NEW.reason!=1 AND OLD.reason=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=1 WHERE sequence=NEW.sequence
+            AND EXISTS(SELECT 1 FROM posts source JOIN users actor ON actor.id=source.user_id
+              WHERE source.id=NEW.source_post_id AND source.deleted_at IS NULL
+                AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL)
+            AND (NEW.viewer_id IN (SELECT viewer_id FROM moderator_feed_viewers) OR NOT EXISTS(
+              SELECT 1 FROM blocks b WHERE
+                (b.blocker_id=NEW.viewer_id AND b.blocked_id=NEW.actor_id)
+                OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=NEW.actor_id)))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=NEW.source_post_id AND bh.user_id=NEW.viewer_id)
+            AND ((NEW.reason&8)!=0 OR NOT EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
+              SELECT parent.id,parent.parent_id FROM posts child JOIN posts parent ON parent.id=child.parent_id
+                WHERE child.id=NEW.source_post_id
+              UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+                JOIN ancestors child ON parent.id=child.parent_id
+            ) SELECT 1 FROM ancestors JOIN muted_posts muted ON muted.post_id=ancestors.id
+              WHERE muted.user_id=NEW.viewer_id));
+        END;
+        UPDATE personalized_feed_entries SET eligible=0
+          WHERE feed='for-you' AND source_post_id IS NOT NULL AND reason=1 AND eligible=1;
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
+  {
+    version: 219,
+    name: 'reinstall_self_post_dormancy',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_self_eligibility;
+        CREATE TRIGGER materialized_feed_self_eligibility
+          AFTER INSERT ON personalized_feed_entries
+          WHEN NEW.event_kind='post' AND NEW.source_post_id IS NOT NULL
+            AND EXISTS(SELECT 1 FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
+              WHERE p.id=NEW.source_post_id AND p.user_id=NEW.viewer_id
+                AND (p.parent_id IS NULL OR parent.user_id=p.user_id)
+                AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry
+                  JOIN posts descendant ON descendant.id=ancestry.post_id
+                  WHERE ancestry.ancestor_id=p.id AND descendant.user_id!=p.user_id
+                    AND descendant.deleted_at IS NULL)) BEGIN
+          UPDATE personalized_feed_entries SET eligible=0 WHERE sequence=NEW.sequence;
+        END;
+        UPDATE personalized_feed_entries SET eligible=0
+          WHERE feed='for-you' AND source_post_id IS NOT NULL AND reason=1 AND eligible=1;
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
+  {
+    version: 220,
+    name: 'make_feed_insert_triggers_order_independent',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_group_insert;
+        CREATE TRIGGER materialized_feed_group_insert AFTER INSERT ON personalized_feed_entries
+          WHEN (SELECT eligible FROM personalized_feed_entries WHERE sequence=NEW.sequence)=1 BEGIN
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          VALUES(NEW.viewer_id,NEW.feed,
+            CASE WHEN NEW.source_post_id IS NULL THEN NEW.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=NEW.source_post_id),
+                NEW.source_post_id)) END,NEW.sequence,NEW.created_at)
+          ON CONFLICT(viewer_id,feed,group_key) DO UPDATE SET
+            latest_sequence=max(latest_sequence,excluded.latest_sequence),
+            activity_at=max(activity_at,excluded.activity_at);
+        END;
+
+        DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
+        CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
+          INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
+            SELECT NEW.viewer_id,NEW.feed,
+              CASE WHEN (SELECT eligible FROM personalized_feed_entries WHERE sequence=NEW.sequence)=1
+                THEN NEW.sequence ELSE 0 END,
+              CASE WHEN (SELECT eligible FROM personalized_feed_entries WHERE sequence=NEW.sequence)=0 THEN 0
+                WHEN NEW.feed='for-you' AND EXISTS(SELECT 1 FROM for_you_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='to-me' AND EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END
+          ON CONFLICT(viewer_id,feed) DO UPDATE SET
+            latest_sequence=CASE WHEN (SELECT eligible FROM personalized_feed_entries
+              WHERE sequence=NEW.sequence)=1 THEN max(latest_sequence,NEW.sequence) ELSE latest_sequence END,
+            unread_count=unread_count+(NEW.sequence>last_seen_sequence) *
+              CASE WHEN (SELECT eligible FROM personalized_feed_entries WHERE sequence=NEW.sequence)=0 THEN 0
+                WHEN NEW.feed='for-you' AND EXISTS(SELECT 1 FROM for_you_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='to-me' AND EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=NEW.viewer_id AND seen.event_key=NEW.event_key) THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='user_follow'
+                  AND coalesce((SELECT hide_people_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                WHEN NEW.feed='for-you' AND NEW.event_kind='tag_follow'
+                  AND coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=NEW.viewer_id),0)=1 THEN 0
+                ELSE 1 END;
+        END;
+        UPDATE personalized_feed_entries SET eligible=0
+          WHERE feed='for-you' AND source_post_id IS NOT NULL AND reason=1 AND eligible=1;
+        DELETE FROM personalized_feed_groups WHERE latest_sequence IN
+          (SELECT sequence FROM personalized_feed_entries WHERE eligible=0);
+        UPDATE feed_state SET
+          latest_sequence=coalesce((SELECT max(sequence) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1),0),
+          unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+            WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1
+              AND entry.sequence>feed_state.last_seen_sequence
+              AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+                WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))
+                OR (entry.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                  WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))));
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;`)
+    },
+  },
+  {
+    version: 221,
+    name: 'reinstall_personalized_conversation_groups',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_groups'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_group_conversation;
+        CREATE TRIGGER materialized_feed_group_conversation
+          AFTER INSERT ON post_conversations WHEN NEW.conversation_id!=NEW.post_id BEGIN
+          INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,'conversation:' || printf('%020d',NEW.conversation_id),
+            max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry
+          WHERE entry.source_post_id IN
+            (SELECT post_id FROM post_conversations WHERE conversation_id=NEW.conversation_id)
+            AND entry.eligible=1 GROUP BY entry.viewer_id,entry.feed
+          ON CONFLICT(viewer_id,feed,group_key) DO UPDATE SET
+            latest_sequence=max(latest_sequence,excluded.latest_sequence),
+            activity_at=max(activity_at,excluded.activity_at);
+          DELETE FROM personalized_feed_groups
+            WHERE group_key='conversation:' || printf('%020d',NEW.post_id);
+        END;
+
+        DELETE FROM personalized_feed_groups;
+        INSERT INTO personalized_feed_groups(viewer_id,feed,group_key,latest_sequence,activity_at)
+          SELECT entry.viewer_id,entry.feed,
+            CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END,max(entry.sequence),max(entry.created_at)
+          FROM personalized_feed_entries entry WHERE entry.eligible=1
+          GROUP BY entry.viewer_id,entry.feed,CASE WHEN entry.source_post_id IS NULL THEN entry.event_key
+            ELSE 'conversation:' || printf('%020d',coalesce(
+              (SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+              entry.source_post_id)) END;
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
+  {
+    version: 222,
+    name: 'keep_self_posts_visible_and_read',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DROP TRIGGER IF EXISTS materialized_feed_self_eligibility;
+        DROP TRIGGER IF EXISTS materialized_feed_self_read;
+        CREATE TRIGGER materialized_feed_self_read AFTER INSERT ON personalized_feed_entries
+          WHEN NEW.feed='for-you' AND NEW.source_post_id IS NOT NULL
+            AND EXISTS(SELECT 1 FROM posts WHERE id=NEW.source_post_id AND user_id=NEW.viewer_id) BEGIN
+          INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(NEW.viewer_id,NEW.event_key);
+          INSERT OR IGNORE INTO latest_read_exceptions(user_id,post_id)
+            SELECT NEW.viewer_id,NEW.source_post_id WHERE NEW.source_post_id>coalesce(
+              (SELECT through_post_id FROM latest_read_state WHERE user_id=NEW.viewer_id),0);
+        END;
+        DROP TRIGGER IF EXISTS materialized_feed_nonempty_reason;
+        CREATE TRIGGER materialized_feed_nonempty_reason
+          AFTER UPDATE OF reason ON personalized_feed_entries
+          WHEN NEW.source_post_id IS NOT NULL AND NEW.reason!=0 AND OLD.reason=0 BEGIN
+          UPDATE personalized_feed_entries SET eligible=1 WHERE sequence=NEW.sequence
+            AND EXISTS(SELECT 1 FROM posts source JOIN users actor ON actor.id=source.user_id
+              WHERE source.id=NEW.source_post_id AND source.deleted_at IS NULL
+                AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL)
+            AND (NEW.viewer_id IN (SELECT viewer_id FROM moderator_feed_viewers) OR NOT EXISTS(
+              SELECT 1 FROM blocks b WHERE
+                (b.blocker_id=NEW.viewer_id AND b.blocked_id=NEW.actor_id)
+                OR (b.blocked_id=NEW.viewer_id AND b.blocker_id=NEW.actor_id)))
+            AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+              WHERE ph.post_id=NEW.source_post_id AND bh.user_id=NEW.viewer_id);
+        END;
+        INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+          SELECT entry.viewer_id,entry.event_key FROM personalized_feed_entries entry JOIN posts source
+            ON source.id=entry.source_post_id AND source.user_id=entry.viewer_id
+          WHERE entry.feed='for-you';
+        INSERT OR IGNORE INTO latest_read_exceptions(user_id,post_id)
+          SELECT entry.viewer_id,entry.source_post_id FROM personalized_feed_entries entry JOIN posts source
+            ON source.id=entry.source_post_id AND source.user_id=entry.viewer_id
+          WHERE entry.feed='for-you' AND entry.source_post_id>coalesce(
+            (SELECT through_post_id FROM latest_read_state WHERE user_id=entry.viewer_id),0);
+        UPDATE personalized_feed_entries SET eligible=1
+          WHERE feed='for-you' AND source_post_id IN (SELECT source.id FROM posts source JOIN users author
+            ON author.id=source.user_id WHERE source.user_id=personalized_feed_entries.viewer_id
+              AND source.deleted_at IS NULL AND author.deleted_at IS NULL AND author.suspended_at IS NULL)
+            AND reason!=0 AND NOT EXISTS(SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh
+              ON bh.tag=ph.tag WHERE ph.post_id=source_post_id AND bh.user_id=viewer_id);
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1
+            AND entry.sequence>feed_state.last_seen_sequence
+            AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+              WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))
+              OR (entry.feed='to-me' AND NOT EXISTS(SELECT 1 FROM to_me_reads seen
+                WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key))));
+        UPDATE personalized_feed_generations SET generation=generation+1;
+        DELETE FROM personalized_feed_page_cursors;
+        DELETE FROM personalized_feed_group_cursors;
+        DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
@@ -3507,8 +5068,12 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
   if (current > latestMigrationVersion) {
     throw new Error(`Database version ${current} is newer than supported version ${latestMigrationVersion}`)
   }
-  for (const migration of migrations) {
-    if (migration.version <= current) continue
+  const pending = migrations.filter(migration => migration.version > current)
+  const configuredDelay = Number(Bun.env.MIGRATION_DELAY_MS ?? 50)
+  const migrationDelayMs = Bun.env.NODE_ENV === 'test' || !Number.isFinite(configuredDelay)
+    ? 0
+    : Math.max(0, Math.min(5_000, Math.floor(configuredDelay)))
+  for (const [index, migration] of pending.entries()) {
     if (migration.transaction === false) {
       const foreignKeys = (database.query('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys
       const legacyAlterTable = (database.query('PRAGMA legacy_alter_table').get() as { legacy_alter_table: number })
@@ -3533,6 +5098,9 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
       })()
     }
     onMigration?.(migration)
+    // Give Bun and SQLite a short breather between large schema generations. This is intentionally synchronous:
+    // migrations run before the application starts accepting requests, and runMigrations has a synchronous API.
+    if (migrationDelayMs && index < pending.length - 1) Bun.sleepSync(migrationDelayMs)
   }
   const integrity = database.query('PRAGMA foreign_key_check').all()
   if (integrity.length) {

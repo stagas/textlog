@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead } from './latest-state'
+import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead, unreadLatestCount }
+  from './latest-state'
 
 test('latest unread state includes the viewer own posts and decreases as a page is read', () => {
   const database = new Database(':memory:')
@@ -81,4 +82,21 @@ test('compact latest state uses a cursor with sparse reads above it', () => {
   markAllLatestRead(1, database)
   expect(latestPostState(1, database).some(row => row.unread)).toBe(false)
   expect(database.query('SELECT count(*) count FROM latest_read_exceptions').get()).toEqual({ count: 0 })
+})
+
+test('latest unread counting stops at the displayed 99+ cap', () => {
+  const database = new Database(':memory:')
+  database.run(`CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL,parent_id INTEGER,
+    deleted_at TEXT);
+  CREATE TABLE latest_read_state(user_id INTEGER PRIMARY KEY,through_post_id INTEGER NOT NULL);
+  CREATE TABLE latest_read_exceptions(user_id INTEGER,post_id INTEGER,PRIMARY KEY(user_id,post_id));
+  CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
+  CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT);
+  CREATE TABLE blocked_hashtags (user_id INTEGER,tag TEXT);
+  INSERT INTO latest_read_state VALUES(1,0);`)
+  const insert = database.query('INSERT INTO posts(id,user_id,parent_id) VALUES(?,2,NULL)')
+  database.transaction(() => {
+    for (let id = 1; id <= 120; id++) insert.run(id)
+  })()
+  expect(unreadLatestCount(1, database)).toBe(99)
 })

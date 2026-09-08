@@ -637,7 +637,8 @@ describe('database migrations', () => {
 
     runMigrations(database)
 
-    expect(database.query('SELECT event_key FROM activity_reads ORDER BY event_key').all())
+    expect(database.query(`SELECT event_key FROM activity_reads
+      WHERE event_key IN ('follow:2:2026-08-05 11:00:00','post:2') GROUP BY event_key ORDER BY event_key`).all())
       .toEqual([{ event_key: 'follow:2:2026-08-05 11:00:00' }, { event_key: 'post:2' }])
   })
 

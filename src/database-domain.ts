@@ -20,6 +20,7 @@ import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, tr
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
 import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
+import { materializedPersonalizedGroupPage } from './feed-state'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { dropUsername, excludesDroppedUsernameUsers, resolveHandle } from './handles'
@@ -495,6 +496,7 @@ function invalidateBlockVisibility(userIds: number[]) {
     cacheDb.query(`DELETE FROM feed_snapshots WHERE viewer_id IN (${placeholders})
       AND (kind LIKE 'latest%' OR kind='hot' OR kind LIKE 'hot:%')`).run(...ids)
     cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id IN (${placeholders})`).run(...ids)
+    cacheDb.query(`DELETE FROM global_feed_page_cursors WHERE viewer_id IN (${placeholders})`).run(...ids)
   })()
 }
 
@@ -3250,27 +3252,74 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? visibleProjectedIds(database, seededPublicConversationIds(database, sampleSeed), viewerId, 1, pageSize,
           'conversation')
         : null
-      // Anonymous page one has no read-state navigation that needs positions from a complete snapshot. Keep its
-      // cold path proportional to the requested page; deeper pages still use a snapshot for stable pagination.
-      const directAnonymousFirstPage = viewerId < 0 && page === 1 && !sampleSeed
+      const latestFilters = viewerId < 0
+        ? `NOT EXISTS (SELECT 1 FROM post_hashtags ph
+            WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+          AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+            JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
+            AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
+          AND ${excludesMetaPosts('h.conversation_id')}`
+        : `EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
+          JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id AND p.deleted_at IS NULL
+          AND (? < 0 OR NOT EXISTS (WITH RECURSIVE ancestors(user_id,parent_id) AS (
+            SELECT p.user_id,p.parent_id
+            UNION ALL
+            SELECT parent.user_id,parent.parent_id FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
+          ) SELECT 1 FROM ancestors JOIN blocks b ON
+            (b.blocker_id=? AND b.blocked_id=ancestors.user_id)
+            OR (b.blocker_id=ancestors.user_id AND b.blocked_id=?)))
+          AND ${excludesWhispers} AND ${excludesMetaPosts()}
+          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+            WHERE ph.post_id=p.id AND bh.user_id=?)) LIMIT 1)`
+      const latestParameters = viewerId < 0 ? [] : parameters
+      const latestCursorPage = !sampleSeed
+        ? (() => {
+          const totalItems = (database.query(`SELECT count(*) count FROM conversation_heads h
+            WHERE ${latestFilters}`).get(...latestParameters) as { count: number }).count
+          const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+          const safePage = Math.min(page, totalPages)
+          const generation = `${materializedFeedGeneration(database, 'latest', viewerId)}:${
+            materializedStrictGeneration(database, 'latest')
+          }`
+          const cursorRow = cacheDb.query(`SELECT before_rank FROM global_feed_page_cursors
+            WHERE kind='latest' AND viewer_id=? AND page_size=? AND page=? AND generation=?`)
+            .get(viewerId, pageSize, safePage, generation) as { before_rank: number | null } | null
+          const putCursor = cacheDb.query(`INSERT INTO global_feed_page_cursors(
+            kind,viewer_id,page_size,page,before_rank,generation) VALUES('latest',?,?,?,?,?)
+            ON CONFLICT(kind,viewer_id,page_size,page) DO UPDATE SET
+              before_rank=excluded.before_rank,generation=excluded.generation`)
+          putCursor.run(viewerId, pageSize, 1, null, generation)
+          const load = (boundary: number | null) => database.query(`SELECT h.conversation_id,h.latest_post_id
+            FROM conversation_heads h WHERE ${latestFilters}
+            AND (? IS NULL OR h.latest_post_id<?)
+            ORDER BY h.latest_post_id DESC,h.conversation_id DESC LIMIT ?`)
+            .all(...latestParameters, boundary, boundary, pageSize) as Array<{
+              conversation_id: number
+              latest_post_id: number
+            }>
+          let cursorPage = cursorRow ? safePage : 1
+          let boundary = cursorRow?.before_rank ?? null
+          while (cursorPage < safePage) {
+            const rows = load(boundary)
+            const last = rows.at(-1)
+            if (!last) break
+            boundary = last.latest_post_id
+            cursorPage++
+            putCursor.run(viewerId, pageSize, cursorPage, boundary, generation)
+          }
+          const rows = load(boundary)
+          const nextBoundary = rows.at(-1)?.latest_post_id
+          if (nextBoundary !== undefined && safePage < totalPages) {
+            putCursor.run(viewerId, pageSize, safePage + 1, nextBoundary, generation)
+          }
+          return { snapshotId: 0, items: rows.map(row => row.conversation_id), page: safePage,
+            totalItems, totalPages }
+        })()
+        : null
       const snapshot = sharedRandomPage
         ? { snapshotId: 0, ...sharedRandomPage }
-        : directAnonymousFirstPage
-        ? (() => {
-          const filters = `NOT EXISTS (SELECT 1 FROM post_hashtags ph
-              WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
-            AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
-              JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
-              AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
-            AND ${excludesMetaPosts('h.conversation_id')}`
-          const totalItems = (database.query(`SELECT count(*) count FROM conversation_heads h WHERE ${filters}`)
-            .get() as { count: number }).count
-          const items = (database.query(`SELECT h.conversation_id FROM conversation_heads h
-            WHERE ${filters} ORDER BY h.latest_post_id DESC,h.conversation_id DESC LIMIT ?`)
-            .all(pageSize) as Array<{ conversation_id: number }>).map(row => row.conversation_id)
-          return { snapshotId: 0, items, page: 1, totalItems,
-            totalPages: Math.max(1, Math.ceil(totalItems / pageSize)) }
-        })()
+        : latestCursorPage
+        ? latestCursorPage
         : feedSnapshotPage<number>(database, snapshotKind, viewerId, page, () => {
           if (viewerId < 0) {
             return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
@@ -3383,10 +3432,28 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           conversation_id: number
         }>).map(row => [row.id, row.conversation_id]))
         : new Map<number, number>()
+      const cursorPages = new Map<number, number>()
+      const cursorPageForConversation = (conversationId: number) => {
+        const cached = cursorPages.get(conversationId)
+        if (cached) return cached
+        const head = database.query('SELECT latest_post_id FROM conversation_heads WHERE conversation_id=?')
+          .get(conversationId) as { latest_post_id: number } | null
+        if (!head) return 1
+        const preceding = (database.query(`SELECT count(*) count FROM conversation_heads h
+          WHERE ${latestFilters} AND h.latest_post_id>?`).get(...latestParameters, head.latest_post_id) as {
+          count: number
+        }).count
+        const resolved = Math.floor(preceding / pageSize) + 1
+        cursorPages.set(conversationId, resolved)
+        return resolved
+      }
       const href = (row: { id: number } | undefined) => {
         if (!row) return undefined
-        const rowPage = Math.floor((snapshotPositions.get(unreadConversations.get(row.id) || row.id) || 0)
-          / pageSize) + 1
+        const conversationId = unreadConversations.get(row.id) || row.id
+        const snapshotPosition = snapshotPositions.get(conversationId)
+        const rowPage = snapshotPosition === undefined
+          ? cursorPageForConversation(conversationId)
+          : Math.floor(snapshotPosition / pageSize) + 1
         return `/all${rowPage > 1 ? `?page=${rowPage}` : ''}#post-${row.id}`
       }
       if (viewerId >= 0 && markRead && unreadPostIds.length) {
@@ -3410,9 +3477,59 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'feeds.newPage': {
       const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.newPage'>
-      const snapshot = visibleProjectedIds(database, publicFeedProjection(database).newRootIds, viewerId, page,
-        pageSize, 'new')
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
+      const visibility = `p.deleted_at IS NULL AND p.parent_id IS NULL
+        AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)}
+        AND ${excludesWhisperPosts('p.id')} AND ${excludesMetaPosts('p.id')}
+        AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+          (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocked_id=? AND b.blocker_id=p.user_id)))
+        AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+          WHERE ph.post_id=p.id AND bh.user_id=?)`
+      const visibilityParameters = [blockViewerId, blockViewerId, blockViewerId, viewerId]
+      const totalItems = (database.query(`SELECT count(*) count FROM posts p JOIN users u ON u.id=p.user_id
+        WHERE ${visibility}`).get(...visibilityParameters) as { count: number }).count
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+      const safePage = Math.min(page, totalPages)
+      const generation = `${materializedFeedGeneration(database, 'new', viewerId)}:${
+        materializedStrictGeneration(database, 'new')
+      }`
+      const cursorRow = cacheDb.query(`SELECT before_text,before_id FROM global_feed_page_cursors
+        WHERE kind='new' AND viewer_id=? AND page_size=? AND page=? AND generation=?`)
+        .get(viewerId, pageSize, safePage, generation) as {
+          before_text: string | null
+          before_id: number | null
+        } | null
+      const putCursor = cacheDb.query(`INSERT INTO global_feed_page_cursors(
+        kind,viewer_id,page_size,page,before_text,before_id,generation) VALUES('new',?,?,?,?,?,?)
+        ON CONFLICT(kind,viewer_id,page_size,page) DO UPDATE SET before_text=excluded.before_text,
+          before_id=excluded.before_id,generation=excluded.generation`)
+      putCursor.run(viewerId, pageSize, 1, null, null, generation)
+      const load = (beforeCreatedAt: string | null, beforeId: number | null) => database.query(
+        `SELECT p.id,p.created_at FROM posts p JOIN users u ON u.id=p.user_id WHERE ${visibility}
+        AND (? IS NULL OR p.created_at<? OR (p.created_at=? AND p.id<?))
+        ORDER BY p.created_at DESC,p.id DESC LIMIT ?`,
+      ).all(...visibilityParameters, beforeCreatedAt, beforeCreatedAt, beforeCreatedAt, beforeId, pageSize) as Array<{
+        id: number
+        created_at: string
+      }>
+      let cursorPage = cursorRow ? safePage : 1
+      let beforeCreatedAt = cursorRow?.before_text ?? null
+      let beforeId = cursorRow?.before_id ?? null
+      while (cursorPage < safePage) {
+        const rows = load(beforeCreatedAt, beforeId)
+        const last = rows.at(-1)
+        if (!last) break
+        beforeCreatedAt = last.created_at
+        beforeId = last.id
+        cursorPage++
+        putCursor.run(viewerId, pageSize, cursorPage, beforeCreatedAt, beforeId, generation)
+      }
+      const rootRows = load(beforeCreatedAt, beforeId)
+      const nextBoundary = rootRows.at(-1)
+      if (nextBoundary && safePage < totalPages) {
+        putCursor.run(viewerId, pageSize, safePage + 1, nextBoundary.created_at, nextBoundary.id, generation)
+      }
+      const snapshot = { items: rootRows.map(row => row.id), page: safePage, totalItems, totalPages }
       const conversationRows = snapshot.items.length
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
           JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
@@ -3495,12 +3612,51 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         .get(...visibilityParameters) as { count: number }).count
       const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
       const safePage = Math.min(page, totalPages)
-      const conversationIds = (database.query(`SELECT projection.conversation_id
+      const generation = (database.query(`SELECT coalesce(refreshed_at,'') generation
+        FROM hot_feed_projection_state WHERE id=1`).get() as { generation: string } | null)?.generation || ''
+      const storedCursor = cacheDb.query(`SELECT before_rank,before_id FROM global_feed_page_cursors
+        WHERE kind='hot' AND viewer_id=? AND page_size=? AND page=? AND generation=?`)
+        .get(viewerId, pageSize, safePage, generation) as {
+          before_rank: number | null
+          before_id: number | null
+        } | null
+      const cursorRow = storedCursor && (storedCursor.before_rank === null || storedCursor.before_id !== null)
+        ? storedCursor
+        : null
+      const putCursor = cacheDb.query(`INSERT INTO global_feed_page_cursors(
+        kind,viewer_id,page_size,page,before_rank,before_id,generation) VALUES('hot',?,?,?,?,?,?)
+        ON CONFLICT(kind,viewer_id,page_size,page) DO UPDATE SET
+          before_rank=excluded.before_rank,before_id=excluded.before_id,generation=excluded.generation`)
+      putCursor.run(viewerId, pageSize, 1, null, null, generation)
+      let cursorPage = cursorRow ? safePage : 1
+      let beforeRank = cursorRow?.before_rank ?? null
+      let beforeConversationId = cursorRow?.before_id ?? null
+      const rankedConversations = (boundary: number | null, boundaryId: number | null, limit: number) => database.query(
+        `SELECT projection.conversation_id,min(projection.conversation_rank) rank
         FROM hot_feed_projection projection JOIN posts p ON p.id=projection.post_id WHERE ${visibility}
-        GROUP BY projection.conversation_id ORDER BY min(projection.conversation_rank)
-        LIMIT ? OFFSET ?`).all(...visibilityParameters, pageSize, (safePage - 1) * pageSize) as Array<{
+        GROUP BY projection.conversation_id
+        HAVING (? IS NULL OR min(projection.conversation_rank)>?
+          OR (min(projection.conversation_rank)=? AND projection.conversation_id>?))
+        ORDER BY min(projection.conversation_rank),projection.conversation_id LIMIT ?`,
+      ).all(...visibilityParameters, boundary, boundary, boundary, boundaryId, limit) as Array<{
         conversation_id: number
-      }>).map(row => row.conversation_id)
+        rank: number
+      }>
+      while (cursorPage < safePage) {
+        const rows = rankedConversations(beforeRank, beforeConversationId, pageSize)
+        const last = rows.at(-1)
+        if (!last) break
+        beforeRank = last.rank
+        beforeConversationId = last.conversation_id
+        cursorPage++
+        putCursor.run(viewerId, pageSize, cursorPage, beforeRank, beforeConversationId, generation)
+      }
+      const rankedPage = rankedConversations(beforeRank, beforeConversationId, pageSize)
+      const conversationIds = rankedPage.map(row => row.conversation_id)
+      const last = rankedPage.at(-1)
+      if (last && safePage < totalPages) {
+        putCursor.run(viewerId, pageSize, safePage + 1, last.rank, last.conversation_id, generation)
+      }
       const conversationRows = conversationIds.length
         ? database.query(`SELECT p.*,u.handle,pc.conversation_id
         FROM post_conversations pc JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
@@ -3544,11 +3700,13 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = refreshHotFeedProjection(database, refreshAt)
       cacheDb.query('DELETE FROM feed_snapshots WHERE kind LIKE \'hot:%\'').run()
       cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE kind=\'hot\'').run()
+      cacheDb.query("DELETE FROM global_feed_page_cursors WHERE kind='hot'").run()
       return { refreshed: true, ...result } as DatabaseDomainOutput<K>
     }
     case 'feeds.hotProjectionChanged': {
       cacheDb.query('DELETE FROM feed_snapshots WHERE kind LIKE \'hot:%\'').run()
       cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE kind=\'hot\'').run()
+      cacheDb.query("DELETE FROM global_feed_page_cursors WHERE kind='hot'").run()
       return null as DatabaseDomainOutput<K>
     }
     case 'feeds.personalizedPage': {
@@ -3580,6 +3738,20 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           cacheDb.query(`DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?
             AND kind IN (${toMe ? '\'latest\',\'for-you\',\'to-me\'' : '\'latest\''})`).run(userId)
         }
+      }
+      else if (database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_groups'",
+      ).get()) {
+        const feed = toMe ? 'to-me' : 'for-you'
+        const groups = materializedPersonalizedGroupPage(database, userId, feed, 1, pageSize,
+          personalizedFeedGeneration(database, userId)).groups
+        const rows = groups.length ? database.query(`SELECT event_key FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=? AND entry.feed=? AND entry.eligible=1 AND
+            (CASE WHEN entry.source_post_id IS NULL THEN entry.event_key ELSE 'conversation:' || printf('%020d',
+              coalesce((SELECT conversation_id FROM post_conversations WHERE post_id=entry.source_post_id),
+                entry.source_post_id)) END) IN (SELECT value FROM json_each(?))`)
+          .all(userId, feed, JSON.stringify(groups)) as Array<{ event_key: string }> : []
+        changed = markForYouEntriesRead(userId, rows.map(row => row.event_key), toMe, database)
       }
       return changed as DatabaseDomainOutput<K>
     }

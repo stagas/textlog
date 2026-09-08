@@ -76,6 +76,24 @@ test('hot enriches ranked roots with the same two-to-five recent replies as late
   expect(conversationIds(hot.posts)).toEqual([100, 106, 105, 104, 103, 102])
 })
 
+test('numbered hot pages use stable rank cursors without duplicate conversations', async () => {
+  const db = database()
+  db.run(`INSERT INTO posts(id,user_id,body,created_at) VALUES(30,3,'third','2026-08-27 09:45:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES(31,1,30,'third reply','2026-08-27 10:25:00');`)
+  recordHotActivity(db, 31)
+  await executeDatabaseDomain(db, 'feeds.refreshHotProjection', {
+    force: true,
+    now: '2026-08-27T10:30:00.000Z',
+  })
+  db.run('UPDATE hot_feed_projection SET conversation_rank=1')
+  const pages = await Promise.all([1, 2, 3].map(page =>
+    executeDatabaseDomain(db, 'feeds.hotPage', { viewerId: -1, page, pageSize: 1 as 20 })
+  ))
+  const roots = pages.flatMap(result => result.posts.filter(post => post.parent_id === null).map(post => post.id))
+  expect(roots).toHaveLength(3)
+  expect(new Set(roots).size).toBe(3)
+})
+
 test('hot activity dirties the projection and clean projections age out', async () => {
   const db = database()
   const now = new Date('2026-08-27T10:30:00.000Z')

@@ -32,6 +32,10 @@ export function createCacheDatabase(path = defaultCachePath()) {
       strict_generation INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY(kind,viewer_id,variant,generation));
     CREATE INDEX IF NOT EXISTS materialized_feed_pages_v2_created ON materialized_feed_pages_v2(created_at);
+    CREATE TABLE IF NOT EXISTS global_feed_page_cursors (
+      kind TEXT NOT NULL,viewer_id INTEGER NOT NULL,page_size INTEGER NOT NULL,page INTEGER NOT NULL,
+      before_rank INTEGER,before_text TEXT,before_id INTEGER,generation TEXT NOT NULL,
+      PRIMARY KEY(kind,viewer_id,page_size,page));
     CREATE TABLE IF NOT EXISTS recent_feed_visitors (
       user_id INTEGER PRIMARY KEY,request_url TEXT NOT NULL,cookie TEXT NOT NULL,page_size INTEGER NOT NULL,
       density TEXT NOT NULL,last_visited_at INTEGER NOT NULL,user_agent TEXT NOT NULL DEFAULT '');
@@ -48,6 +52,15 @@ export function createCacheDatabase(path = defaultCachePath()) {
   if (!recentVisitorColumns.some(column => column.name === 'user_agent')) {
     database.run("ALTER TABLE recent_feed_visitors ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
   }
+  const globalCursorColumns = database.query('PRAGMA table_info(global_feed_page_cursors)').all() as Array<{
+    name: string
+  }>
+  if (!globalCursorColumns.some(column => column.name === 'before_text')) {
+    database.run('ALTER TABLE global_feed_page_cursors ADD COLUMN before_text TEXT')
+  }
+  if (!globalCursorColumns.some(column => column.name === 'before_id')) {
+    database.run('ALTER TABLE global_feed_page_cursors ADD COLUMN before_id INTEGER')
+  }
   return database
 }
 
@@ -55,6 +68,7 @@ export function clearCacheDatabase(database: Database, preserveRecentVisitors = 
   database.transaction(() => {
     database.query('DELETE FROM feed_snapshots').run()
     database.query('DELETE FROM materialized_feed_pages_v2').run()
+    database.query('DELETE FROM global_feed_page_cursors').run()
     if (!preserveRecentVisitors) database.query('DELETE FROM recent_feed_visitors').run()
   })()
 }

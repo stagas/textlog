@@ -6,6 +6,31 @@ import { unreadForYouCount } from './for-you-state'
 import { markLatestPostsRead, unreadLatestCount } from './latest-state'
 import { runMigrations } from './migrations'
 
+function replyReadMatrixDatabase() {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(10,1,'root','2026-08-27 09:00:00');
+    INSERT INTO for_you_reads(user_id,event_key) VALUES(1,'post:00000000000000000010');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at)
+      VALUES(11,2,10,'direct reply','2026-08-27 10:00:00');`)
+  markLatestPostsRead(1, [10], database)
+  cacheDb.query("DELETE FROM feed_snapshots WHERE viewer_id=1").run()
+  return database
+}
+
+async function openPersonalized(database: Database, toMe: boolean, markRead = true) {
+  return executeDatabaseDomain(database, 'feeds.personalizedPage', {
+    user: database.query('SELECT * FROM users WHERE id=1').get() as any,
+    page: 1,
+    pageSize: 20,
+    toMe,
+    path: toMe ? '/to-me' : '/my-feed',
+    markRead,
+  })
+}
+
 test('All hides dropped-username posts except for moderators', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
@@ -115,6 +140,57 @@ test('reading All does not consume matching unread My Feed activity', async () =
   })
   expect(myFeed.forYouCount).toBe(2)
   expect(myFeed.timeline.filter(row => row.unread).map(row => row.id)).toEqual([2, 1])
+})
+
+test('direct-reply badges obey the complete All, My Feed, and @ read matrix', async () => {
+  {
+    const database = replyReadMatrixDatabase()
+    const first = await executeDatabaseDomain(database, 'feeds.latestPage', {
+      viewerId: 1, page: 1, pageSize: 20,
+    })
+    expect(first.latestCount).toBe(1)
+    expect(first.unreadPostIds).toContain(11)
+    expect(unreadForYouCount(1, database)).toBe(1)
+    expect((await openPersonalized(database, true, false)).toMeCount).toBe(1)
+
+    const second = await executeDatabaseDomain(database, 'feeds.latestPage', {
+      viewerId: 1, page: 1, pageSize: 20,
+    })
+    expect(second.latestCount).toBe(0)
+    expect(second.unreadPostIds).toEqual([])
+    expect((await openPersonalized(database, false, false)).forYouCount).toBe(1)
+    expect((await openPersonalized(database, true, false)).toMeCount).toBe(1)
+  }
+
+  {
+    const database = replyReadMatrixDatabase()
+    const first = await openPersonalized(database, false)
+    expect(first.forYouCount).toBe(1)
+    expect(first.timeline.find(row => row.id === 11)?.unread).toBeTruthy()
+    expect(first.latestCount).toBe(0)
+    expect(first.toMeCount).toBe(1)
+
+    const second = await openPersonalized(database, false)
+    expect(second.forYouCount).toBe(0)
+    expect(second.timeline.some(row => row.unread)).toBeFalse()
+    expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
+    expect((await openPersonalized(database, true, false)).toMeCount).toBe(1)
+  }
+
+  {
+    const database = replyReadMatrixDatabase()
+    const first = await openPersonalized(database, true)
+    expect(first.toMeCount).toBe(1)
+    expect(first.timeline.find(row => row.id === 11)?.unread).toBeTruthy()
+    expect(first.forYouCount).toBe(1)
+    expect(first.latestCount).toBe(1)
+
+    const second = await openPersonalized(database, true)
+    expect(second.toMeCount).toBe(0)
+    expect(second.timeline.some(row => row.unread)).toBeFalse()
+    expect((await openPersonalized(database, false, false)).forYouCount).toBe(1)
+    expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(1)
+  }
 })
 
 test('latest includes unread replies beyond the normal conversation preview', async () => {
@@ -295,6 +371,104 @@ test('Any deterministically shuffles the full conversation pool from its seed', 
   expect(first.posts).toHaveLength(20)
   expect(repeated.posts.map(post => post.id)).toEqual(first.posts.map(post => post.id))
   expect(reshuffled.posts.map(post => post.id)).not.toEqual(first.posts.map(post => post.id))
+})
+
+test('numbered All pages use cursor boundaries without duplicate conversations', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.test','x')")
+  const insert = database.query('INSERT INTO posts(id,user_id,body,created_at) VALUES(?,1,?,?)')
+  for (let id = 1; id <= 41; id++) insert.run(id, `post ${id}`, `2026-08-01 10:${String(id).padStart(2, '0')}:00`)
+  cacheDb.query("DELETE FROM global_feed_page_cursors WHERE kind='latest' AND viewer_id=-121").run()
+
+  const pages = await Promise.all([1, 2, 3].map(page => executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: -121,
+    page,
+    pageSize: 20,
+    markRead: false,
+  })))
+  const ids = pages.flatMap(result => result.posts.map(post => post.id))
+
+  expect(pages.map(result => result.page)).toEqual([1, 2, 3])
+  expect(pages.map(result => result.posts.length)).toEqual([20, 20, 1])
+  expect(new Set(ids).size).toBe(41)
+  expect(ids).toEqual(Array.from({ length: 41 }, (_, index) => 41 - index))
+})
+
+test('All unread navigation resolves cursor page numbers without a full snapshot', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x')`)
+  const insert = database.query('INSERT INTO posts(id,user_id,body,created_at) VALUES(?,2,?,?)')
+  for (let id = 1; id <= 21; id++) insert.run(id, `post ${id}`, `2026-09-01 10:${id}:00`)
+  cacheDb.query("DELETE FROM global_feed_page_cursors WHERE kind='latest' AND viewer_id=1").run()
+
+  const preview = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+    markRead: false,
+  })
+  expect(preview.lastUnreadHref).toBe('/all?page=2#post-1')
+
+  const readFirstPage = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1,
+    page: 1,
+    pageSize: 20,
+  })
+  expect(readFirstPage.unreadHref).toBe('/all?page=2#post-1')
+})
+
+test('numbered New pages seek through equal timestamps by post id', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.test','x')")
+  const insert = database.query(
+    "INSERT INTO posts(id,user_id,body,created_at) VALUES(?,1,?,'2026-09-01 10:00:00')",
+  )
+  for (let id = 1; id <= 41; id++) insert.run(id, `post ${id}`)
+  cacheDb.query("DELETE FROM global_feed_page_cursors WHERE kind='new' AND viewer_id=-122").run()
+
+  const pages = []
+  for (const page of [1, 2, 3]) {
+    pages.push(await executeDatabaseDomain(database, 'feeds.newPage', {
+      viewerId: -122,
+      page,
+      pageSize: 20,
+    }))
+  }
+  const ids = pages.flatMap(result => result.posts.map(post => post.id))
+
+  expect(pages.map(result => result.posts.length)).toEqual([20, 20, 1])
+  expect(new Set(ids).size).toBe(41)
+  expect(ids).toEqual(Array.from({ length: 41 }, (_, index) => 41 - index))
+})
+
+test('viewer block changes invalidate cached global feed boundaries', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'viewer','viewer@example.test','x'),(2,'old','old@example.test','x'),
+    (3,'middle','middle@example.test','x'),(4,'newest','newest@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES
+    (10,2,'old','2026-09-01'),(20,3,'middle','2026-09-02'),(30,4,'newest','2026-09-03');`)
+  cacheDb.query('DELETE FROM global_feed_page_cursors WHERE viewer_id=1').run()
+  const before = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 2, pageSize: 1 as 20, markRead: false,
+  })
+  expect(before.posts.map(post => post.id)).toEqual([20])
+
+  await executeDatabaseDomain(database, 'api.relationshipMutation', {
+    userId: 1,
+    handle: 'newest',
+    action: 'block',
+  })
+  expect(cacheDb.query('SELECT 1 FROM global_feed_page_cursors WHERE viewer_id=1').get()).toBeNull()
+  const after = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 2, pageSize: 1 as 20, markRead: false,
+  })
+  expect(after.posts.map(post => post.id)).toEqual([10])
 })
 
 test('New and Any apply viewer blocks after selecting their shared public projection', async () => {

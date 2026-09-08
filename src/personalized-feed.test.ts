@@ -24,6 +24,8 @@ test('moderators see blocked-user leaf posts in For You with relationship metada
 
   expect(feed.timeline.map(row => row.id)).toContain(1)
   expect(feed.timeline.find(row => row.id === 1)?.renderedPost?.blocked_viewer).toBeTrue()
+  expect(feed.forYouCount).toBe(1)
+  expect(feed.unreadHref).toBe('/for-you#post-1')
 })
 
 test('For You preserves moderation warnings in rendered posts', () => {
@@ -314,7 +316,7 @@ test('For You keeps expandable parent context using the same two-to-five reply r
       (2829,1,370,'viewer parent','2026-08-29 10:49:12'),
       (2833,3,2829,'nested reply','2026-08-29 11:22:11'),
       (2834,3,370,'direct sibling','2026-08-29 11:25:06');
-    INSERT INTO for_you_reads(user_id,event_key) VALUES
+    INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES
       (1,'post:00000000000000000370'),(1,'post:00000000000000002370'),
       (1,'post:00000000000000002829'),(1,'post:00000000000000002833'),
       (1,'post:00000000000000002834');`)
@@ -343,7 +345,7 @@ test('For You groups fresh sibling branches under the same shared parent as All'
       (4,3,2,'second branch','2026-08-03 10:00:00'),
       (5,4,3,'newest reply','2026-08-30 12:00:00'),
       (6,4,4,'fresh sibling reply','2026-08-30 11:00:00');
-    INSERT INTO for_you_reads(user_id,event_key) VALUES
+    INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES
       (1,'post:00000000000000000001'),(1,'post:00000000000000000002'),
       (1,'post:00000000000000000003'),(1,'post:00000000000000000004');`)
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
@@ -406,10 +408,10 @@ test('unread count refreshes while relationship invalidation remains pending', (
 test('personalized snapshots refresh follow state for To Me and For You actions', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
-  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
-      (1,'viewer','viewer@example.com','!',''),
-      (2,'actor','actor@example.com','!',''),
-      (3,'target','target@example.com','!','');
+  database.run(`INSERT INTO users(id,handle,email,password,bio,hide_people_follow_activity) VALUES
+      (1,'viewer','viewer@example.com','!','',0),
+      (2,'actor','actor@example.com','!','',1),
+      (3,'target','target@example.com','!','',1);
     INSERT INTO follows(follower_id,following_id,created_at) VALUES
       (2,1,'2026-08-27 09:00:00');`)
   const viewer: User = { id: 1, handle: 'viewer', email: 'viewer@example.com', bio: '' }
