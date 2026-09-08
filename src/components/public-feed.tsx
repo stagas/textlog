@@ -2,13 +2,14 @@ import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
+import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId }: {
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1 }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
@@ -22,17 +23,41 @@ export function PublicFeed(
       writePreviewExecutionOutput?: string | null
       writePreviewLocation?: import('../types').LocationView
       writeDraftId?: string
+      chunk?: number
+      initialChunks?: number
     },
 ) {
+  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
+  const chunkPosts = chunk === 0 && initialChunks > 1
+    ? feed.posts.slice(0, initialChunks * FEED_CHUNK_SIZE)
+    : chunkItems(feed.posts, chunk)
   const feedPath = path
   const random = path.startsWith('/any')
   const newest = path === '/new'
-  const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
+  const returnPath = feedChunkReturnPath(
+    feedPath + (feed.page > 1 ? `${feedPath.includes('?') ? '&' : '?'}page=${feed.page}` : ''),
+    renderedChunk,
+  )
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
   const unreadPage = feed.unreadHref
     ? Number(new URL(feed.unreadHref, 'http://localhost').searchParams.get('page') || 1)
     : null
+  const feedContent = chunkPosts.length
+    ? (
+      <FeedThreads posts={chunkPosts} user={user} returnPath={returnPath} promoteAncestors
+        expandedByDefault={!user && (path === '/all' || random)} collapseWithoutPreviews={newest}
+        expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
+        contextDirectedUnreadPostIds={directedUnreadPostIds} />
+    )
+    : null
+  const chunkMarkup = (
+    <InfiniteFeedChunk chunk={renderedChunk}
+      hasMore={feed.posts.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+      {feedContent}
+    </InfiniteFeedChunk>
+  )
+  if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
       mobileWriteAction notificationBanner={notificationBanner} feeds={random ? undefined : newest
@@ -57,12 +82,7 @@ export function PublicFeed(
         : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
       {feed.posts.length
-        ? (
-          <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} promoteAncestors
-            expandedByDefault={!user && (path === '/all' || random)} collapseWithoutPreviews={newest}
-            expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
-            contextDirectedUnreadPostIds={directedUnreadPostIds} />
-        )
+        ? chunkMarkup
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

@@ -3,6 +3,7 @@ import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../typ
 import { displayBio, linkify } from '../utils'
 import { ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
+import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { BioReferenceForms, FeedThreads, TagReference, UserReference } from './post'
@@ -47,7 +48,8 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 
 export function Feed(
   { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId, writeError,
-    writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId }: {
+    writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId, chunk = 0,
+    initialChunks = 1 }: {
       user: User
       data: PersonalizedFeedData
       title?: string
@@ -62,10 +64,13 @@ export function Feed(
       writePreviewExecutionOutput?: string | null
       writePreviewLocation?: import('../types').LocationView
       writeDraftId?: string
+      chunk?: number
+      initialChunks?: number
     },
 ) {
   const feedPath = path
-  const returnPath = feedPath + (data.page > 1 ? `?page=${data.page}` : '')
+  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
+  const returnPath = feedChunkReturnPath(feedPath + (data.page > 1 ? `?page=${data.page}` : ''), renderedChunk)
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
   const unreadPage = data.unreadHref
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
@@ -92,7 +97,7 @@ export function Feed(
   }
   const timelinePositions = new Map(displayTimeline.map((row, index) => [row.event_key, index]))
   const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
-  const visibleTimeline = displayTimeline.filter((row, index) => {
+  const allVisibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
     return displayTimeline.findIndex(candidate =>
       ['post', 'reply', 'mention'].includes(candidate.activity_kind)
@@ -106,6 +111,9 @@ export function Feed(
           : timelinePositions.get(row.event_key)!
       return position(a) - position(b)
     })
+  const visibleTimeline = chunk === 0 && initialChunks > 1
+    ? allVisibleTimeline.slice(0, initialChunks * FEED_CHUNK_SIZE)
+    : chunkItems(allVisibleTimeline, chunk)
   const renderTimelineRow = (row: PersonalizedTimelineRow) => {
     const anchor = activityAnchor(row.event_key)
     const activityReturnPath = `${returnPath}#${anchor}`
@@ -208,6 +216,32 @@ export function Feed(
         </article>
       )
   }
+  const timelineMarkup = visibleTimeline.length
+    ? groupSimilarActivities(visibleTimeline).map((group, groupIndex) =>
+      group.rows.length > 1 && group.collapsible
+        ? (
+          <div className="activity-group" key={group.rows[0].event_key}>
+            {renderTimelineRow(group.rows[0])}
+            <div className="activity-more">
+              <input className="activity-more-input" type="checkbox" id={`activity-more-${chunk}-${groupIndex}`} />
+              <label className="activity-more-summary" htmlFor={`activity-more-${chunk}-${groupIndex}`}>
+                and {group.rows.length - 1} more
+              </label>
+              <div className="activity-more-content"><div className="activity-more-content-inner">
+                {group.rows.slice(1).map(renderTimelineRow)}
+              </div></div>
+            </div>
+          </div>
+        )
+        : renderTimelineRow(group.rows[0]))
+    : null
+  const chunkMarkup = (
+    <InfiniteFeedChunk chunk={renderedChunk}
+      hasMore={allVisibleTimeline.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+      {timelineMarkup}
+    </InfiniteFeedChunk>
+  )
+  if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
       <h1 className="visually-hidden">Your feed</h1>
@@ -224,26 +258,7 @@ export function Feed(
         latestCount={data.latestCount} />
       {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
       {displayTimeline.length
-        ? groupSimilarActivities(visibleTimeline).map((group, groupIndex) =>
-          group.rows.length > 1 && group.collapsible
-            ? (
-              <div className="activity-group" key={group.rows[0].event_key}>
-                {renderTimelineRow(group.rows[0])}
-                <div className="activity-more">
-                  <input className="activity-more-input" type="checkbox" id={`activity-more-${groupIndex}`} />
-                  <label className="activity-more-summary" htmlFor={`activity-more-${groupIndex}`}>
-                    and {group.rows.length - 1} more
-                  </label>
-                  <div className="activity-more-content">
-                    <div className="activity-more-content-inner">
-                      {group.rows.slice(1).map(renderTimelineRow)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-            : renderTimelineRow(group.rows[0])
-        )
+        ? chunkMarkup
         : data.page === 1
         ? (
           <div className="empty empty-actions">

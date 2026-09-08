@@ -39,6 +39,10 @@ export function page(node: React.ReactNode, status = 200) {
   return new Response('<!doctype html>' + markup, { status,
     headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' } })
 }
+export function htmlFragment(node: React.ReactNode, status = 200) {
+  return new Response(renderToStaticMarkup(node as React.ReactElement), { status,
+    headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'private, no-store' } })
+}
 export function notFoundPage(req: Request) {
   return page(<ErrorPage user={currentUser(req)} status={404} />, 404)
 }

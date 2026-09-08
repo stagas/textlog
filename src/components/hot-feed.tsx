@@ -3,13 +3,14 @@ import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
+import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId }: {
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1 }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -24,10 +25,24 @@ export function HotFeed(
       writePreviewExecutionOutput?: string | null
       writePreviewLocation?: import('../types').LocationView
       writeDraftId?: string
+      chunk?: number
+      initialChunks?: number
     },
 ) {
+  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
+  const chunkPosts = chunk === 0 && initialChunks > 1
+    ? feed.posts.slice(0, initialChunks * FEED_CHUNK_SIZE)
+    : chunkItems(feed.posts, chunk)
   const feedPath = path
-  const returnPath = feedPath + (feed.page > 1 ? `?page=${feed.page}` : '')
+  const returnPath = feedChunkReturnPath(feedPath + (feed.page > 1 ? `?page=${feed.page}` : ''), renderedChunk)
+  const chunkMarkup = (
+    <InfiniteFeedChunk chunk={renderedChunk}
+      hasMore={feed.posts.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+      <FeedThreads posts={chunkPosts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
+        expandedByDefault={!user && path === '/hot'} promoteAncestors />
+    </InfiniteFeedChunk>
+  )
+  if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
@@ -47,10 +62,7 @@ export function HotFeed(
         toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
       {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
       {feed.posts.length
-        ? (
-          <FeedThreads posts={feed.posts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
-            expandedByDefault={!user && path === '/hot'} promoteAncestors />
-        )
+        ? chunkMarkup
         : feed.page === 1
         ? <GlobalFeedEmpty user={user} />
         : (

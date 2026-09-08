@@ -8893,3 +8893,6 @@ body:has(.logs-page) main {
   .tag-picker-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .people-picker-options { grid-template-columns: minmax(0, 1fr); }
 }
+.infinite-feed-sentinel {
+  height: 1px;
+}

@@ -438,6 +438,7 @@ app.use('*', async (c, next) => {
   await next()
   const embeddable = c.req.path.startsWith('/embed/')
   const scriptsEnabled = c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
+    || ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(c.req.path)
   for (const [name, value] of Object.entries(
     securityHeaders(devReloadEnabled, undefined, embeddable, scriptsEnabled),
   )) c.header(name, value)
@@ -682,7 +683,7 @@ app.get('/embed.css', () =>
     'content-type': 'text/css; charset=utf-8',
     'cache-control': 'public, max-age=86400',
   } }))
-for (const path of ['/notifications.js', '/sw.js']) {
+for (const path of ['/notifications.js', '/infinite-scroll.js', '/sw.js']) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
   const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
   app.get(path, async () =>
