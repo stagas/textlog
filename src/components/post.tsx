@@ -1594,7 +1594,11 @@ export function FeedThreads(
     while (ancestor.parent) ancestor = ancestor.parent
     return ancestor.parent_id === null && !!ancestor.deleted_at
   }
-  const feedPosts = posts.filter(post => !belongsToDeletedTopLevel(post) && !post.hidden_by_reply_gate)
+  const feedPosts = posts
+    .filter(post => !belongsToDeletedTopLevel(post) && !post.hidden_by_reply_gate)
+    .map(post => post.feed_branch_root && post.parent && post.parent_id !== post.parent.id
+      ? { ...post, parent_id: post.parent.id }
+      : post)
   if (!feedPosts.length) return null
   const treePosts = [...feedPosts]
   const ids = new Set(feedPosts.map(post => post.id))

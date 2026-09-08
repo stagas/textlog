@@ -181,7 +181,9 @@ test('a folded unread reply promotes its parent into the tree', () => {
   expect(html).toMatch(
     /collapsed-preview-post[^>]*>[\s\S]*?id="post-301"[\s\S]*?collapsed-preview-post[^>]*>[\s\S]*?id="post-302"/,
   )
-  expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"><article[^>]*id="post-302"/)
+  expect(html).toMatch(
+    /class="reply-node collapsed-preview-path collapsed-preview-post">[\s\S]*?<article[^>]*id="post-302"/,
+  )
   expect(html).not.toContain('class="parent-quote')
 })
 
@@ -202,7 +204,7 @@ test('an unread reply keeps a root parent in the tree without quoting it', () =>
   expect(html.match(/Visible parent/g)).toHaveLength(1)
 })
 
-test('a feed branch root continues when its retained quoted parent has the same author', () => {
+test('a feed branch root continues beneath its retained parent in the tree', () => {
   const parent = { id: 2547, user_id: 490, parent_id: null, body: 'Earlier thought', created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle: 'jg', reply_count: 1 }
   const branchRoot = { id: 2553, user_id: 490, parent_id: null, parent, body: 'Upon further reflection',
@@ -213,12 +215,10 @@ test('a feed branch root continues when its retained quoted parent has the same 
     totalItems: 1,
     totalPages: 1,
   }} />)
-  const quoteStart = html.indexOf('<blockquote class="parent-quote')
-  const quoteEnd = html.indexOf('</blockquote>', quoteStart)
-
-  expect(html.slice(0, quoteStart)).toContain('<span class="post-context">continued:</span>')
-  expect(html.slice(quoteStart, quoteEnd)).toContain('<span class="post-context">wrote:</span>')
-  expect(html.slice(0, quoteStart)).not.toContain('<span class="post-context">wrote:</span>')
+  expect(html).toMatch(/id="post-2547"[\s\S]*?class="reply-branch[^\"]*"[\s\S]*?id="post-2553"/)
+  expect(html).toContain('<span class="post-context">continued:</span>')
+  expect(html).toContain('<span class="post-context">wrote:</span>')
+  expect(html).not.toContain('class="parent-quote')
 })
 
 test('latest shows approximate age wording only for unread post metadata', () => {

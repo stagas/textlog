@@ -1919,7 +1919,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .toBe('An updated nested reply preview')
   expect(replyPreviewHtml).toContain(`id="post-${quotedReply.id}"`)
   expect(replyPreviewHtml).toContain(`action="/post/${quotedReply.id}/reply#post-${quotedReply.id}"`)
-  expect(replyPreviewHtml).toContain('A route-level integration post')
+  expect(replyPreviewHtml).not.toContain('A route-level integration post')
+  expect(replyPreviewHtml).toContain(`<a class="quiet post-parent-link" href="/post/${post.id}">parent</a>`)
   const invalidEditBody = `remember edit ${'x'.repeat(490)}`
   const invalidEdit = await request(`/post/${post.id}/edit`, {
     method: 'POST',

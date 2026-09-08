@@ -464,7 +464,7 @@ describe('in-memory stylesheet', () => {
 
   test('styles conversation top links', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.postfoot .post-reply-link,\n.posttop .post-top-link,')
+    expect(css).toContain('.postfoot .post-reply-link,\n.posttop .post-parent-link,\n.posttop .post-top-link,')
     expect(css).toContain('.posttop > .post-top-link {\n  margin-left: auto;\n}')
   })
 
