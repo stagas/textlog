@@ -378,7 +378,7 @@ test('to-me renders sibling reply activities together in one conversation tree',
     parent_id: parent.id,
     parent,
     activity_kind: 'reply',
-    renderedPost: { ...postActivity(id, id, handle), parent_id: parent.id, parent },
+    renderedPost: { ...postActivity(id, id, handle), parent_id: parent.id, parent, feed_ancestor_gap: true },
   })
   const html = renderToStaticMarkup(<Feed
     user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
@@ -389,6 +389,7 @@ test('to-me renders sibling reply activities together in one conversation tree',
 
   expect(html.match(/one shared parent/g)).toHaveLength(1)
   expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html).not.toContain('thread-ancestor-gap')
   expect(html.indexOf('note by bob')).toBeLessThan(html.indexOf('note by cara'))
 })
 

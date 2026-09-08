@@ -1617,6 +1617,12 @@ export function FeedThreads(
         ? { feed_ancestor_gap: true }
         : {}) })
     ids.add(parent.id)
+    for (let index = 0; index < treePosts.length; index++) {
+      const child = treePosts[index]
+      if (child.parent_id === parent.id && child.parent?.id === parent.id && child.feed_ancestor_gap) {
+        treePosts[index] = { ...child, feed_ancestor_gap: undefined }
+      }
+    }
   }
   if (promoteAncestors) {
     for (const post of feedPosts) {

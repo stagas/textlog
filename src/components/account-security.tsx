@@ -1,10 +1,11 @@
-import type { User } from '../types'
 import type { ApiKeyView, FeedKeyView, SessionView } from '../types'
+import { FormActions, FormMessage } from './page-shared'
+import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
+
+import type { User } from '../types'
 import { AccountSettingsHeader } from './account-settings-header'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { FormActions, FormMessage } from './page-shared'
-import { CenteredPanel, PanelCopy, PanelHeading } from './panel'
 
 function SecuritySection({ title, description, id, children }: {
   title: string
@@ -308,12 +309,12 @@ export function AccountPassword({ user, enabled, token, request = false, sent = 
           : (
             <h1>
               {invalid
-                ? 'Link unavailable'
+                ? 'Link unavailable.'
                 : sent
-                ? 'Check your email'
+                ? 'Check your email.'
                 : enabled
-                ? 'Change password'
-                : 'Set a password'}
+                ? 'Change password:'
+                : 'Set a password:'}
             </h1>
           )}
         {error && <p className="status-message status-error" role="alert">{error}</p>}

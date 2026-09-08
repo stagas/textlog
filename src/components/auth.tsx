@@ -131,7 +131,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
         width="medium"
       >
         <AuthBrand />
-        <h1>Check your email</h1>
+        <h1>Check your email.</h1>
         <p>
           {handle
             ? (
@@ -197,10 +197,11 @@ export function ChooseHandle({ error, handle = '', next, previousAccountId }: {
             <FormActions className="handle-picker-actions"
               secondary={previousAccountId && (
                 <button className="secondary-action cancel-action" type="submit" formAction="/choose-handle/cancel"
-                  formNoValidate>cancel</button>
-              )}
-              primary={<button className="button">continue →</button>}
-            />
+                  formNoValidate
+                >
+                  cancel
+                </button>
+              )} primary={<button className="button">continue →</button>} />
           </form>
         </div>
       </section>

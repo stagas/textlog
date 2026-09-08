@@ -1,8 +1,9 @@
+import { CenteredPanel, Panel, PanelCopy, PanelHeading } from './panel'
+
 import type { User } from '../types'
 import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { CenteredPanel, Panel, PanelCopy, PanelHeading } from './panel'
 
 function SampleContent({ title, eyebrow, danger = false }: { title: string; eyebrow: string; danger?: boolean }) {
   return (
@@ -63,7 +64,7 @@ export function PanelsGallery({ user }: { user?: User | null }) {
             <Panel width="fluid" className="panel-gallery-state">
               <p className="eyebrow">status</p>
               <div className="panel-gallery-state-content">
-                <PanelHeading>Check your email</PanelHeading>
+                <PanelHeading>Check your email.</PanelHeading>
                 <p className="status-message status-success" role="status">A fresh verification link has been sent.</p>
                 <PanelCopy>The link expires in one hour.</PanelCopy>
               </div>
