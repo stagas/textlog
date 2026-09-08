@@ -2686,6 +2686,18 @@ body.corners-round a.button {
   border-top: 0;
 }
 
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > :first-child:is(
+  .post,
+  .feed-thread,
+  .feed-relationship,
+  .activity-follow
+),
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child .post,
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .activity-group:first-child > .activity-follow:first-child,
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .activity-item:first-child :is(.post, .activity-follow) {
+  border-top: 0;
+}
+
 .deleted-post a,
 .deleted-parent a {
   color: var(--muted);
@@ -8086,6 +8098,11 @@ a.post-context:hover {
 .feed-tabs + .feed-read-action + .feed-thread,
 .feed-tabs + .for-you-item > .feed-thread,
 .feed-read-action + .for-you-item > .feed-thread {
+  border-top: 0;
+}
+
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .feed-thread:first-child,
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread {
   border-top: 0;
 }
 
