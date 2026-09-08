@@ -219,6 +219,39 @@ test('latest includes unread replies beyond the normal conversation preview', as
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
 })
 
+test('latest exposes and consumes an unread reply omitted from a deep branch preview', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(20,2,'root','2026-08-26 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+    (21,2,20,'deep unread','2026-08-26 10:00:00'),
+    (22,2,21,'depth 2','2026-08-26 11:00:00'),
+    (23,2,22,'depth 3','2026-08-26 12:00:00'),
+    (24,2,23,'depth 4','2026-08-26 13:00:00'),
+    (25,2,24,'depth 5','2026-08-26 14:00:00'),
+    (26,2,25,'depth 6','2026-08-26 15:00:00'),
+    (27,2,26,'depth 7','2026-08-26 16:00:00');`)
+  markLatestPostsRead(1, [20, 21, 22, 24, 25, 26, 27], database)
+  cacheDb.query('DELETE FROM feed_snapshots WHERE kind=\'latest-conversation-heads-v13\' AND viewer_id=1').run()
+
+  const first = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+
+  expect(first.latestCount).toBe(1)
+  expect(first.unreadPostIds).toEqual([23])
+  expect(first.posts.find(post => post.id === 23)).toMatchObject({ feed_ancestor_gap: true })
+  expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: 1 })).toBe(0)
+
+  const second = await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+  expect(second.latestCount).toBe(0)
+  expect(second.unreadPostIds).toEqual([])
+})
+
 test('latest keeps up to five replies available when the recent root is present', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
