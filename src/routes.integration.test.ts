@@ -2085,7 +2085,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const forYouFirstBody = await (await request('/my-feed', { cookie: aliceCookie })).text()
   expect(forYouFirstBody).not.toContain('/my-feed?cursor=')
   expect(forYouFirstBody).not.toContain('cursor note 81')
-  expect(forYouFirstBody).toContain(post.body)
+  expect(forYouFirstBody).not.toContain(post.body)
+  expect(await (await request('/my-feed?page=3', { cookie: aliceCookie })).text()).toContain(post.body)
   expect(forYouFirstBody).not.toContain('action="/my-feed/read-all"')
   expect(forYouFirstBody).not.toContain('class="for-you-item activity-item-unread"')
 
@@ -2344,7 +2345,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     'class="active" aria-current="page" href="/@">',
   )
   expect(unreadToMeHtml).toContain('@<span class="to-me-count">1</span></a>')
-  expect(unreadToMeHtml).not.toContain('>all</a>')
+  expect(unreadToMeHtml).toContain('>all</a>')
   expect(unreadToMeHtml).toContain('activity-item-directed-unread')
   expect(unreadToMeHtml).toContain('class="unread-dot" aria-label="unread"')
   expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=? AND event_key=?')
