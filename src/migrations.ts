@@ -5063,6 +5063,40 @@ export function databaseVersion(database: Database) {
   return (database.query('PRAGMA user_version').get() as { user_version: number }).user_version
 }
 
+function isBusyError(error: unknown) {
+  if (!(error instanceof Error)) return false
+  const sqlite = error as Error & { code?: string; errno?: number }
+  return sqlite.code === 'SQLITE_BUSY' || sqlite.code === 'SQLITE_BUSY_SNAPSHOT' || sqlite.errno === 5
+    || sqlite.errno === 517
+}
+
+function runMigrationWhenWriterIsAvailable(database: Database, migration: Migration) {
+  const migrate = database.transaction(() => {
+    // Another green instance may have completed this migration while this one was waiting for the writer lock.
+    if (databaseVersion(database) >= migration.version) return false
+    migration.up(database)
+    database.run(`PRAGMA user_version=${migration.version}`)
+    return true
+  }).immediate
+
+  let attempts = 0
+  while (true) {
+    try {
+      return migrate()
+    }
+    catch (error) {
+      if (!isBusyError(error)) throw error
+      attempts++
+      if (attempts === 1 || attempts % 12 === 0) {
+        console.warn(`database migration waiting v${migration.version} ${migration.name} attempts=${attempts}`)
+      }
+      // The old blue process remains available while green patiently waits for a write window. BEGIN IMMEDIATE avoids
+      // taking a stale read snapshot first, which SQLite cannot later promote and reports as SQLITE_BUSY_SNAPSHOT.
+      Bun.sleepSync(Math.min(5_000, 250 * attempts))
+    }
+  }
+}
+
 export function runMigrations(database: Database, onMigration?: (migration: Migration) => void) {
   const current = databaseVersion(database)
   if (current > latestMigrationVersion) {
@@ -5074,6 +5108,7 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
     ? 0
     : Math.max(0, Math.min(5_000, Math.floor(configuredDelay)))
   for (const [index, migration] of pending.entries()) {
+    let applied: boolean
     if (migration.transaction === false) {
       const foreignKeys = (database.query('PRAGMA foreign_keys').get() as { foreign_keys: number }).foreign_keys
       const legacyAlterTable = (database.query('PRAGMA legacy_alter_table').get() as { legacy_alter_table: number })
@@ -5081,10 +5116,7 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
       if (foreignKeys) database.run('PRAGMA foreign_keys=OFF')
       database.run('PRAGMA legacy_alter_table=ON')
       try {
-        database.transaction(() => {
-          migration.up(database)
-          database.run(`PRAGMA user_version=${migration.version}`)
-        })()
+        applied = runMigrationWhenWriterIsAvailable(database, migration)
       }
       finally {
         if (foreignKeys) database.run('PRAGMA foreign_keys=ON')
@@ -5092,12 +5124,9 @@ export function runMigrations(database: Database, onMigration?: (migration: Migr
       }
     }
     else {
-      database.transaction(() => {
-        migration.up(database)
-        database.run(`PRAGMA user_version=${migration.version}`)
-      })()
+      applied = runMigrationWhenWriterIsAvailable(database, migration)
     }
-    onMigration?.(migration)
+    if (applied) onMigration?.(migration)
     // Give Bun and SQLite a short breather between large schema generations. This is intentionally synchronous:
     // migrations run before the application starts accepting requests, and runMigrations has a synchronous API.
     if (migrationDelayMs && index < pending.length - 1) Bun.sleepSync(migrationDelayMs)
