@@ -106,6 +106,7 @@ const databaseIndependentPaths = new Set([
   '/embed.css',
   '/notifications.js',
   '/infinite-scroll.js',
+  '/compose.js',
   '/sw.js',
   '/theme.css',
   '/textlog.svg',

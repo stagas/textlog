@@ -1,5 +1,5 @@
 import type React from 'preact/compat'
-import { POST_MAX } from '../post-body'
+import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import type { LocationView, User } from '../types'
 import type { PostView } from '../types'
@@ -38,23 +38,31 @@ export function ReplyBox(
       },
 ) {
   return (
-    <Panel className={className}>
-      <form method="post" action={action}>
+    <>
+      <Panel className={className}>
+        <form method="post" action={action}>
         {hidden}
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         {beforeTextarea}
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus} defaultValue={body}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX} autoFocus={autoFocus}
+            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
+            defaultValue={body}
             placeholder={placeholder} autoComplete="off" inputMode="text" enterkeyhint="enter" />
           <PostingSuggestionResults search={suggestionSearch} />
           <div className="composefoot">
             <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
-            <FormActions secondary={secondary} primary={primary} />
+            <div className="compose-controls-row">
+              <output className="compose-character-count" hidden aria-live="polite" />
+              <FormActions secondary={secondary} primary={primary} />
+            </div>
           </div>
         </div>
-      </form>
-    </Panel>
+        </form>
+      </Panel>
+      <script src="/compose.js?v=4" defer />
+    </>
   )
 }
 

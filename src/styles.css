@@ -5279,7 +5279,7 @@ form.report-panel {
 
 :is(.write-compose, .reply-compose) textarea.form-control {
   min-height: calc(3lh + var(--space-4) + var(--compose-controls-inset));
-  max-height: calc(15lh + var(--space-4) + var(--compose-controls-inset));
+  max-height: calc(var(--compose-max-lines) * 1lh + var(--space-4) + var(--compose-controls-inset));
   padding: var(--space-4) var(--gutter) var(--compose-controls-inset);
 }
 
@@ -5292,6 +5292,37 @@ form.report-panel {
   margin-inline: var(--gutter);
   padding-bottom: var(--space-4);
   pointer-events: none;
+}
+
+:is(.write-compose, .reply-compose) .compose-character-count {
+  color: var(--muted);
+  font-size: var(--font-size-12);
+  line-height: 1;
+}
+
+:is(.write-compose, .reply-compose) .compose-character-count[hidden] {
+  display: none;
+}
+
+:is(.write-compose, .reply-compose) .compose-character-count-over-limit {
+  color: var(--error-ink);
+}
+
+:is(.write-compose, .reply-compose) .compose-controls-row {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+:is(.write-compose, .reply-compose) .composefoot .compose-controls-row .form-actions {
+  display: flex;
+  width: auto;
+  margin-left: auto;
+  gap: var(--space-4);
 }
 
 :is(.write-compose, .reply-compose) .posting-suggestion-results {

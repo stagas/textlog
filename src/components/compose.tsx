@@ -1,4 +1,4 @@
-import { POST_MAX } from '../post-body'
+import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import { appName } from '../brand'
 import { activeThemeLogoSvg } from '../theme'
@@ -165,23 +165,28 @@ export function WriteForm(
   const controls = (
     <div className="composefoot">
       <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
-      <FormActions secondary={
-        <span className="edit-post-actions">
-          <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
-        </span>
-      } primary={<button className="button" accessKey="p" title="Publish this post">post →</button>} />
+      <div className="compose-controls-row">
+        <output className="compose-character-count" hidden aria-live="polite" />
+        <FormActions secondary={
+          <span className="edit-post-actions">
+            <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
+          </span>
+        } primary={<button className="button" accessKey="p" title="Publish this post">post →</button>} />
+      </div>
     </div>
   )
   return (
-    <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
-      <form method="post" action="/post">
+    <>
+      <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
+        <form method="post" action="/post">
         <input type="hidden" name="from" value={returnPath} />
         {showBack && <input type="hidden" name="show_back" value="1" />}
         {embedded && !standalone && <input type="hidden" name="embedded" value="1" />}
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} autoFocus={autoFocus}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX} autoFocus={autoFocus}
+            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
             accessKey={embedded ? 'w' : undefined} defaultValue={body}
             placeholder={embedded ? placeholder : undefined}
             aria-label={`What’s on your mind, @${user.handle}?`} autoComplete="off" inputMode="text"
@@ -189,8 +194,10 @@ export function WriteForm(
           <PostingSuggestionResults search={suggestionSearch} />
           {controls}
         </div>
-      </form>
-    </Panel>
+        </form>
+      </Panel>
+      <script src="/compose.js?v=4" defer />
+    </>
   )
 }
 
@@ -217,25 +224,32 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
     </>
   )
   return (
-    <Panel className="compose write-compose embedded-write-compose anonymous-write-compose">
-      <form method="post" action="/post">
+    <>
+      <Panel className="compose write-compose embedded-write-compose anonymous-write-compose">
+        <form method="post" action="/post">
         <input type="hidden" name="from" value={returnPath} />
         <input type="hidden" name="embedded" value="1" />
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" maxLength={POST_MAX} defaultValue={body}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX} defaultValue={body}
+            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
             placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
             enterkeyhint="enter" />
           <div className="composefoot">
             <PostingHelp controlledBy={helpId} actions={moreActions} />
-            <FormActions secondary={
-              <span className="edit-post-actions">
-                <PostingHelpAction id={helpId} />
-              </span>
-            } primary={<button className="button" title="Join and publish this post">post →</button>} />
+            <div className="compose-controls-row">
+              <output className="compose-character-count" hidden aria-live="polite" />
+              <FormActions secondary={
+                <span className="edit-post-actions">
+                  <PostingHelpAction id={helpId} />
+                </span>
+              } primary={<button className="button" title="Join and publish this post">post →</button>} />
+            </div>
           </div>
         </div>
-      </form>
-    </Panel>
+        </form>
+      </Panel>
+      <script src="/compose.js?v=4" defer />
+    </>
   )
 }

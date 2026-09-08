@@ -744,7 +744,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
   expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
   expect(html).toMatch(
-    /autofocus="" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
+    /autofocus="" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -2291,7 +2291,9 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html.indexOf('compose write-compose')).toBeLessThan(html.indexOf('class="feed-tabs"'))
     expect(html).toContain('name="from"')
     expect(html).toMatch(/placeholder="[^"]+, @reader\?"/)
-    expect(html).toContain('name="body" maxlength="500" accesskey="w"')
+    expect(html).toMatch(
+      /name="body" data-character-limit="500" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w"/,
+    )
     expect(html).not.toContain('class="skip-link" href="/write')
     expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')
     expect(html).not.toContain('<a class="skip-link" href="#main-content">skip to content</a>')
