@@ -547,12 +547,13 @@ export function registerFeedsRoutes(app: Hono) {
     const expandedRootId = positiveInteger(c.req.query('expand'))
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const pageSize = resolvedPageSize(c.req.raw)
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () =>
       dataPromise ||= databaseService().call('feeds.personalizedPage', {
         user,
         page: currentPage(c.req.query('page')),
-        pageSize: resolvedPageSize(c.req.raw),
+        pageSize,
         toMe: true,
         path: '/@',
       })
@@ -571,7 +572,10 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
-        viewerCacheVersion(1, user, notificationBanner), false, renderForCache)
+        viewerCacheVersion(1, user, notificationBanner), false, renderForCache, async () => {
+        return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
+          toMe: true }) > 0
+      })
       : await render()
     warmOtherFeedTabsAfterMiss(c.req.raw, user, 'to-me', response)
     return rememberFeed(response, 'activity')

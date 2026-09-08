@@ -169,3 +169,40 @@ test('my feed shows unread counters and dots once before caching its read state'
   expect(secondHtml).not.toContain('to-me-count')
   expect(secondHtml).not.toContain('aria-label="unread"')
 })
+
+test('@ shows a cached directed entry unread once and consumes it on the next visit', async () => {
+  const request = new Request('http://localhost/@')
+  const cacheVersion = 2_147_400_000 + Math.floor(Math.random() * 400_000)
+  const alice: User = { id: 1, handle: 'alice', email: 'alice@example.test', bio: '' }
+  const root = createPost(database, alice.id, 'cached @ read target', null, false)
+  if (!('id' in root)) throw new Error('could not create @ read target')
+  const reply = createPost(database, 2, 'cached directed activity', root.id, false)
+  if (!('id' in reply)) throw new Error('could not create directed activity')
+  const load = () => executeDatabaseDomain(database, 'feeds.personalizedPage', {
+    user: alice, page: 1, pageSize: 20, toMe: true, path: '/@', markRead: false,
+  })
+  const body = (feed: Awaited<ReturnType<typeof load>>) => new Response(
+    `<a href="/@">@${feed.toMeCount
+      ? `<span class="to-me-count">${feed.toMeCount}</span>`
+      : ''}</a>${feed.timeline.filter(row => row.unread)
+      .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')}`,
+  )
+
+  await rpcMaterializedFeedPage(request, 'to-me', alice.id, async () => body(await load()), false, cacheVersion)
+  const open = () => rpcMaterializedFeedPage(request, 'to-me', alice.id, async () => body(await load()), false,
+    cacheVersion, false, async () => body(await load()), async () =>
+      await executeDatabaseDomain(database, 'feeds.markPersonalizedSnapshotPageRead', {
+        userId: alice.id, pageSize: 20, toMe: true,
+      }) > 0)
+
+  const firstVisit = await open()
+  const firstHtml = await firstVisit.text()
+  expect(firstVisit.headers.get('x-feed-cache')).toBe('memory')
+  expect(firstHtml).toContain('to-me-count')
+  expect(firstHtml).toContain('aria-label="unread"')
+
+  const secondVisit = await open()
+  const secondHtml = await secondVisit.text()
+  expect(secondHtml).not.toContain('to-me-count')
+  expect(secondHtml).not.toContain('aria-label="unread"')
+})
