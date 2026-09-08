@@ -120,6 +120,52 @@ test('a warmed all feed marks visible posts read when that account opens it', as
     async () => ((await data()).unreadPostIds?.length || 0) > 0)
 
   expect(opened.headers.get('x-feed-cache')).toBe('memory')
-  expect(await opened.json()).toMatchObject({ unreadPostIds: [] })
+  expect(await opened.json()).toMatchObject({ unreadPostIds: expect.arrayContaining([post.id]) })
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: alice.id })).toBe(0)
+
+  const revisited = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await data()), false,
+    cacheVersion, false, async () => body(await data(), true),
+    async () => ((await data()).unreadPostIds?.length || 0) > 0)
+  expect(await revisited.json()).toMatchObject({ unreadPostIds: [] })
+})
+
+test('my feed shows unread counters and dots once before caching its read state', async () => {
+  const request = new Request('http://localhost/my-feed')
+  const cacheVersion = 2_147_000_000 + Math.floor(Math.random() * 400_000)
+  const alice: User = { id: 1, handle: 'alice', email: 'alice@example.test', bio: '' }
+  const load = () => executeDatabaseDomain(database, 'feeds.personalizedPage', {
+    user: alice,
+    page: 1,
+    pageSize: 20,
+    toMe: false,
+    path: '/my-feed',
+    markRead: false,
+  })
+  const body = (feed: Awaited<ReturnType<typeof load>>) => new Response(
+    `<a href="/my-feed">my feed${feed.forYouCount
+      ? `<span class="to-me-count">${feed.forYouCount}</span>`
+      : ''}</a>${feed.timeline.filter(row => row.unread)
+      .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')}`,
+  )
+
+  await rpcMaterializedFeedPage(request, 'for-you', alice.id, async () => body(await load()), false, cacheVersion)
+  invalidateMaterializedFeedMemory()
+  const open = () => rpcMaterializedFeedPage(request, 'for-you', alice.id, async () => body(await load()), false,
+    cacheVersion, false, async () => body(await load()), async () =>
+      await executeDatabaseDomain(database, 'feeds.markPersonalizedSnapshotPageRead', {
+        userId: alice.id,
+        pageSize: 20,
+        toMe: false,
+      }) > 0)
+
+  const firstVisit = await open()
+  const firstHtml = await firstVisit.text()
+  expect(firstVisit.headers.get('x-feed-cache')).toBe('durable')
+  expect(firstHtml).toContain('to-me-count')
+  expect(firstHtml).toContain('aria-label="unread"')
+
+  const secondVisit = await open()
+  const secondHtml = await secondVisit.text()
+  expect(secondHtml).not.toContain('to-me-count')
+  expect(secondHtml).not.toContain('aria-label="unread"')
 })

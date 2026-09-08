@@ -146,7 +146,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       : memory.body
     const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
       && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
-    let memoryBodyChanged = false
+    let responseBody = hydratedMemoryBody
     // Personalized pages can gain new unread entries without changing this process's memory entry. Consume the
     // visible page on every visit so reads made in My Feed are reflected in All before the response is returned.
     if (memoryHitNeedsReadAction(kind, memory.hitActionDone, personalizedActionStale) && onCacheHit) {
@@ -154,15 +154,18 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       const changed = await onCacheHit()
       if (renderForCache && readActionNeedsRerender(changed, personalizedActionStale)) {
         memory.body = materializedBody(await (await renderForCache()).text(), viewerId)
-        memoryBodyChanged = true
+        // A newly consumed page must remain visibly unread for this response. Only replace the current response when
+        // the cached dots were already consumed elsewhere and this request merely repaired stale markup.
+        if (personalizedActionStale && changed === false) {
+          responseBody = viewerId >= 0
+            ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+            : memory.body
+        }
       }
     }
-    const body = viewerId >= 0 && memoryBodyChanged
-      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
-      : hydratedMemoryBody
     const headers = new Headers(memory.headers)
     headers.set('x-feed-cache', 'memory')
-    return new Response(body, { status: memory.status, headers })
+    return new Response(responseBody, { status: memory.status, headers })
   }
   const startedAtMemoryGeneration = memoryGeneration
   let materialization = materializations.get(key)
@@ -171,7 +174,9 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       const cached = await call('cache.materializedFeedGet', { kind, viewerId, variant })
       if (cached.html) {
         const changed = await onCacheHit?.()
-        const cachedHtml = onCacheHit && renderForCache && changed !== false
+        const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
+          && personalizedReadActionOutOfSync(kind, cached.html)
+        const cachedHtml = onCacheHit && renderForCache && readActionNeedsRerender(changed, personalizedActionStale)
           ? await (await renderForCache()).text()
           : cached.html
         if (cachedHtml !== cached.html) {
@@ -183,7 +188,8 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             html: cachedHtml,
           })
         }
-        return { body: cachedHtml, generation: cached.generation, status: 200,
+        const responseHtml = personalizedActionStale && changed === false ? cachedHtml : cached.html
+        return { body: responseHtml, memoryBody: cachedHtml, generation: cached.generation, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'], [
             'x-feed-cache',
             'durable',
