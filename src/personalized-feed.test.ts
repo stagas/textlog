@@ -201,7 +201,7 @@ test('To Me conversations are ordered by their latest directed activity', () => 
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2])
 })
 
-test('To Me interleaves directed activity chronologically instead of grouping conversations', () => {
+test('To Me joins directed activity from the same conversation at its newest position', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
@@ -218,7 +218,7 @@ test('To Me interleaves directed activity chronologically instead of grouping co
 
   const feed = loadPersonalizedFeed(database, viewer, 1, 20, true, '/@', false)
 
-  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 4, 2])
+  expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2, 4])
 })
 
 test('For You includes unread replies beyond the recent reply preview', () => {

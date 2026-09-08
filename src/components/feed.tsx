@@ -86,7 +86,6 @@ export function Feed(
     return rootId
   }
   const threadPosts = (row: PersonalizedTimelineRow) => {
-    if (toMe) return [row.renderedPost!]
     const rootId = conversationRootId(row)
     return timelinePosts.filter(candidate => conversationRootId(candidate) === rootId)
       .map(candidate => candidate.renderedPost!)
@@ -95,7 +94,6 @@ export function Feed(
   const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
   const visibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
-    if (toMe) return true
     return displayTimeline.findIndex(candidate =>
       ['post', 'reply', 'mention'].includes(candidate.activity_kind)
       && conversationRootId(candidate) === conversationRootId(row)
@@ -118,7 +116,7 @@ export function Feed(
           className={`for-you-item for-you-author-${row.actor_id}`}
           key={row.event_key}
         >
-          <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath} promoteAncestors={!toMe}
+          <FeedThreads posts={threadPosts(row)} user={user} returnPath={returnPath} promoteAncestors
             expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
             contextDirectedUnreadPostIds={directedUnreadPostIds} />
         </div>

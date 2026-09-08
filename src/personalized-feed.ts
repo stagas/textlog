@@ -14,7 +14,7 @@ import { enrichPosts, loadBioReferenceData, loadWordNetNormalizations, visibleTa
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 40
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 41
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 const snapshotUnreadCountProjections = new WeakMap<Database, Map<string, number>>()
@@ -273,10 +273,6 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
         continue
       }
-      if (toMe) {
-        result.push({ rows: [row], created_at: row.created_at, order: row.event_key })
-        continue
-      }
       const root = rootId(row)
       if (emittedThreads.has(root)) continue
       emittedThreads.add(root)
@@ -298,7 +294,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
             ? { ...candidate, feed_ancestor_gap: true }
             : candidate
         )
-        result.push({ rows: projectedRows, created_at: threadActivity.get(root!) || row.created_at,
+        result.push({ rows: projectedRows,
+          created_at: toMe ? row.created_at : threadActivity.get(root!) || row.created_at,
           order: row.event_key })
       }
     }

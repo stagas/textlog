@@ -274,7 +274,7 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor,
             pageSize: visitor.pageSize, toMe, path: toMe ? '/@' : '/my-feed', markRead: false })
           return page(<Feed user={visitor.user} data={data} title={toMe ? '@' : 'my feed'}
             path={toMe ? '/@' : undefined} toMe={toMe} notificationBanner={notificationBanner} />)
-        }, false, viewerCacheVersion(kind === 'for-you' ? 12 : 0, visitor.user, notificationBanner), true)
+        }, false, viewerCacheVersion(kind === 'for-you' ? 12 : 1, visitor.user, notificationBanner), true)
       }
     }))
 }
@@ -571,7 +571,7 @@ export function registerFeedsRoutes(app: Hono) {
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
-        viewerCacheVersion(0, user, notificationBanner), false, renderForCache)
+        viewerCacheVersion(1, user, notificationBanner), false, renderForCache)
       : await render()
     warmOtherFeedTabsAfterMiss(c.req.raw, user, 'to-me', response)
     return rememberFeed(response, 'activity')
