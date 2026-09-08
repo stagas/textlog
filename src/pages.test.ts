@@ -48,6 +48,7 @@ import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './c
 
 import React from 'preact/compat'
 import { maskEmail } from './components/auth'
+import { WriteForm } from './components/compose'
 import { HotFeed } from './components/hot-feed'
 import { Layout } from './components/layout'
 import { PublicFeed } from './components/public-feed'
@@ -442,6 +443,19 @@ test('compose offers a server-rendered post preview', () => {
   expect(preview).not.toContain('preview-reply')
   expect(preview).not.toContain('href="#"')
   expect(preview).not.toContain('NaN')
+})
+
+test('embedded compose keeps autotag and preview submissions in the feed', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '',
+    email_verified_at: '2026-08-12 10:00:00', handle_chosen_at: '2026-08-12 10:00:00' }
+  const html = renderToStaticMarkup(React.createElement(WriteForm, {
+    user,
+    returnPath: '/hot?page=2',
+    embedded: true,
+  }))
+
+  expect(html).toContain('name="action" value="autotag" formaction="/hot?page=2"')
+  expect(html).toContain('name="action" value="preview" formaction="/hot?page=2"')
 })
 
 test('compose previews inline polls with their visible tag and options', () => {

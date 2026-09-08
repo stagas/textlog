@@ -1871,6 +1871,19 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     'class="panel panel-surface panel-medium compose write-compose embedded-write-compose"',
   )
   expect(embeddedPreviewHtml).not.toContain('<title>write ·')
+  const embeddedAutotag = await request('/all', {
+    method: 'POST',
+    cookie: aliceCookie,
+    form: { body: embeddedPreviewBody, action: 'autotag', embedded: '1', from: '/all' },
+  })
+  expect(embeddedAutotag.status).toBe(200)
+  const embeddedAutotagHtml = await embeddedAutotag.text()
+  expect(embeddedAutotagHtml).toContain('Autotag is not configured.')
+  expect(embeddedAutotagHtml).toContain(embeddedPreviewBody)
+  expect(embeddedAutotagHtml).toContain(
+    'class="panel panel-surface panel-medium compose write-compose embedded-write-compose"',
+  )
+  expect(embeddedAutotagHtml).not.toContain('<title>write ·')
   const invalidReplyBody = `remember reply ${'x'.repeat(490)}`
   const invalidReply = await request(`/post/${post.id}/reply`, {
     method: 'POST',

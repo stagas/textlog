@@ -32,7 +32,8 @@ import {
 } from '../http'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
 import { decodePostCursor } from '../pagination'
-import { normalizePostBody, postBodyValidationMessage, validPostBody } from '../post-body'
+import { autotagText } from '../openrouter'
+import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
@@ -113,10 +114,28 @@ const writeState = async (c: Context) => {
   if (c.req.method === 'POST') {
     const fields = await form(c.req.raw)
     const writeBody = normalizePostBody(fields.body || '')
-    if (fields.action !== 'preview' || fields.embedded !== '1') {
-      return { writeError: 'Unsupported feed action.', writeBody }
+    if (!['autotag', 'preview'].includes(fields.action || '') || fields.embedded !== '1') {
+      return { writeError: 'Unsupported feed action.', writeBody, writeHandled: true }
     }
-    if (!validPostBody(writeBody)) return { writeError: postBodyValidationMessage(writeBody), writeBody }
+    if (fields.action === 'autotag') {
+      if (!writeBody.trim()) return { writeError: postBodyValidationMessage(writeBody), writeBody, writeHandled: true }
+      const result = await autotagText(writeBody)
+      const enrichedBody = result.ok ? normalizePostBody(result.body) : writeBody
+      const valid = result.ok && validPostBody(enrichedBody)
+      return {
+        writeBody: valid ? enrichedBody : writeBody,
+        writeDraftId: fields.draft_id,
+        writeHandled: true,
+        writeError: result.ok && !valid
+          ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
+          : result.ok
+          ? undefined
+          : result.message,
+      }
+    }
+    if (!validPostBody(writeBody)) {
+      return { writeError: postBodyValidationMessage(writeBody), writeBody, writeHandled: true }
+    }
     const user = currentUser(c.req.raw)
     let writeDraftId: string | undefined
     if (user) {
@@ -134,6 +153,7 @@ const writeState = async (c: Context) => {
     return {
       writeBody,
       writeDraftId,
+      writeHandled: true,
       writePreview: true,
       writePreviewExecutionOutput: await executePostCode(writeBody),
       writePreviewLocation: await previewLocation(writeBody),
@@ -397,7 +417,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeError && !write.writePreview
+    const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
         viewerCacheVersion(12, user, notificationBanner), false, renderForCache, async () => {
@@ -439,7 +459,7 @@ export function registerFeedsRoutes(app: Hono) {
         )
       }
       : undefined
-    const response = !write.writeError && !write.writePreview
+    const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
         viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache,
@@ -495,7 +515,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const response = !write.writeError && !write.writePreview
+    const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
         viewerCacheVersion(newFeedCacheVersion, user, notificationBanner))
@@ -548,7 +568,7 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeError && !write.writePreview
+    const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(0, user, notificationBanner), false, renderForCache)
@@ -580,7 +600,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} {...write} />,
       )
     }
-    const response = !write.writeError && !write.writePreview
+    const response = !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,

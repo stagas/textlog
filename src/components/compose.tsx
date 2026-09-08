@@ -144,6 +144,7 @@ export function WriteForm(
   const moreActions = (
     <>
       <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+        formAction={embedded && !standalone ? returnPath : undefined}
         title="Enrich post with hashtags"
       >
         autotag
@@ -202,6 +203,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
   const moreActions = (
     <>
       <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+        formAction={returnPath}
         title="Enrich post with hashtags"
       >
         autotag
