@@ -2402,7 +2402,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(activityFirstBody).not.toContain('action="/@/read-all"')
   insertActivityReply.run(bob.id, post.id, 'newer activity after cursor', '2080-02-01 12:00:00')
   const activitySecondBody = await (await request('/@?page=2', { cookie: aliceCookie })).text()
-  expect(activitySecondBody).toContain('oldest cursor boundary')
+  expect(activitySecondBody).not.toContain('oldest cursor boundary')
   expect(activitySecondBody).toContain('activity cursor reply 81')
   expect(activitySecondBody).not.toContain('← prev')
   expect(activitySecondBody).toContain('newer activity after cursor')

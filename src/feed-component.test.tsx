@@ -370,7 +370,7 @@ test('profile feeds omit gated-replies notices', () => {
   expect(html).not.toContain('(replies are hidden until you answer the quiz)')
 })
 
-test('to-me renders sibling reply activities as separate chronological entries', () => {
+test('to-me renders sibling reply activities together in one conversation tree', () => {
   const parent = { id: 25, user_id: 1, parent_id: null, body: 'one shared parent', created_at: '2026-08-19 09:00:00',
     deleted_at: null, handle: 'reader', reply_count: 2 }
   const activity = (id: number, handle: string): PersonalizedTimelineRow => ({
@@ -387,9 +387,9 @@ test('to-me renders sibling reply activities as separate chronological entries',
     toMe
   />)
 
-  expect(html.match(/one shared parent/g)).toHaveLength(2)
-  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(2)
-  expect(html.indexOf('note by cara')).toBeLessThan(html.indexOf('note by bob'))
+  expect(html.match(/one shared parent/g)).toHaveLength(1)
+  expect(html.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(html.indexOf('note by bob')).toBeLessThan(html.indexOf('note by cara'))
 })
 
 test('threaded activity replies retain their unread dots', () => {
