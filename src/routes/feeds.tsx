@@ -73,7 +73,7 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>,
   banner: Awaited<ReturnType<typeof showNotificationBanner>> = false)
 {
-  const feedPresentationVersion = 1
+  const feedPresentationVersion = 2
   const bannerVersion = banner
     ? ['notifications', 'appearance', 'invite', 'bio', 'notification-update', 'donate'].indexOf(banner) + 1
     : 0

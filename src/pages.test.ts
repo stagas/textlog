@@ -219,6 +219,23 @@ test('account navigation marks linked accounts with unread activity', () => {
   expect(html).toContain('<span>@quiet</span></button>')
 })
 
+test('account navigation highlights the authenticated account despite stale selection metadata', () => {
+  const html = withAppearance(new Request('https://textlog.test/my-feed'),
+    () =>
+      renderToStaticMarkup(React.createElement(Layout, {
+        user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+          linked_accounts: [
+            { id: 1, handle: 'reader', handle_chosen_at: '2026-01-01', selected: false },
+            { id: 2, handle: 'previous', handle_chosen_at: '2026-02-01', selected: true },
+          ] },
+        children: React.createElement('p', null, 'Hello'),
+      })))
+
+  expect(html).toContain('account-menu-account-selected" type="button" aria-current="true"><span>@reader</span>')
+  expect(html).toContain('name="accountId" value="2"')
+  expect(html).not.toContain('aria-current="true"><span>@previous</span>')
+})
+
 test('panels gallery renders every shared panel variation', () => {
   const html = renderToStaticMarkup(React.createElement(PanelsGallery as React.FunctionComponent, {}))
 

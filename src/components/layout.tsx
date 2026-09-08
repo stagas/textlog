@@ -99,7 +99,7 @@ export function Layout({
       <a href="/bookmarks">bookmarks</a>
       <hr className="account-menu-separator" />
       {user.linked_accounts?.map(account => (
-        account.selected
+        account.id === user.id
           ? (
             <button className="account-menu-account account-menu-account-selected" type="button" aria-current="true"
               key={account.id}>
