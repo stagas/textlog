@@ -691,7 +691,9 @@ for (const path of ['/notifications.js', '/infinite-scroll.js', '/sw.js']) {
       (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
-        'cache-control': 'no-cache',
+        'cache-control': path === '/infinite-scroll.js'
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
       } },
     ))

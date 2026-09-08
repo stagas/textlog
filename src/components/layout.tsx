@@ -223,6 +223,7 @@ export function Layout({
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
         <link rel="stylesheet" href="/styles.css?v=1531" />
+        {onFeedPage && <script src="/infinite-scroll.js?v=5" defer />}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body
@@ -368,7 +369,6 @@ export function Layout({
             </nav>
           </footer>
         )}
-        {onFeedPage && <script src="/infinite-scroll.js?v=5" defer />}
         {devReloadBootId && <DevReload bootId={devReloadBootId} />}
       </body>
     </html>
