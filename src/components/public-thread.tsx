@@ -21,13 +21,16 @@ export function PublicThread(
   },
 ) {
   const backPostId = postAnchorId(returnPath)
+  const parentHref = post.parent_id
+    ? `/post/${post.parent_id}${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
+    : undefined
   const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
   return (
     <Layout title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread public-post-page-thread">
         <div className="thread-root">
-          <Post p={post} user={null} tappableParent backHref={returnPath} canonicalTimestamp topHref={topHref}
-            flatHref={flatHref} treeHref={treeHref} shareAction />
+          <Post p={post} user={null} showParent={false} backHref={returnPath} canonicalTimestamp
+            parentHref={parentHref} topHref={topHref} flatHref={flatHref} treeHref={treeHref} shareAction />
         </div>
         {showForm && !post.thread_locked && !replyTo && (
           <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath} />

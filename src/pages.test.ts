@@ -1050,7 +1050,7 @@ test('feed threads highlight search matches while retaining tappable reply navig
   }))
 
   expect(html).toContain('A <mark>needle</mark> in a reply')
-  expect(html).toContain('class="quiet post-top-link"')
+  expect(html).not.toContain('class="quiet post-top-link"')
   expect(html).toContain('from=%2Fsearch%3Fq%3Dneedle%26page%3D2%23post-42')
   expect(html).not.toContain('>read</a>')
 })
@@ -1414,7 +1414,7 @@ test('locally collapsible complete conversations only render the collapsed-previ
   expect(html).not.toContain('>more</a>')
 })
 
-test('partial conversations place sibling omission markers at the newest visible boundary', () => {
+test('partial conversations render a loaded parent as a normal branch', () => {
   const root = { id: 35, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-07 15:44:34', deleted_at: null,
     handle: 'root', reply_count: 5, direct_reply_count: 3 }
   const branch = { id: 37, user_id: 2, parent_id: root.id, body: 'Older branch', created_at: '2026-08-07 15:45:17',
@@ -1436,11 +1436,11 @@ test('partial conversations place sibling omission markers at the newest visible
     promoteAncestors: true,
   }))
 
-  expect(html).not.toContain('id="post-37"')
+  expect(html).toContain('id="post-37"')
   expect(html).toMatch(
-    /class="reply-node projected-reply-deeper omitted-parent-reply"[\s\S]*?aria-label="Earlier replies omitted" rel="nofollow">…<\/a>[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/,
+    /id="post-37"[\s\S]*?class="reply-branch"[\s\S]*?id="post-47"[\s\S]*?id="post-41"[\s\S]*?id="post-2716"/,
   )
-  expect(html.match(/aria-label="Earlier replies omitted"/g)).toHaveLength(1)
+  expect(html).not.toContain('aria-label="Earlier replies omitted"')
 })
 
 test('collapsed nested previews mark an omitted path without adding preview indentation twice', () => {
@@ -1789,9 +1789,37 @@ test('promoted deep feed activity anchors at its recent branch instead of resurr
 
   expect(html).toContain('Deep branch')
   expect(html).toContain('Recent answer')
-  expect(html).toContain('<blockquote class="parent-quote tappable-parent">')
-  expect(html).toContain('Old root')
+  expect(html).not.toContain('class="parent-quote')
+  expect(html).not.toContain('Old root')
+  expect(html.match(/class="quiet post-top-link"/g)).toHaveLength(1)
   expect(html).not.toContain('aria-label="Earlier replies omitted">…</div>')
+})
+
+test('feed branch roots render their loaded parent through the normal tree', () => {
+  const parent = { id: 3209, user_id: 1, parent_id: null, body: 'Parent of 3210',
+    created_at: '2026-08-23 09:00:00', deleted_at: null, handle: 'parent', reply_count: 3 }
+  const reply = { id: 3210, user_id: 2, parent_id: parent.id, body: 'Reply 3210',
+    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent,
+    feed_branch_root: true }
+  const newerReply = { id: 3211, user_id: 3, parent_id: parent.id, body: 'Newer sibling',
+    created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'newer', reply_count: 0, parent,
+    feed_collapsed_preview: true }
+  const newestReply = { id: 3212, user_id: 4, parent_id: parent.id, body: 'Newest sibling',
+    created_at: '2026-08-23 12:00:00', deleted_at: null, handle: 'newest', reply_count: 0, parent,
+    feed_collapsed_preview: true }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest',
+    posts: [reply, newerReply, newestReply],
+  }))
+
+  expect(html).toMatch(
+    /class="thread-root"[\s\S]*?id="post-3209"[\s\S]*?class="reply-branch[^\"]*"[\s\S]*?id="post-3210"/,
+  )
+  expect(html).toMatch(/class="reply-node collapsed-preview-path collapsed-preview-post"[\s\S]*?id="post-3210"/)
+  expect(html).toMatch(/aria-label="Expand earlier replies"[\s\S]*?id="post-3212"/)
+  expect(html.match(/collapsed-preview-post/g)).toHaveLength(2)
+  expect(html).not.toContain('class="parent-quote')
 })
 
 test('admin metrics use locale-aware number formatting', () => {
@@ -1925,10 +1953,11 @@ test('hot feed conversations preserve selected ancestor context', () => {
     feed: { posts: [reply, parent], page: 1, totalItems: 1, totalPages: 1 },
   }))
 
-  expect(html.match(/Conversation root/g)).toHaveLength(1)
+  expect(html).not.toContain('Conversation root')
   expect(html.match(/Earlier context/g)).toHaveLength(1)
   expect(html).toContain('Quoted parent')
   expect(html).toContain('Current reply')
+  expect(html).not.toContain('class="parent-quote')
 })
 
 test('pages inline the cookie-aware theme and logo', () => {
@@ -4174,6 +4203,9 @@ test('Profile reply cards open their topmost displayed ancestor thread at the re
   expect(html).toContain(
     'class="post-hit-area" href="/post/1?from=%2Fu%2Fwriter%3Ftab%3Dreplies%23post-3#post-3"',
   )
+  expect(html).toContain('<div class="thread-root"><article class="post tappable-post" id="post-1"')
+  expect(html).not.toContain('class="parent-quote')
+  expect(html).not.toContain('class="quiet post-top-link"')
 })
 
 test('Post marks #ascii and #ascii_art bodies and quoted parents for tight line spacing', () => {
@@ -4434,10 +4466,16 @@ test('Anonymous post pages show the full reply composer when reply is requested'
 
 test('Anonymous reply detail places the composer beneath the clicked reply without a reply link', () => {
   const reply = { id: 11, user_id: 2, parent_id: 10, body: 'Reply', handle: 'replier',
-    created_at: '2026-08-03 12:01:00', deleted_at: null }
-  const html = renderToStaticMarkup(React.createElement(PublicThread, { post: reply }))
+    created_at: '2026-08-03 12:01:00', deleted_at: null,
+    parent: { id: 10, user_id: 1, parent_id: 1, body: 'Parent body', handle: 'parent',
+      created_at: '2026-08-03 12:00:00', deleted_at: null, reply_count: 1 } }
+  const html = renderToStaticMarkup(React.createElement(PublicThread, { post: reply, topHref: '/post/1' }))
 
   expect(html).not.toContain('post-reply-link')
+  expect(html).not.toContain('class="parent-quote')
+  expect(html).not.toContain('Parent body')
+  expect(html).toContain('<a class="quiet post-parent-link" href="/post/10">parent</a>'
+    + '<a class="quiet post-top-link" href="/post/1">top</a>')
   expect(html).toContain('action="/post/11/reply#post-11"')
   expect(html).toContain('placeholder="Reply to @replier…"')
   expect(html.indexOf('id="post-11"')).toBeLessThan(html.indexOf('anonymous-reply-compose'))

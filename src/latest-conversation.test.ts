@@ -13,6 +13,16 @@ test('folded previews retain the immediate parent of an unread reply', () => {
   expect(collapsedConversationPreview(replies, new Set([3])).map(post => post.id)).toEqual([3, 4, 2])
 })
 
+test('folded previews retain the feed-selected branch root', () => {
+  const replies = [
+    { id: 3212, parent_id: 3209, created_at: '2026-09-02 12:00:00', feed_collapsed_preview: true },
+    { id: 3211, parent_id: 3209, created_at: '2026-09-02 11:00:00', feed_collapsed_preview: true },
+    { id: 3210, parent_id: 3209, created_at: '2026-09-02 10:00:00', feed_branch_root: true },
+  ]
+
+  expect(collapsedConversationPreview(replies).map(post => post.id)).toEqual([3210, 3212])
+})
+
 test('Latest includes a recent reply burst plus one connected older reply', () => {
   const conversation = [
     reply(2607, '2026-08-26 23:28:22'),

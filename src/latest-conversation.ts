@@ -120,12 +120,18 @@ export function projectRecentConversation<T extends ConversationPost>(
 }
 
 /** Select posts visible while a projected conversation is folded. */
-export function collapsedConversationPreview<T extends ConversationPost & { feed_collapsed_preview?: boolean }>(
+export function collapsedConversationPreview<T extends ConversationPost & {
+  feed_collapsed_preview?: boolean
+  feed_branch_root?: boolean
+}>(
   replies: T[],
   unreadPostIds?: ReadonlySet<number>,
 ) {
   const ordered = newestFirst(replies)
-  const projectedPreview = ordered.filter(post => post.feed_collapsed_preview)
+  const branchRoot = ordered.find(post => post.feed_branch_root)
+  const projectedPreview = branchRoot
+    ? [branchRoot, ...ordered.filter(post => post.id !== branchRoot.id).slice(0, 1)]
+    : ordered.filter(post => post.feed_collapsed_preview)
   const weighted = projectedPreview.length
     ? projectedPreview
     : ordered.length > 1 && withinReplyBurst(ordered[0], ordered[1])

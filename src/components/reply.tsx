@@ -177,6 +177,9 @@ export function Reply(
     },
 ) {
   const backPostId = postAnchorId(returnPath)
+  const parentHref = post.parent_id
+    ? `/post/${post.parent_id}${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
+    : undefined
   const backTargetsReply = replies.some(reply => reply.id === backPostId && !reply.deleted_at)
   const replyParent = replyTo || post
   const activeReplyReturnPath = replyTo
@@ -195,9 +198,10 @@ export function Reply(
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
         <div className="thread-root">
-          <Post p={post} user={user} showReplyAction={showForm && !!replyTo} showOwnerActions showModerateAction
-            tappableParent bookmarkAction shareAction suppressContentWarning={showForm} returnPath={returnPath}
-            backHref={returnPath} canonicalTimestamp topHref={topHref} flatHref={flatHref} treeHref={treeHref}
+          <Post p={post} user={user} showParent={false} showReplyAction={showForm && !!replyTo} showOwnerActions
+            showModerateAction bookmarkAction shareAction suppressContentWarning={showForm} returnPath={returnPath}
+            backHref={returnPath} canonicalTimestamp parentHref={parentHref} topHref={topHref} flatHref={flatHref}
+            treeHref={treeHref}
             reportHref={user.id !== post.user_id
               ? `/post/${post.id}/report${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
               : undefined} />

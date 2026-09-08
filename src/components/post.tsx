@@ -677,6 +677,7 @@ export function Post({
   returnPath,
   backHref,
   canonicalTimestamp = false,
+  parentHref,
   topHref,
   flatHref,
   treeHref,
@@ -695,7 +696,7 @@ export function Post({
   highlightTerms?: string[]; tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
   contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean; topHref?: string; flatHref?: string; treeHref?: string;
+  canonicalTimestamp?: boolean; parentHref?: string; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
   topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
@@ -913,7 +914,7 @@ export function Post({
             </label>
           )}
           {(showTimestamp || flatHref || treeHref || showOwnerActions && (user?.id === p.user_id || canModerate)
-            || tappable && parent || topHref || backHref || topActions) && (
+            || tappable && parent || parentHref || topHref || backHref || topActions) && (
             <div className="post-navigation-actions">
               {showTimestamp && (
                 <time className="post-relative-time" dateTime={p.created_at} title={fmtFull(p.created_at)}>
@@ -937,6 +938,7 @@ export function Post({
               )}
               {flatHref && <a className="quiet post-top-link" href={flatHref}>flat</a>}
               {treeHref && <a className="quiet post-top-link" href={treeHref}>tree</a>}
+              {parentHref && <a className="quiet post-parent-link" href={parentHref}>parent</a>}
               {topHref && <a className="quiet post-top-link" href={topHref}>top</a>}
               {backHref && <a className="quiet post-back-link" href={backHref}>back</a>}
             </div>
@@ -1598,15 +1600,12 @@ export function FeedThreads(
   const ids = new Set(feedPosts.map(post => post.id))
   const externalChildren = new Map<number, PostView[]>()
   for (const post of feedPosts) {
-    if (!post.parent_id || ids.has(post.parent_id) || post.feed_branch_root || post.feed_ancestor_gap) continue
+    if (!post.parent_id || ids.has(post.parent_id)) continue
     externalChildren.set(post.parent_id, [...(externalChildren.get(post.parent_id) || []), post])
   }
   for (const [parentId, children] of externalChildren) {
     const parent = children.find(child => child.parent?.id === parentId)?.parent
     if (!parent || ids.has(parent.id)) continue
-    if (!promoteAncestors && children.length < 2) continue
-    if (children.length < 2 && parent.parent_id && ids.has(parent.parent_id)
-      && !contextUnreadPostIds?.has(parent.parent_id)) continue
     treePosts.push({ ...parent, user_id: parent.user_id ?? -1, parent_id: parent.parent_id ?? null,
       reply_count: parent.reply_count || 0,
       ...(promoteAncestors && promoteAncestors !== 'all' && parent.parent_id != null
@@ -1767,7 +1766,12 @@ export function FeedThreads(
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
-              <FeedPost p={post} user={user} tappable returnPath={anchoredReturnPath} highlightTerms={highlightTerms}
+              <FeedPost p={post} user={user} showParent={false} tappable returnPath={anchoredReturnPath}
+                highlightTerms={highlightTerms}
+                topHref={post.parent
+                  ? replyAtPagePost(replyAnchorReturnPath(post.parent.top_id || post.parent.id,
+                    post.parent.top_id || post.parent.id, anchoredReturnPath))
+                  : undefined}
                 hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
                 foldControlId={foldControlId} collapsedExpansionControlId={collapsed ? foldControlId : undefined}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
