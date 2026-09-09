@@ -298,19 +298,23 @@ export function markAllForYouRead(userId: number, toMe: boolean, database: Datab
       AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR $hidePeopleFollowActivity=0)
       AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR $hideHashtagFollowActivity=0)`
   const materializedParameters = { ...parameters, materializedFeed: toMe ? 'to-me' : 'for-you' }
+  const hasMaterializedEvents = !!database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+  ).get()
   const latestPostIds = [...new Set((database.query(`SELECT event_key FROM (${events})
-    WHERE event_key GLOB 'post:[0-9]*' UNION SELECT event_key FROM (${materializedEvents})
-    WHERE event_key GLOB 'post:[0-9]*'`).all(materializedParameters) as Array<{ event_key: string }>)
+    WHERE event_key GLOB 'post:[0-9]*'${hasMaterializedEvents
+      ? ` UNION SELECT event_key FROM (${materializedEvents}) WHERE event_key GLOB 'post:[0-9]*'`
+      : ''}`).all(materializedParameters) as Array<{ event_key: string }>)
     .map(({ event_key: eventKey }) => Number(eventKey.slice(5))))]
   database.transaction(() => {
     database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${events})`).run(parameters)
-    database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+    if (hasMaterializedEvents) database.query(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${materializedEvents})`).run(materializedParameters)
     if (toMe) {
       database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
       SELECT $viewer,event_key FROM (${projectedEvents(visibleToMeEvents, database)})`).run(parameters)
-      database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
+      if (hasMaterializedEvents) database.query(`INSERT OR IGNORE INTO to_me_reads(user_id,event_key)
         SELECT $viewer,event_key FROM (${materializedEvents})`).run(materializedParameters)
     }
     database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
