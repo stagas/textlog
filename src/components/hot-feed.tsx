@@ -3,7 +3,8 @@ import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
-import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
+import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups,
+  InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
@@ -30,14 +31,13 @@ export function HotFeed(
     },
 ) {
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
-  const chunkPosts = chunk === 0 && initialChunks > 1
-    ? feed.posts.slice(0, initialChunks * FEED_CHUNK_SIZE)
-    : chunkItems(feed.posts, chunk)
+  const conversationCount = feedConversationGroups(feed.posts).length
+  const chunkPosts = chunkFeedPosts(feed.posts, chunk, initialChunks)
   const feedPath = path
   const returnPath = feedChunkReturnPath(feedPath + (feed.page > 1 ? `?page=${feed.page}` : ''), renderedChunk)
   const chunkMarkup = (
     <InfiniteFeedChunk chunk={renderedChunk}
-      hasMore={feed.posts.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+      hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
       <FeedThreads posts={chunkPosts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
         expandedByDefault={!user && path === '/hot'} promoteAncestors />
     </InfiniteFeedChunk>

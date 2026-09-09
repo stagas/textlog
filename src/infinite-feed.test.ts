@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { feedChunk, feedChunkReturnPath, restoredFeedChunks } from './components/infinite-feed'
+import { chunkFeedPosts, feedChunk, feedChunkReturnPath, restoredFeedChunks } from './components/infinite-feed'
+import type { PostView } from './types'
 
 describe('progressive feed chunks', () => {
   test('validates internal fragment indexes', () => {
@@ -15,5 +16,31 @@ describe('progressive feed chunks', () => {
     expect(feedChunkReturnPath('/all?page=2#post-3', 2)).toBe('/all?page=2&chunk=3#post-3')
     expect(feedChunkReturnPath('/any?seed=abc', 4)).toBe('/any?seed=abc&chunk=5')
     expect(feedChunkReturnPath('/all', 0)).toBe('/all')
+  })
+
+  test('never splits a conversation across progressive chunks', () => {
+    const posts: Array<PostView & { conversation_id: number }> = Array.from({ length: 21 }, (_, index) => ({
+      id: index + 1,
+      user_id: 1,
+      parent_id: null,
+      body: `root ${index + 1}`,
+      handle: 'writer',
+      created_at: '2026-09-09 12:00:00',
+      deleted_at: null,
+      conversation_id: index + 1,
+    }))
+    posts.splice(20, 0, {
+      id: 100,
+      user_id: 2,
+      parent_id: 20,
+      body: 'reply at the old row boundary',
+      handle: 'reader',
+      created_at: '2026-09-09 12:01:00',
+      deleted_at: null,
+      conversation_id: 20,
+    })
+
+    expect(chunkFeedPosts(posts, 0).map(post => post.id)).toContain(100)
+    expect(chunkFeedPosts(posts, 1).map(post => post.id)).toEqual([21])
   })
 })
