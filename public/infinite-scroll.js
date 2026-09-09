@@ -8,7 +8,38 @@
   let navigationSpinner = null
   const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0 }
   const pendingLiveTabs = new Set()
+  const dingEnabled = document.querySelector('meta[name="textlog-new-message-sound"]')?.content !== 'off'
+  const ding = dingEnabled ? new Audio('/ding.mp3') : null
+  if (ding) ding.preload = 'auto'
+  let dingUnlocked = false
   const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+  const unlockDing = () => {
+    if (!ding || dingUnlocked) return
+    const previousVolume = ding.volume
+    ding.volume = 0
+    const started = ding.play()
+    if (!started) return
+    void started.then(() => {
+      ding.pause()
+      ding.currentTime = 0
+      ding.volume = previousVolume
+      dingUnlocked = true
+      removeEventListener('pointerdown', unlockDing)
+      removeEventListener('keydown', unlockDing)
+      removeEventListener('touchend', unlockDing)
+    }).catch(() => { ding.volume = previousVolume })
+  }
+
+  addEventListener('pointerdown', unlockDing)
+  addEventListener('keydown', unlockDing)
+  addEventListener('touchend', unlockDing)
+
+  const playBackgroundDing = () => {
+    if (!ding || document.visibilityState === 'visible' && document.hasFocus()) return
+    ding.currentTime = 0
+    void ding.play().catch(() => {})
+  }
 
   const startNavigationSpinner = tab => {
     clearInterval(navigationSpinnerTimer)
@@ -326,11 +357,14 @@
         'for-you': Number(counts.forYouCount) || 0,
         latest: Number(counts.latestCount) || 0,
       }
+      const personalizedIncrease = incoming['to-me'] > liveCounts['to-me']
+        || incoming['for-you'] > liveCounts['for-you']
       Object.entries(incoming).forEach(([kind, count]) => {
         if (count > liveCounts[kind]) pendingLiveTabs.add(kind)
         if (count === 0) pendingLiveTabs.delete(kind)
       })
       applyLiveCounts(counts)
+      if (personalizedIncrease) playBackgroundDing()
       renderNewPostsBanner()
     })
   }

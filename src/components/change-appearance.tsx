@@ -12,7 +12,7 @@ export function ChangeAppearance(
   { user, selected, selectedFont, selectedSansSerifFont = 'system-sans', selectedPrimaryFont = 'monospace',
     selectedSize = 'regular', selectedDensity = 'regular', selectedCorners = 'sharp', selectedLinkPreviews = true,
     showModeratedContent = false, includePeopleFollowActivity = false, includeHashtagFollowActivity = false,
-    showNoteStreak = true, showTimestamps = false, tab = 'theme', returnPath }: {
+    showNoteStreak = true, showTimestamps = false, newMessageSound = true, tab = 'theme', returnPath }: {
       user: User
       selected: Appearance
       selectedFont: FontChoice
@@ -30,6 +30,7 @@ export function ChangeAppearance(
       includeHashtagFollowActivity?: boolean
       showNoteStreak?: boolean
       showTimestamps?: boolean
+      newMessageSound?: boolean
     },
 ) {
   return (
@@ -193,6 +194,11 @@ export function ChangeAppearance(
                 <input className="form-checkbox" type="checkbox" role="switch" name="showTimestamps" value="yes"
                   defaultChecked={showTimestamps} />
                 <span>Show timestamps</span>
+              </label>
+              <label className="link-preview-setting">
+                <input className="form-checkbox" type="checkbox" role="switch" name="newMessageSound" value="yes"
+                  defaultChecked={newMessageSound} />
+                <span>Enable new message sound</span>
               </label>
               <label className="link-preview-setting">
                 <input className="form-checkbox" type="checkbox" role="switch" name="showModeratedContent" value="yes"

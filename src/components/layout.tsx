@@ -193,6 +193,7 @@ export function Layout({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
+        {user && <meta name="textlog-new-message-sound" content={user.new_message_sound === 0 ? 'off' : 'on'} />}
         {'default' in themeBackgrounds
           ? <meta name="theme-color" content={themeBackgrounds.default} />
           : (
@@ -239,7 +240,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=6" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=20" defer />}
+        {onFeedPage && <script src="/infinite-scroll.js?v=23" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript><meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} /></noscript>

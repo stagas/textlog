@@ -2078,6 +2078,8 @@ test('appearance misc tab hides page size and forces 100', () => {
   expect(html).toContain('name="showLinkPreviews" checked="" value="yes"')
   expect(html).toContain('<legend>ui</legend>')
   expect(html).toContain('Show link previews')
+  expect(html).toContain('name="newMessageSound" checked="" value="yes"')
+  expect(html).toContain('Enable new message sound')
   expect(html).toContain('name="showModeratedContent" value="yes"')
   expect(html).toContain('Show moderated content')
   expect(html).not.toContain('name="showModeratedContent" checked=""')
@@ -2088,6 +2090,18 @@ test('appearance misc tab hides page size and forces 100', () => {
   expect(html).not.toContain('name="includePeopleFollowActivity" checked=""')
   expect(html).not.toContain('name="includeHashtagFollowActivity" checked=""')
   expect(html).toContain('save →')
+})
+
+test('appearance misc tab can disable new message sounds', () => {
+  const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
+    selected: { theme: 'system', accent: 'theme' },
+    selectedFont: 'system',
+    newMessageSound: false,
+    tab: 'misc',
+  }))
+  expect(html).toContain('name="newMessageSound" value="yes"')
+  expect(html).not.toContain('name="newMessageSound" checked=""')
 })
 
 test('appearance misc tab can render link previews disabled', () => {

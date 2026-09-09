@@ -66,6 +66,7 @@ const degradedAssets = new Map<string, string>([
   ['/notification-badge-96x96.png', 'image/png'],
   ['/maskable-icon-512x512.png', 'image/png'],
   ['/email-logo.png', 'image/png'],
+  ['/ding.mp3', 'audio/mpeg'],
 ])
 
 function requestPath(request: Request) {
@@ -118,6 +119,7 @@ const databaseIndependentPaths = new Set([
   '/favicon-theme.svg',
   '/og.png',
   '/dump.zip',
+  '/ding.mp3',
 ])
 
 function isDatabaseIndependentRequest(request: Request) {

@@ -475,6 +475,7 @@ export function registerAccountRoutes(app: Hono) {
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
         showNoteStreak={user.show_note_streak === 1} showTimestamps={user.show_timestamps === 1}
+        newMessageSound={user.new_message_sound !== 0}
         returnPath={returnPath} />,
     )
   })
@@ -530,6 +531,7 @@ export function registerAccountRoutes(app: Hono) {
         hideHashtagFollowActivity: f.includeHashtagFollowActivity !== 'yes',
         showNoteStreak: f.showNoteStreak === 'yes',
         showTimestamps: f.showTimestamps === 'yes',
+        newMessageSound: f.newMessageSound === 'yes',
       })
     }
     await markAppearanceBannerHandled(c.req.raw, user.id)

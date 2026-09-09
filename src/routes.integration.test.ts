@@ -144,6 +144,14 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
   expect(await response.text()).toContain("data-progressive-pagination-root")
 })
 
+test('notification sound is served as immutable MPEG audio', async () => {
+  const response = await request('/ding.mp3')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toBe('audio/mpeg')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(0)
+})
+
 test('PWA launch marks the client standalone and removes the launch parameter', async () => {
   const response = await request('/?pwa')
   expect(response.status).toBe(303)

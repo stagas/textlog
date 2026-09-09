@@ -5055,6 +5055,13 @@ export const migrations: Migration[] = [
         DELETE FROM feed_snapshots WHERE kind LIKE 'for-you:%' OR kind LIKE 'to-me:%';`)
     },
   },
+  {
+    version: 223,
+    name: 'new_message_sound_preference',
+    up(database) {
+      addColumn(database, 'users', 'new_message_sound', 'INTEGER NOT NULL DEFAULT 1 CHECK(new_message_sound IN (0,1))')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -177,6 +177,7 @@ const publicAssets = await Promise.all([
   ['/notification-badge-96x96.png', 'image/png'],
   ['/maskable-icon-512x512.png', 'image/png'],
   ['/email-logo.png', 'image/png'],
+  ['/ding.mp3', 'audio/mpeg'],
 ].map(async ([path, contentType]) => ({
   path,
   contentType,
