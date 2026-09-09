@@ -132,7 +132,7 @@ test('reference follow enhancement is served as immutable JavaScript', async () 
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
-  expect(await response.text()).toContain("headers: { Accept: 'application/json' }")
+  expect(await response.text()).toMatch(/headers\s*:\s*\{\s*Accept\s*:\s*["']application\/json["']\s*\}/)
   expect(await (await request('/hot', { cookie: undefined })).text()).not.toContain('/reference-follow.js?v=6')
 })
 

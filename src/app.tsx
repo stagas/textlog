@@ -153,6 +153,19 @@ const logsClientBuild = await Bun.build({
 })
 if (!logsClientBuild.success) throw new Error('Failed to build logs client')
 const logsClient = await logsClientBuild.outputs[0].text()
+const publicScriptPaths = [
+  '/notifications.js', '/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+  '/reference-follow.js', '/sw.js',
+] as const
+const publicScripts = devReloadEnabled ? undefined : new Map(await Promise.all(publicScriptPaths.map(async path => {
+  const build = await Bun.build({
+    entrypoints: [new URL(`../public${path}`, import.meta.url).pathname],
+    target: 'browser',
+    minify: true,
+  })
+  if (!build.success) throw new Error(`Failed to build public script ${path}`)
+  return [path, await build.outputs[0].text()] as const
+})))
 const publicAssets = await Promise.all([
   ['/favicon.ico', 'image/x-icon'],
   ['/favicon-16x16.png', 'image/png'],
@@ -687,15 +700,11 @@ app.get('/embed.css', () =>
     'content-type': 'text/css; charset=utf-8',
     'cache-control': 'public, max-age=86400',
   } }))
-for (const path of [
-  '/notifications.js', '/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
-  '/reference-follow.js', '/sw.js',
-]) {
+for (const path of publicScriptPaths) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
-  const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
   app.get(path, async () =>
     new Response(
-      (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
+      (publicScripts?.get(path) ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
         'cache-control': ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
