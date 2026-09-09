@@ -6,6 +6,8 @@
   let navigationController = null
   let navigationSpinnerTimer = null
   let navigationSpinner = null
+  const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0 }
+  const pendingLiveTabs = new Set()
   const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
 
   const startNavigationSpinner = tab => {
@@ -33,6 +35,78 @@
     navigationSpinnerTimer = null
     navigationSpinner?.remove()
     navigationSpinner = null
+  }
+
+  const liveTabSelectors = { 'to-me': 'a[href="/@"]', 'for-you': 'a[href="/my-feed"]', latest: 'a[href="/all"]' }
+  const activeLiveTab = () => Object.entries(liveTabSelectors)
+    .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
+
+  const syncLiveCountsFromDocument = () => {
+    const values = document.querySelector('[data-feed-view]')?.dataset.liveCounts?.split(':').map(Number)
+    if (!values || values.length !== 3) return
+    ;[liveCounts['to-me'], liveCounts['for-you'], liveCounts.latest] = values
+  }
+
+  const updateLiveBadge = (kind, count) => {
+    const tab = document.querySelector(`.feed-tabs ${liveTabSelectors[kind]}`)
+    if (!tab) return
+    let badge = tab.querySelector('.to-me-count')
+    if (count <= 0) {
+      badge?.remove()
+      return
+    }
+    if (!badge) {
+      badge = document.createElement('span')
+      badge.className = 'to-me-count'
+      tab.append(badge)
+    }
+    badge.textContent = count >= 99 ? '99+' : String(count)
+  }
+
+  const applyLiveCounts = counts => {
+    const incoming = {
+      'to-me': Number(counts.toMeCount) || 0,
+      'for-you': Number(counts.forYouCount) || 0,
+      latest: Number(counts.latestCount) || 0,
+    }
+    Object.entries(incoming).forEach(([kind, count]) => {
+      liveCounts[kind] = count
+      if (count === 0) pendingLiveTabs.delete(kind)
+      updateLiveBadge(kind, count)
+    })
+  }
+
+  const reconcileLiveCounts = async () => {
+    try {
+      const response = await fetch('/feed/counts', { credentials: 'same-origin', cache: 'no-store' })
+      if (!response.ok) return
+      applyLiveCounts(await response.json())
+      renderNewPostsBanner()
+    }
+    catch {}
+  }
+
+  const renderNewPostsBanner = () => {
+    document.querySelector('[data-new-posts-banner]')?.remove()
+    const active = activeLiveTab()
+    if (!active || !pendingLiveTabs.has(active)) return
+    const tabs = document.querySelector('.feed-tabs')
+    if (!tabs) return
+    const banner = document.createElement('div')
+    banner.className = 'feed-read-action'
+    banner.dataset.newPostsBanner = ''
+    const button = document.createElement('button')
+    button.className = 'activity-side-link'
+    button.type = 'button'
+    button.textContent = 'click to show new posts'
+    button.addEventListener('click', () => {
+      const target = new URL(location.href)
+      target.hash = ''
+      history.replaceState(history.state, '', target.pathname + target.search)
+      void navigateFeed(target.href, false, tabs.querySelector('a.active'), false)
+    })
+    banner.append(button)
+    tabs.after(banner)
   }
 
   const loadedThrough = () => Math.max(0, ...[...document.querySelectorAll('[data-feed-chunk]')]
@@ -113,7 +187,7 @@
     })
   }
 
-  const navigateFeed = async (href, push, tab = null) => {
+  const navigateFeed = async (href, push, tab = null, markRead = true) => {
     const currentView = document.querySelector('[data-feed-view]')
     if (!currentView) {
       location.href = href
@@ -127,7 +201,11 @@
     const spinnerStartedAt = performance.now()
     try {
       const response = await fetch(href, {
-        headers: { Accept: 'text/html', 'X-Textlog-Feed-Navigation': '1' },
+        headers: {
+          Accept: 'text/html',
+          'X-Textlog-Feed-Navigation': '1',
+          ...(markRead ? { 'X-Textlog-Explicit-Read': '1' } : { 'X-Textlog-Live-Refresh': '1' }),
+        },
         credentials: 'same-origin',
         signal: controller.signal,
       })
@@ -142,6 +220,9 @@
       observer.disconnect()
       loading = false
       currentView.replaceWith(incomingView)
+      pendingLiveTabs.delete(activeLiveTab())
+      syncLiveCountsFromDocument()
+      if (markRead) await reconcileLiveCounts()
       syncComposerNavigation(parsed)
       document.title = parsed.title
       const resolved = new URL(response.url)
@@ -223,6 +304,34 @@
   })
 
   addEventListener('popstate', () => void navigateFeed(location.href, false))
+
+  syncLiveCountsFromDocument()
+  if (document.querySelector('.feed-tabs a[href="/my-feed"]')) {
+    const events = new EventSource('/feed/events')
+    events.addEventListener('baseline', event => {
+      let counts
+      try { counts = JSON.parse(event.data) }
+      catch { return }
+      applyLiveCounts(counts)
+    })
+    events.addEventListener('feed', event => {
+      let counts
+      try { counts = JSON.parse(event.data) }
+      catch { return }
+      const incoming = {
+        'to-me': Number(counts.toMeCount) || 0,
+        'for-you': Number(counts.forYouCount) || 0,
+        latest: Number(counts.latestCount) || 0,
+      }
+      Object.entries(incoming).forEach(([kind, count]) => {
+        if (count > liveCounts[kind]) pendingLiveTabs.add(kind)
+        if (count === 0) pendingLiveTabs.delete(kind)
+        liveCounts[kind] = count
+        updateLiveBadge(kind, count)
+      })
+      renderNewPostsBanner()
+    })
+  }
 
   void restore()
 })()

@@ -257,7 +257,7 @@ export function Feed(
       )}
       <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
         draftId={writeDraftId} />
-      <div data-feed-view>
+      <div data-feed-view data-live-counts={`${data.toMeCount}:${data.forYouCount}:${data.latestCount || 0}`}>
         <h1 className="visually-hidden">Your feed</h1>
         <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
         ? hasUnread && unreadPage !== null && unreadPage > data.page

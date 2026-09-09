@@ -17,6 +17,7 @@ import type { Context, Hono } from 'hono'
 import { randomInt } from 'node:crypto'
 import { instance } from '../../instance.config'
 import { executePostCode } from '../code-execution'
+import { subscribeToPosts } from '../api-broker'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
 import { feedWarmIdle } from '../idle-work'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
@@ -42,6 +43,8 @@ import { withAppearance } from '../theme'
 import type { PersonalizedFeedData, PostFeedPage } from '../types'
 import { currentUser } from '../utils'
 import { previewLocation } from './posts'
+
+const SSE_HEARTBEAT_MS = 5_000
 
 async function requestedFetchedThread(c: Context, viewerId: number) {
   const id = positiveInteger(c.req.query('fetch'))
@@ -85,7 +88,7 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>,
   banner: Awaited<ReturnType<typeof showNotificationBanner>> = false)
 {
-  const feedPresentationVersion = 3
+  const feedPresentationVersion = 7
   const bannerVersion = banner
     ? ['notifications', 'appearance', 'invite', 'bio', 'notification-update', 'donate'].indexOf(banner) + 1
     : 0
@@ -363,6 +366,89 @@ export async function loadRecentFeedVisitors() {
 }
 
 export function registerFeedsRoutes(app: Hono) {
+  app.get('/feed/counts', async c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+    const counts = await databaseService().call('feeds.unreadCounts', { userId: user.id })
+    return c.json(counts, 200, { 'cache-control': 'no-store' })
+  })
+
+  app.get('/feed/events', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return c.text('Unauthorized', 401)
+    const encoder = new TextEncoder()
+    let cleanup = () => {}
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        let closed = false
+        let pending = false
+        let rerun = false
+        let initializing = true
+        let queuedDuringInitialization = false
+        let lastCounts = ''
+        let unsubscribe = () => {}
+        let heartbeat: ReturnType<typeof setInterval> | undefined
+        const close = () => {
+          if (closed) return
+          closed = true
+          if (heartbeat) clearInterval(heartbeat)
+          unsubscribe()
+          try { controller.close() }
+          catch {}
+        }
+        const send = (value: string) => {
+          if (closed) return
+          try { controller.enqueue(encoder.encode(value)) }
+          catch { close() }
+        }
+        const publishCounts = async () => {
+          if (pending) {
+            rerun = true
+            return
+          }
+          pending = true
+          try {
+            do {
+              rerun = false
+              const counts = await databaseService().call('feeds.unreadCounts', { userId: user.id })
+              const serialized = JSON.stringify(counts)
+              if (serialized !== lastCounts) {
+                lastCounts = serialized
+                send(`event: feed\ndata: ${serialized}\n\n`)
+              }
+            } while (rerun && !closed)
+          }
+          catch { close() }
+          finally { pending = false }
+        }
+        unsubscribe = subscribeToPosts(() => {
+          if (initializing) queuedDuringInitialization = true
+          else void publishCounts()
+        })
+        void databaseService().call('feeds.unreadCounts', { userId: user.id }).then(counts => {
+          lastCounts = JSON.stringify(counts)
+          send(`event: baseline\ndata: ${lastCounts}\n\n`)
+          initializing = false
+          if (queuedDuringInitialization) void publishCounts()
+        }).catch(close)
+        heartbeat = setInterval(() => {
+          send(': heartbeat\n\n')
+          if (initializing) queuedDuringInitialization = true
+          else void publishCounts()
+        }, SSE_HEARTBEAT_MS)
+        cleanup = close
+        c.req.raw.signal.addEventListener('abort', cleanup, { once: true })
+        send('event: ready\ndata: {"status":"connected"}\n\n')
+      },
+      cancel() { cleanup() },
+    })
+    return new Response(stream, { headers: {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-store, no-transform',
+      connection: 'keep-alive',
+      'x-accel-buffering': 'no',
+    } })
+  })
   const moved = (path: string) => (c: Context) => c.redirect(path + new URL(c.req.url).search, 308)
   app.get('/for-you', moved('/my-feed'))
   app.get('/to-me', moved('/@'))
@@ -414,6 +500,8 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
+    const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () => {
       if (!dataPromise) {
@@ -423,13 +511,16 @@ export function registerFeedsRoutes(app: Hono) {
           pageSize,
           toMe: false,
           path: '/my-feed',
+          markRead: !liveRefresh,
         })
       }
       return dataPromise
     }
     const render = async () => {
+      const feed = await data()
       const view = (
-        <Feed user={user} data={await data()} title="my feed" notificationBanner={notificationBanner}
+        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed}
+          title="my feed" notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
           {...write} />
       )
@@ -442,7 +533,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
@@ -470,14 +561,17 @@ export function registerFeedsRoutes(app: Hono) {
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PostFeedPage> | undefined
     const data = () =>
       dataPromise ||= databaseService().call('feeds.latestPage', { viewerId: user?.id ?? -1,
-        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
+        page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw), markRead: !liveRefresh })
     const render = async () => {
       const feed = await data()
       const view = (
-        <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
+        <PublicFeed user={user} feed={explicitRead ? latestFeedAfterVisibleReads(feed) : feed} path="/all"
+          notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
           {...write} />
       )
@@ -492,7 +586,7 @@ export function registerFeedsRoutes(app: Hono) {
         )
       }
       : undefined
-    const response = !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
@@ -602,6 +696,8 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
+    const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () =>
       dataPromise ||= databaseService().call('feeds.personalizedPage', {
@@ -610,10 +706,13 @@ export function registerFeedsRoutes(app: Hono) {
         pageSize,
         toMe: true,
         path: '/@',
+        markRead: !liveRefresh,
       })
     const render = async () => {
+      const feed = await data()
       const view = (
-        <Feed user={user} data={await data()} title="@" path="/@" toMe notificationBanner={notificationBanner}
+        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, true) : feed}
+          title="@" path="/@" toMe notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
           {...write} />
       )
@@ -626,7 +725,7 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,

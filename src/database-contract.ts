@@ -345,6 +345,10 @@ export type DatabaseDomainOperations = {
   'api.markActivitiesRead': { input: { userId: number; activityIds: string[]; toMe: boolean }; output: number }
   'api.markAllActivitiesRead': { input: { userId: number; toMe: boolean }; output: null }
   'api.latestState': { input: { userId: number }; output: { unreadIds: number[]; unreadCount: number } }
+  'feeds.unreadCounts': {
+    input: { userId: number }
+    output: { forYouCount: number; toMeCount: number; latestCount: number }
+  }
   'api.markLatestRead': { input: { userId: number; postIds: number[] }; output: number }
   'api.markAllLatestRead': { input: { userId: number }; output: number }
   'api.profile': { input: { handle: string; viewerId: number | null; origin: string };

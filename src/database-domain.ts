@@ -2211,6 +2211,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       ).map(row => row.id)
       return { unreadIds, unreadCount: unreadIds.length } as DatabaseDomainOutput<K>
     }
+    case 'feeds.unreadCounts': {
+      const { userId } = input as DatabaseDomainInput<'feeds.unreadCounts'>
+      return {
+        forYouCount: personalizedUnreadCount(database, userId, false),
+        toMeCount: personalizedUnreadCount(database, userId, true),
+        latestCount: unreadLatestCount(userId, database),
+      } as DatabaseDomainOutput<K>
+    }
     case 'api.markLatestRead': {
       const { userId, postIds } = input as DatabaseDomainInput<'api.markLatestRead'>
       const requested = new Set(postIds)
