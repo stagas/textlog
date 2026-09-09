@@ -3716,7 +3716,9 @@ test('Following and follower links return to the originating connection', () => 
 
   expect(following).toContain('<div class="explore-tag-card" id="tag-notes">')
   expect(following).toContain('data-progressive-pagination-root="profile-connections"')
-  expect(following).toContain('<form method="post" action="/tag-follow/notes">')
+  expect(following).toContain(
+    '<form method="post" action="/tag-follow/notes" data-follow-enhance="true">',
+  )
   expect(following).toContain('value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"')
   expect(following).toContain(
     'class="explore-tag-link" href="/tag/notes?from=%2Fu%2Freader%3Ftab%3Dfollowing%26page%3D2%26tagsPage%3D3%23tag-notes" '
