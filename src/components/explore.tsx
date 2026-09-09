@@ -109,7 +109,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
                     )}
                   </div>
                   {user && (
-                    <form method="post" action={'/follow/' + p.handle}>
+                    <form method="post" action={'/follow/' + p.handle} data-follow-enhance="true">
                       <input type="hidden" name="explorePeople" value={explorePeople} />
                       <input type="hidden" name="from" value={exploreReturnPath(p.id)} />
                       {!!p.followsViewer && <span className="follows-you">follows you</span>}

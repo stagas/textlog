@@ -14,7 +14,8 @@ document.addEventListener('submit', async event => {
   if (!(form instanceof HTMLFormElement)) return
 
   const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : null
-  if (!submitter?.closest('.reference-menu-popover')) return
+  if (!submitter || (!form.hasAttribute('data-follow-enhance')
+    && !submitter.closest('.reference-menu-popover'))) return
 
   const action = new URL(form.action, location.href)
   if (action.origin !== location.origin || !/^\/(?:follow|tag-follow)\//.test(action.pathname)) return
@@ -22,14 +23,16 @@ document.addEventListener('submit', async event => {
   event.preventDefault()
   if (pendingActions.has(action.href)) return
   pendingActions.add(action.href)
-  const matchingButtons = [...document.querySelectorAll('.reference-menu-popover button[type="submit"]')]
+  const matchingButtons = [...document.querySelectorAll('button')]
+    .filter(button => button.form?.hasAttribute('data-follow-enhance')
+      || button.closest('.reference-menu-popover'))
     .filter(button => {
       const owner = button.form
       return owner && new URL(owner.action, location.href).href === action.href
     })
   const buttonState = matchingButtons.map(button => ({
     button,
-    label: button.textContent,
+    content: button.innerHTML,
     width: button.style.width,
     ariaLabel: button.getAttribute('aria-label'),
   }))
@@ -59,8 +62,15 @@ document.addEventListener('submit', async event => {
     const { following } = await response.json()
     updated = true
     matchingButtons.forEach(button => {
-      const followsViewer = Boolean(button.closest('.reference-popover-actions')?.querySelector('.follows-you'))
-      button.textContent = following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
+      const followsViewer = Boolean(button.form?.querySelector('.follows-you')
+        || button.closest('.reference-popover-actions')?.querySelector('.follows-you'))
+      const state = buttonState.find(item => item.button === button)
+      if (button.classList.contains('explore-tag-chip')) {
+        if (state) button.innerHTML = state.content
+        button.setAttribute('aria-pressed', String(following))
+        button.title = `${following ? 'Unfollow' : 'Follow'} ${button.textContent?.trim() || ''}`
+      }
+      else button.textContent = following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
       button.classList.toggle('button-muted', following)
     })
   }
@@ -70,8 +80,8 @@ document.addEventListener('submit', async event => {
   finally {
     clearInterval(spinnerTimer)
     pendingActions.delete(action.href)
-    buttonState.forEach(({ button, label, width, ariaLabel }) => {
-      if (!updated) button.textContent = label
+    buttonState.forEach(({ button, content, width, ariaLabel }) => {
+      if (!updated) button.innerHTML = content
       button.style.width = width
       button.removeAttribute('aria-busy')
       if (ariaLabel === null) button.removeAttribute('aria-label')

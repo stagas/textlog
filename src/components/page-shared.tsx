@@ -990,7 +990,7 @@ export function TagChips(
         }`
         const chip = user
           ? (
-            <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+            <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`} data-follow-enhance="true">
               <input type="hidden" name="from" value={returnPath} />
               <button className={`button explore-tag-chip${tag[followingKey] ? ' button-muted' : ''}`}
                 aria-pressed={tag[followingKey]} title={`${tag[followingKey] ? 'Unfollow' : 'Follow'} #${tag.tag}`}
@@ -1153,7 +1153,7 @@ export function ConnectionPeople(
               <BioReferenceForms data={person.bioReference} prefix={`person-${person.id}-bio`} user={user} />
             </div>
             {user && user.id !== person.id && (
-              <form method="post" action={`/follow/${person.handle}`}>
+              <form method="post" action={`/follow/${person.handle}`} data-follow-enhance="true">
                 {returnPath && <input type="hidden" name="from" value={returnPath(person)} />}
                 {!!person.followsViewer && <span className="follows-you">follows you</span>}
                 <button className={`button${person.viewerFollowing ? ' button-muted' : ''}`}>

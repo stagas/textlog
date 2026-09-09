@@ -982,12 +982,14 @@ test('search results use explore tag chips and highlight handle and bio matches'
 
   expect(tags).toContain('<span>#<mark>type</mark>script</span>')
   expect(tags).toContain('class="explore-tag-chips"')
+  expect(tags).toContain('data-follow-enhance="true"')
   expect(tags).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(tags).toContain('name="from" value="/search?q=type&amp;tab=tags&amp;page=3"')
   expect(people).toContain('@<mark>type</mark>writer')
   expect(people).toContain('<mark>Type</mark>s useful notes')
   expect(people).toContain('>unfollow</button>')
   expect(people).toContain('id="person-2"')
+  expect(people).toContain('data-follow-enhance="true"')
   expect(people).toContain('name="from" value="/search?q=type%20writer&amp;tab=people&amp;page=3#person-2"')
 })
 
@@ -1009,6 +1011,7 @@ test('explore renders tag toggles above a full-width people section', () => {
 
   expect(html).toContain('class="explore-tags" id="explore-tags"')
   expect(html).toContain('data-progressive-pagination-root="explore"')
+  expect(html).toContain('data-follow-enhance="true"')
   expect(html).toContain('class="button explore-tag-chip button-muted" aria-pressed="true"')
   expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(html).toContain('name="from" value="/explore#explore-tags"')

@@ -97,7 +97,8 @@ export function Connections(
                         <div className="explore-tag-card" key={tag.tag} id={`tag-${tag.tag}`}>
                           {user
                             ? (
-                              <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}>
+                              <form method="post" action={`/tag-follow/${encodeURIComponent(tag.tag)}`}
+                                data-follow-enhance="true">
                                 <input type="hidden" name="from" value={connectionReturnPath(`#tag-${tag.tag}`)} />
                                 <button
                                   className={`button explore-tag-chip${tag.viewerFollowing ? ' button-muted' : ''}`}
