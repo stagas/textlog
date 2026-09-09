@@ -31,7 +31,12 @@ export const COMPOSE_PLACEHOLDERS = [
 ] as const
 
 export function randomComposePlaceholder(handle: string, random = Math.random) {
-  const template = COMPOSE_PLACEHOLDERS[Math.floor(random() * COMPOSE_PLACEHOLDERS.length)]
-    ?? COMPOSE_PLACEHOLDERS[0]
-  return template.replace('{handle}', handle)
+  const placeholders = composePlaceholders(handle)
+  return placeholders[Math.floor(random() * placeholders.length)] ?? placeholders[0]
+}
+
+export function composePlaceholders(handle?: string) {
+  return COMPOSE_PLACEHOLDERS.map(template => handle
+    ? template.replace('{handle}', handle)
+    : template.replace(', @{handle}', ''))
 }

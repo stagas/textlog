@@ -2,7 +2,7 @@ import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import { appName } from '../brand'
 import { activeRequest, activeThemeLogoSvg } from '../theme'
-import { randomComposePlaceholder } from '../compose-placeholders'
+import { composePlaceholders, randomComposePlaceholder } from '../compose-placeholders'
 import type { User } from '../types'
 import type { LocationView, PostView } from '../types'
 import { isMobileRequest } from '../user-agent'
@@ -143,6 +143,7 @@ export function WriteForm(
   const shouldAutoFocus = (autoFocus || embedded) && !isMobileRequest(activeRequest())
   const storageKey = `textlog:compose:${user.id}:write`
   const placeholder = randomComposePlaceholder(user.handle)
+  const typewriterPlaceholders = JSON.stringify(composePlaceholders(user.handle))
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const moreActions = (
     <>
@@ -201,7 +202,7 @@ export function WriteForm(
         </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=6" defer />
+      <script src="/compose.js?v=8" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }
@@ -213,6 +214,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
 }) {
   const autoFocus = !isMobileRequest(activeRequest())
   const storageKey = 'textlog:compose:guest:write'
+  const typewriterPlaceholders = JSON.stringify(composePlaceholders())
   const helpId = 'anonymous-posting-help'
   const moreActions = (
     <>
@@ -257,7 +259,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
         </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=6" defer />
+      <script src="/compose.js?v=8" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }

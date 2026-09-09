@@ -61,10 +61,73 @@
     }
   }
 
+  const startPlaceholderTypewriter = textarea => {
+    const encodedPlaceholders = document.querySelector('script[data-typewriter-placeholders]')
+      ?.dataset.typewriterPlaceholders
+    if (!encodedPlaceholders || textarea.value
+      || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    let placeholders
+    try {
+      placeholders = JSON.parse(encodedPlaceholders)
+    } catch {
+      return
+    }
+    if (!Array.isArray(placeholders) || !placeholders.length) return
+
+    const typingDelay = 85
+    const backspaceDelay = 28
+    const displayDelay = 5000
+    let current = placeholders.indexOf(textarea.placeholder)
+    let timer
+
+    const schedule = (callback, delay) => {
+      clearTimeout(timer)
+      timer = setTimeout(callback, delay)
+    }
+    const chooseNext = () => {
+      if (placeholders.length === 1) return 0
+      let next = current
+      while (next === current) next = Math.floor(Math.random() * placeholders.length)
+      return next
+    }
+    const type = (text, index = 0) => {
+      if (textarea.value) return
+      textarea.placeholder = text.slice(0, index)
+      if (index < text.length) schedule(() => type(text, index + 1), typingDelay)
+      else schedule(backspace, displayDelay)
+    }
+    const backspace = () => {
+      if (textarea.value) return
+      if (textarea.placeholder.length) {
+        textarea.placeholder = textarea.placeholder.slice(0, -1)
+        schedule(backspace, backspaceDelay)
+        return
+      }
+      current = chooseNext()
+      schedule(() => type(placeholders[current]), typingDelay)
+    }
+    const restart = () => {
+      if (textarea.value || timer) return
+      current = chooseNext()
+      type(placeholders[current])
+    }
+
+    textarea.placeholder = ''
+    current = chooseNext()
+    type(placeholders[current])
+    textarea.addEventListener('input', () => {
+      clearTimeout(timer)
+      timer = undefined
+      if (!textarea.value) restart()
+    })
+  }
+
   textareas.forEach(textarea => {
     const saved = storedValue(textarea)
     if (!textarea.value && saved) textarea.value = saved
     update(textarea)
+    startPlaceholderTypewriter(textarea)
   })
   document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
 
