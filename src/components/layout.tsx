@@ -223,6 +223,7 @@ export function Layout({
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
         <link rel="stylesheet" href="/styles.css?v=1537" />
+        {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onFeedPage && <script src="/infinite-scroll.js?v=5" defer />}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>

@@ -175,6 +175,8 @@ test('header write action appears outside feed pages', () => {
   )
   expect(renderPath('/explore')).toContain('<a href="/drafts?from=%2Fexplore">drafts</a>')
   expect(renderPath('/drafts')).toContain('<a href="/drafts">drafts</a>')
+  expect(renderPath('/post/1?from=%2Flatest%23post-1')).toContain('src="/contextual-back.js?v=2"')
+  expect(renderPath('/post/1')).not.toContain('src="/contextual-back.js')
 })
 
 test('admin navigation is the first child in the handle menu', () => {
