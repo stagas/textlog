@@ -437,7 +437,8 @@ app.use('*', async (c, next) => {
 app.use('*', async (c, next) => {
   await next()
   const embeddable = c.req.path.startsWith('/embed/')
-  const scriptsEnabled = c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
+  const scriptsEnabled = (Boolean(currentUser(c.req.raw)) && !c.req.path.startsWith('/account'))
+    || c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
     || ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(c.req.path)
     || new URL(c.req.url).searchParams.has('from')
   for (const [name, value] of Object.entries(
@@ -684,7 +685,9 @@ app.get('/embed.css', () =>
     'content-type': 'text/css; charset=utf-8',
     'cache-control': 'public, max-age=86400',
   } }))
-for (const path of ['/notifications.js', '/infinite-scroll.js', '/compose.js', '/contextual-back.js', '/sw.js']) {
+for (const path of [
+  '/notifications.js', '/infinite-scroll.js', '/compose.js', '/contextual-back.js', '/reference-follow.js', '/sw.js',
+]) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
   const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
   app.get(path, async () =>
@@ -692,7 +695,7 @@ for (const path of ['/notifications.js', '/infinite-scroll.js', '/compose.js', '
       (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
-        'cache-control': ['/infinite-scroll.js', '/compose.js', '/contextual-back.js'].includes(path)
+        'cache-control': ['/infinite-scroll.js', '/compose.js', '/contextual-back.js', '/reference-follow.js'].includes(path)
           ? 'public, max-age=31536000, immutable'
           : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),

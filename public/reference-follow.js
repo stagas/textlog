@@ -1,0 +1,81 @@
+const pendingActions = new Set()
+
+document.addEventListener('pointerout', event => {
+  const menu = event.target instanceof Element ? event.target.closest('.reference-menu') : null
+  if (!menu || (event.relatedTarget instanceof Node && menu.contains(event.relatedTarget))) return
+
+  const focused = document.activeElement
+  if (focused instanceof HTMLButtonElement && focused.matches('.reference-menu-popover button[type="submit"]')
+    && menu.contains(focused)) focused.blur()
+})
+
+document.addEventListener('submit', async event => {
+  const form = event.target
+  if (!(form instanceof HTMLFormElement)) return
+
+  const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : null
+  if (!submitter?.closest('.reference-menu-popover')) return
+
+  const action = new URL(form.action, location.href)
+  if (action.origin !== location.origin || !/^\/(?:follow|tag-follow)\//.test(action.pathname)) return
+
+  event.preventDefault()
+  if (pendingActions.has(action.href)) return
+  pendingActions.add(action.href)
+  const matchingButtons = [...document.querySelectorAll('.reference-menu-popover button[type="submit"]')]
+    .filter(button => {
+      const owner = button.form
+      return owner && new URL(owner.action, location.href).href === action.href
+    })
+  const buttonState = matchingButtons.map(button => ({
+    button,
+    label: button.textContent,
+    width: button.style.width,
+    ariaLabel: button.getAttribute('aria-label'),
+  }))
+  const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+  let spinnerFrame = 0
+  const renderSpinner = () => {
+    matchingButtons.forEach(button => { button.textContent = spinnerFrames[spinnerFrame] })
+    spinnerFrame = (spinnerFrame + 1) % spinnerFrames.length
+  }
+  matchingButtons.forEach(button => {
+    button.style.width = `${button.getBoundingClientRect().width}px`
+    button.setAttribute('aria-busy', 'true')
+    button.setAttribute('aria-label', 'Updating follow status')
+  })
+  renderSpinner()
+  const spinnerTimer = setInterval(renderSpinner, 80)
+  submitter.focus({ preventScroll: true })
+
+  let updated = false
+  try {
+    const response = await fetch(action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) throw new Error(`Follow request failed (${response.status})`)
+    const { following } = await response.json()
+    updated = true
+    matchingButtons.forEach(button => {
+      const followsViewer = Boolean(button.closest('.reference-popover-actions')?.querySelector('.follows-you'))
+      button.textContent = following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
+      button.classList.toggle('button-muted', following)
+    })
+  }
+  catch (error) {
+    console.error(error)
+  }
+  finally {
+    clearInterval(spinnerTimer)
+    pendingActions.delete(action.href)
+    buttonState.forEach(({ button, label, width, ariaLabel }) => {
+      if (!updated) button.textContent = label
+      button.style.width = width
+      button.removeAttribute('aria-busy')
+      if (ariaLabel === null) button.removeAttribute('aria-label')
+      else button.setAttribute('aria-label', ariaLabel)
+    })
+  }
+})

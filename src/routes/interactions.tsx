@@ -124,6 +124,10 @@ export function registerInteractionsRoutes(app: Hono) {
     }
     const referer = c.req.header('referer')
     const returnPath = f.from ? safeNext(f.from) : safeRefererPath(referer, c.req.url)
+    if (c.req.header('accept')?.includes('application/json')) {
+      if (!result) return c.json({ error: 'Not found' }, 404)
+      return c.json({ following: result.followed })
+    }
     if (referer && URL.canParse(referer)) {
       const url = new URL(referer)
       if (url.pathname === '/explore' && /^\d+(,\d+){0,7}$/.test(f.explorePeople || '')) {
@@ -191,6 +195,9 @@ export function registerInteractionsRoutes(app: Hono) {
     if (result.followed) {
       void sendPushForTagFollow(user.id, user.handle, tag)
         .catch(error => logError('tag follow activity push failed', error))
+    }
+    if (c.req.header('accept')?.includes('application/json')) {
+      return c.json({ following: result.followed })
     }
     return redirect(instantScrollPath(f.from
       ? safeNext(f.from)

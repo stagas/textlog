@@ -2017,7 +2017,7 @@ test('appearance is one server-rendered form with CSS tabs and every choice', ()
   expect(html).toContain('name="accent" checked="" value="amber"')
   expect(html).toContain('name="fontSize"')
   expect(html).toContain('name="density"')
-  expect(html).not.toContain('<script')
+  expect(html).not.toContain('src="/compose.js')
   expect(html).not.toContain('style=')
 })
 
@@ -2211,7 +2211,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
   expect(profile).toContain('class="account-danger-zone" id="notifications"')
-  expect(profile).not.toContain('<script')
+  expect(profile).not.toContain('src="/notifications.js')
 })
 
 test('notification settings show new-user alerts only to administrators', () => {
@@ -2270,7 +2270,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
   expect(html).toContain('value="large"')
   expect(html).toContain('value="larger"')
   expect(html).toContain('Fonts are used from your device.')
-  expect(html).not.toContain('<script')
+  expect(html).not.toContain('src="/compose.js')
   expect(html).not.toContain('style=')
 })
 

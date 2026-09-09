@@ -90,6 +90,7 @@ async function request(path: string, options: {
   userAgent?: string
   ip?: string
   acceptHtml?: boolean
+  acceptJson?: boolean
 } = {}) {
   const method = options.method || 'GET'
   const headers = new Headers()
@@ -98,6 +99,7 @@ async function request(path: string, options: {
   if (options.userAgent) headers.set('user-agent', options.userAgent)
   if (options.ip) headers.set('x-forwarded-for', options.ip)
   if (options.acceptHtml) headers.set('accept', 'text/html')
+  if (options.acceptJson) headers.set('accept', 'application/json')
   if (method !== 'GET') headers.set('origin', origin)
   if (options.json !== undefined) headers.set('content-type', 'application/json')
   return await fetch(`${origin}${path}`, {
@@ -123,6 +125,15 @@ test('web manifest is cached by browsers', async () => {
     background_color: '#171a17',
     start_url: '/?pwa',
   })
+})
+
+test('reference follow enhancement is served as immutable JavaScript', async () => {
+  const response = await request('/reference-follow.js?v=4')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  expect(await response.text()).toContain("headers: { Accept: 'application/json' }")
+  expect(await (await request('/hot', { cookie: undefined })).text()).not.toContain('/reference-follow.js?v=4')
 })
 
 test('PWA launch marks the client standalone and removes the launch parameter', async () => {
@@ -2158,8 +2169,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
 
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
-  const followAlice = await request('/follow/alice', { method: 'POST', cookie: bobCookie, form: {} })
-  expect(followAlice.status).toBe(303)
+  const followAlice = await request('/follow/alice', {
+    method: 'POST', cookie: bobCookie, form: {}, acceptJson: true,
+  })
+  expect(followAlice.status).toBe(200)
+  expect(await followAlice.json()).toEqual({ following: true })
   expect(database.query('SELECT 1 FROM follows WHERE follower_id=? AND following_id=?').get(bob.id, alice.id))
     .toBeTruthy()
   const followBob = await request('/follow/bob', { method: 'POST', cookie: aliceCookie, form: {} })
@@ -2249,7 +2263,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const bobProfileAsAlice = await (await request('/u/bob', { cookie: aliceCookie })).text()
   expect(bobProfileAsAlice).toContain('<span class="follows-you">follows you</span><button class="button" '
     + 'aria-label="follow back @bob">follow back</button>')
-  await request('/tag-follow/shared', { method: 'POST', cookie: aliceCookie })
+  const followedSharedTag = await request('/tag-follow/shared', {
+    method: 'POST', cookie: aliceCookie, acceptJson: true,
+  })
+  expect(followedSharedTag.status).toBe(200)
+  expect(await followedSharedTag.json()).toEqual({ following: true })
   await request('/tag-follow/shared', { method: 'POST', cookie: bobCookie })
   const unicodeTagFollow = await request('/tag-follow/' + encodeURIComponent('español'), {
     method: 'POST',
