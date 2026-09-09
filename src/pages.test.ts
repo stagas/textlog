@@ -2338,6 +2338,19 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
   }
 })
 
+test('feed pages expose a replaceable view beneath the persistent composer', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-08-20' }
+  const feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }
+  for (const html of [
+    renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/all' })),
+    renderToStaticMarkup(React.createElement(HotFeed, { user, feed })),
+  ]) {
+    expect(html).toContain('<div data-feed-view="true">')
+    expect(html.indexOf('embedded-write-compose')).toBeLessThan(html.indexOf('data-feed-view'))
+    expect(html.indexOf('data-feed-view')).toBeLessThan(html.indexOf('id="feed-tabs"'))
+  }
+})
+
 test('public collection pages advertise their RSS and Atom feeds', () => {
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user: null, cursor: null }))
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user: null, cursor: null, path: '/latest' }))

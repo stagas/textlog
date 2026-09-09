@@ -226,7 +226,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=4" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=5" defer />}
+        {onFeedPage && <script src="/infinite-scroll.js?v=6" defer />}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body

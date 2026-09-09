@@ -244,14 +244,15 @@ export function Feed(
   if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
-      <h1 className="visually-hidden">Your feed</h1>
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
           location={writePreviewLocation} />
       )}
       <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
         draftId={writeDraftId} />
-      <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
+      <div data-feed-view>
+        <h1 className="visually-hidden">Your feed</h1>
+        <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
         ? hasUnread && unreadPage !== null && unreadPage > data.page
         : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
         lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
@@ -282,6 +283,7 @@ export function Feed(
           </div>
         )}
       <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} />
+      </div>
     </Layout>
   )
 }

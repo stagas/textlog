@@ -64,7 +64,6 @@ export function PublicFeed(
       ? { title: 'New conversations', rss: '/new.rss', atom: '/new.atom' }
       : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
     >
-      <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
           location={writePreviewLocation} />
@@ -75,7 +74,9 @@ export function PublicFeed(
             draftId={writeDraftId} />
         )
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
-      <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
+      <div data-feed-view>
+        <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
+        <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
         latestCount={feed.latestCount} forYouReadStatus={user && feed.posts.length
         ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
@@ -91,6 +92,7 @@ export function PublicFeed(
           </div>
         )}
       <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
+      </div>
     </Layout>
   )
 }

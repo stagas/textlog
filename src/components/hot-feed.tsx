@@ -47,7 +47,6 @@ export function HotFeed(
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
     >
-      <h1 className="visually-hidden">Hot notes</h1>
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
           location={writePreviewLocation} />
@@ -58,19 +57,22 @@ export function HotFeed(
             draftId={writeDraftId} />
         )
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
-      <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-        toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
-      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
-      {feed.posts.length
-        ? chunkMarkup
-        : feed.page === 1
-        ? <GlobalFeedEmpty user={user} />
-        : (
-          <div className="empty">
-            No notes on this page. <a href="/hot">Return to the first page</a>.
-          </div>
-        )}
-      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
+      <div data-feed-view>
+        <h1 className="visually-hidden">Hot notes</h1>
+        <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
+          toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
+        {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
+        {feed.posts.length
+          ? chunkMarkup
+          : feed.page === 1
+          ? <GlobalFeedEmpty user={user} />
+          : (
+            <div className="empty">
+              No notes on this page. <a href="/hot">Return to the first page</a>.
+            </div>
+          )}
+        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
+      </div>
     </Layout>
   )
 }
