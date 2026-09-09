@@ -65,3 +65,26 @@ test('mark all clears descendants of followed tags across the whole My Feed', ()
   expect(database.query(`SELECT count(*) count FROM for_you_reads
     WHERE user_id=1 AND CAST(substr(event_key,6) AS INTEGER)%2=0`).get()).toEqual({ count: 21 })
 })
+
+test('mark all clears visible materialized entries missing from the live projection', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO personalized_feed_entries(
+      viewer_id,feed,event_key,event_kind,actor_id,reason,created_at,eligible)
+      VALUES(1,'for-you','signup:historical','signup',2,0,'2026-08-01',1);
+    UPDATE feed_state SET unread_count=1 WHERE viewer_id=1 AND feed='for-you';`)
+
+  // There is no current follow or tag relationship, so only the materialized feed still represents this item.
+  expect(unreadForYouCount(1, database)).toBe(0)
+  expect(database.query(`SELECT unread_count FROM feed_state
+    WHERE viewer_id=1 AND feed='for-you'`).get()).toEqual({ unread_count: 1 })
+
+  markAllForYouRead(1, false, database)
+
+  expect(database.query(`SELECT event_key FROM for_you_reads WHERE user_id=1`).all())
+    .toEqual([{ event_key: 'signup:historical' }])
+  expect(database.query(`SELECT unread_count FROM feed_state
+    WHERE viewer_id=1 AND feed='for-you'`).get()).toEqual({ unread_count: 0 })
+})
