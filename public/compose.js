@@ -32,7 +32,41 @@
   }
 
   const textareas = document.querySelectorAll(textareaSelector)
-  textareas.forEach(update)
+  const storedValue = textarea => {
+    const key = textarea.dataset.composeStorageKey
+    if (!key) return null
+    try {
+      return localStorage.getItem(key)
+    } catch {
+      return null
+    }
+  }
+  const storeValue = textarea => {
+    const key = textarea.dataset.composeStorageKey
+    if (!key) return
+    try {
+      if (textarea.value) localStorage.setItem(key, textarea.value)
+      else localStorage.removeItem(key)
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+  }
+  const clearStoredValue = textarea => {
+    const key = textarea.dataset.composeStorageKey
+    if (!key) return
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+  }
+
+  textareas.forEach(textarea => {
+    const saved = storedValue(textarea)
+    if (!textarea.value && saved) textarea.value = saved
+    update(textarea)
+  })
+  document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
 
   if ('ResizeObserver' in window) {
     const observer = new ResizeObserver(entries => entries.forEach(entry => update(entry.target)))
@@ -42,6 +76,7 @@
   document.addEventListener('input', event => {
     if (event.target instanceof HTMLTextAreaElement && event.target.matches(textareaSelector)) {
       event.target.setCustomValidity('')
+      storeValue(event.target)
       update(event.target)
     }
   })
@@ -49,7 +84,12 @@
   document.addEventListener('submit', event => {
     if (!(event.target instanceof HTMLFormElement)) return
     const textarea = event.target.querySelector(textareaSelector)
-    if (!textarea || event.submitter?.getAttribute('name') === 'action' || !update(textarea)) return
+    if (!textarea || event.submitter?.getAttribute('name') === 'action') return
+
+    if (!update(textarea)) {
+      clearStoredValue(textarea)
+      return
+    }
 
     event.preventDefault()
     const characters = textarea.value.length

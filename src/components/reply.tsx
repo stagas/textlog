@@ -1,8 +1,10 @@
 import type React from 'preact/compat'
 import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
+import { activeRequest } from '../theme'
 import type { LocationView, User } from '../types'
 import type { PostView } from '../types'
+import { isMobileRequest } from '../user-agent'
 import { Layout } from './layout'
 import {
   FormActions,
@@ -19,7 +21,8 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, moreActions,
-    className = 'replybox reply-compose', suggestionSearch, draftId, helpId = 'reply-posting-help', autoFocus = true }:
+    className = 'replybox reply-compose', suggestionSearch, draftId, helpId = 'reply-posting-help', autoFocus = true,
+    storageKey }:
       {
         action: string
         body: string
@@ -35,8 +38,10 @@ export function ReplyBox(
         draftId?: string
         helpId?: string
         autoFocus?: boolean
+        storageKey?: string
       },
 ) {
+  const shouldAutoFocus = autoFocus && !isMobileRequest(activeRequest())
   return (
     <>
       <Panel className={className}>
@@ -46,7 +51,9 @@ export function ReplyBox(
         <FormMessage error={error} />
         {beforeTextarea}
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX} autoFocus={autoFocus}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+            data-auto-focus={shouldAutoFocus ? '' : undefined}
+            data-compose-storage-key={storageKey}
             data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
             defaultValue={body}
             placeholder={placeholder} autoComplete="off" inputMode="text" enterkeyhint="enter" />
@@ -61,7 +68,7 @@ export function ReplyBox(
         </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=4" defer />
+      <script src="/compose.js?v=6" defer />
     </>
   )
 }
@@ -119,12 +126,12 @@ export function ReplyComposer(
       placeholder={user && replyParent.user_id === user.id ? 'Continue writing…' : `Reply to @${replyParent.handle}…`}
       className={`replybox reply-compose${inline ? '' : ' root-reply-compose'}${
         user ? '' : ' anonymous-reply-compose'
-      }`} autoFocus={autoFocus} hidden={
+    }`} autoFocus={autoFocus} hidden={
       <>
         <input type="hidden" name="reply_page_id" value={replyPageId} />
         {returnPath && <input type="hidden" name="from" value={returnPath} />}
       </>
-    } helpId={helpId} secondary={
+    } helpId={helpId} storageKey={`textlog:compose:${user?.id ?? 'guest'}:reply:${replyParent.id}`} secondary={
       <span className="edit-post-actions">
         <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
       </span>

@@ -49,6 +49,7 @@ import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './c
 import React from 'preact/compat'
 import { maskEmail } from './components/auth'
 import { WriteForm } from './components/compose'
+import { ReplyBox } from './components/reply'
 import { HotFeed } from './components/hot-feed'
 import { Layout } from './components/layout'
 import { PublicFeed } from './components/public-feed'
@@ -85,6 +86,29 @@ test('mobile account navigation uses an in-flow details menu', () => {
     + '<span class="nav-mood">🤸</span></summary>')
   expect(html).not.toContain('popoverTarget="account-menu-popover"')
   expect(html).not.toContain('popover="auto"')
+})
+
+test('embedded composers autofocus on desktop but not mobile user agents', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
+    email_verified_at: '2026-01-01' }
+  const renderComposers = (request: Request) => withAppearance(request, () => ({
+    write: renderToStaticMarkup(React.createElement(WriteForm, { user, embedded: true })),
+    reply: renderToStaticMarkup(React.createElement(ReplyBox, {
+      action: '/reply', body: '', secondary: null, primary: null,
+    })),
+  }))
+  const desktop = renderComposers(new Request('https://textlog.test/all', {
+    headers: { 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' },
+  }))
+  const mobile = renderComposers(new Request('https://textlog.test/all', {
+    headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },
+  }))
+
+  expect(desktop.write).toContain('data-auto-focus')
+  expect(desktop.write).toContain('data-compose-storage-key="textlog:compose:1:write"')
+  expect(desktop.reply).toContain('data-auto-focus')
+  expect(mobile.write).not.toContain('data-auto-focus')
+  expect(mobile.reply).not.toContain('data-auto-focus')
 })
 
 test('write page omits the redundant header write action', () => {
@@ -340,8 +364,9 @@ test('post page reply forms only autofocus when reply was explicitly requested',
   const requested = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: true }))
 
   expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose root-reply-compose"')
-  expect(passive).not.toContain('autofocus=""')
-  expect(requested).toContain('autofocus=""')
+  expect(passive).not.toContain('data-auto-focus')
+  expect(requested).toContain('data-auto-focus')
+  expect(requested).toContain('data-compose-storage-key="textlog:compose:1:reply:9"')
 })
 
 test('replying to your own post invites you to continue writing', () => {
@@ -744,7 +769,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
   expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
   expect(html).toMatch(
-    /autofocus="" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
+    /data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -2292,7 +2317,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('name="from"')
     expect(html).toMatch(/placeholder="[^"]+, @reader\?"/)
     expect(html).toMatch(
-      /name="body" data-character-limit="500" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w"/,
+      /name="body" data-character-limit="500" data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w"/,
     )
     expect(html).not.toContain('class="skip-link" href="/write')
     expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')

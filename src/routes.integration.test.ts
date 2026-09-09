@@ -1996,7 +1996,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const mentionHelperHtml = await mentionHelper.text()
   expect(mentionHelperHtml).toContain('@<mark>ali</mark>ce')
   expect(mentionHelperHtml).toMatch(/name="mention_query"[^>]*value="ali"/)
-  expect(mentionHelperHtml).toContain('name="body" data-character-limit="500" autofocus=""')
+  expect(mentionHelperHtml).toContain('name="body" data-character-limit="500" data-auto-focus')
   expect(mentionHelperHtml).not.toContain('name="mention_query" maxlength="100" required=""')
   const implicitMentionHelper = await request(`/post/${post.id}/reply`, {
     method: 'POST',

@@ -1,10 +1,11 @@
 import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
 import { appName } from '../brand'
-import { activeThemeLogoSvg } from '../theme'
+import { activeRequest, activeThemeLogoSvg } from '../theme'
 import { randomComposePlaceholder } from '../compose-placeholders'
 import type { User } from '../types'
 import type { LocationView, PostView } from '../types'
+import { isMobileRequest } from '../user-agent'
 import { Layout } from './layout'
 import {
   FormActions,
@@ -139,6 +140,8 @@ export function WriteForm(
     },
 ) {
   if (!canPublishPosts(user)) return null
+  const shouldAutoFocus = (autoFocus || embedded) && !isMobileRequest(activeRequest())
+  const storageKey = `textlog:compose:${user.id}:write`
   const placeholder = randomComposePlaceholder(user.handle)
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const moreActions = (
@@ -185,7 +188,9 @@ export function WriteForm(
         {draftId && <input type="hidden" name="draft_id" value={draftId} />}
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX} autoFocus={autoFocus}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+            data-auto-focus={shouldAutoFocus ? '' : undefined}
+            data-compose-storage-key={storageKey}
             data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
             accessKey={embedded ? 'w' : undefined} defaultValue={body}
             placeholder={embedded ? placeholder : undefined}
@@ -196,7 +201,7 @@ export function WriteForm(
         </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=4" defer />
+      <script src="/compose.js?v=6" defer />
     </>
   )
 }
@@ -206,6 +211,8 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
   error?: string
   body?: string
 }) {
+  const autoFocus = !isMobileRequest(activeRequest())
+  const storageKey = 'textlog:compose:guest:write'
   const helpId = 'anonymous-posting-help'
   const moreActions = (
     <>
@@ -231,7 +238,8 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
         <input type="hidden" name="embedded" value="1" />
         <FormMessage error={error} />
         <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX} defaultValue={body}
+          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+            data-auto-focus={autoFocus ? '' : undefined} data-compose-storage-key={storageKey} defaultValue={body}
             data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
             placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
             enterkeyhint="enter" />
@@ -249,7 +257,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
         </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=4" defer />
+      <script src="/compose.js?v=6" defer />
     </>
   )
 }
