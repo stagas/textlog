@@ -3,7 +3,16 @@ import { applyHtmlCachePolicy, canonicalizeCrawlerLinks, clearSessionCookie, cra
   feedPreferenceCookie, FORM_REQUEST_BODY_LIMIT, htmlCacheControl, isCrawlerRequest, isSameOriginRequest,
   limitedFormData, RequestBodyError, requiresSameOrigin, retainedAnyFeedSeed, retainedAnyFeedSeedCookie,
   returningVisitor, returningVisitorCookie, safeLocalPath, safeRefererPath, securityHeaders, sessionCookie,
-  stringField } from './http'
+  stringField, notificationUserAgent } from './http'
+
+test('notification banner browser identity survives browser version updates', () => {
+  const identity = (userAgent: string) => notificationUserAgent(new Request('https://textlog.cc', {
+    headers: { 'user-agent': userAgent },
+  }))
+  expect(identity('Mozilla/5.0 AppleWebKit/537.36 Chrome/140.0.7339.81 Safari/537.36'))
+    .toBe(identity('Mozilla/5.0 AppleWebKit/537.36 Chrome/141.0.7390.12 Safari/537.36'))
+  expect(identity('Mozilla/5.0 Firefox/142.0')).toBe(identity('Mozilla/5.0 Firefox/143.0'))
+})
 
 describe('local redirects', () => {
   test('accepts local paths and rejects ambiguous or external targets', () => {

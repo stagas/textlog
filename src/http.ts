@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { sessionCookieName } from './brand'
+import { stableUserAgent } from './user-agent'
 
 export function stringField(data: FormData, name: string) {
   const value = data.get(name)
@@ -316,7 +317,7 @@ export function notificationDeviceCookie(value: string, appUrl: string | undefin
 }
 
 export function notificationUserAgent(request: Request) {
-  return (request.headers.get('user-agent') || '').trim().slice(0, 512)
+  return stableUserAgent(request.headers.get('user-agent') || '')
 }
 
 export function notificationBannerDismissed(request: Request, userId: number) {

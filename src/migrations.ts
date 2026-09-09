@@ -5,6 +5,7 @@ import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHas
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
+import { stableUserAgent } from './user-agent'
 
 type Migration = { version: number; name: string; transaction?: boolean; up(database: Database): void }
 
@@ -5076,6 +5077,41 @@ export const migrations: Migration[] = [
     up(database) {
       if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       addColumn(database, 'users', 'new_message_sound', 'INTEGER NOT NULL DEFAULT 1 CHECK(new_message_sound IN (0,1))')
+    },
+  },
+  {
+    version: 224,
+    name: 'stable_banner_user_agents',
+    up(database) {
+      const hasTable = (table: string) => !!database.query(
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+      ).get(table)
+      const migrateStatuses = (table: 'notification_user_agents' | 'appearance_user_agents') => {
+        if (!hasTable(table)) return
+        const rows = database.query(`SELECT user_id,user_agent,status,updated_at FROM ${table}
+          ORDER BY updated_at,user_agent`).all() as Array<{
+            user_id: number; user_agent: string; status: string; updated_at: string
+          }>
+        database.query(`DELETE FROM ${table}`).run()
+        const insert = database.query(`INSERT INTO ${table}(user_id,user_agent,status,updated_at) VALUES(?,?,?,?)
+          ON CONFLICT(user_id,user_agent) DO UPDATE SET status=excluded.status,updated_at=excluded.updated_at`)
+        for (const row of rows) insert.run(row.user_id, stableUserAgent(row.user_agent), row.status, row.updated_at)
+      }
+      migrateStatuses('notification_user_agents')
+      migrateStatuses('appearance_user_agents')
+
+      if (!hasTable('notification_improvement_user_agents')) return
+      const improvements = database.query(`SELECT user_id,user_agent,dismissed_at
+        FROM notification_improvement_user_agents ORDER BY dismissed_at,user_agent`).all() as Array<{
+          user_id: number; user_agent: string; dismissed_at: string
+        }>
+      database.query('DELETE FROM notification_improvement_user_agents').run()
+      const insertImprovement = database.query(`INSERT INTO notification_improvement_user_agents
+        (user_id,user_agent,dismissed_at) VALUES(?,?,?) ON CONFLICT(user_id,user_agent)
+        DO UPDATE SET dismissed_at=excluded.dismissed_at`)
+      for (const row of improvements) {
+        insertImprovement.run(row.user_id, stableUserAgent(row.user_agent), row.dismissed_at)
+      }
     },
   },
 ]
