@@ -62,6 +62,15 @@ test('materialized feed templates refresh linked-account unread dots', () => {
   }
 })
 
+test('materialized feed templates refresh the active All tab count after its highlight', () => {
+  const html = '<a class="active" aria-current="page" href="/all">'
+    + '<svg class="feed-tab-highlight"><rect></rect></svg>all<span class="to-me-count">1</span></a>'
+  expect(materializedBody(html, 1)).toBe(
+    '<a class="active" aria-current="page" href="/all">'
+      + '<svg class="feed-tab-highlight"><rect></rect></svg>all{{latest-count}}</a>',
+  )
+})
+
 test('materialized feed templates replace capped counters', () => {
   const html = '<a href="/@">@<span class="to-me-count">99+</span></a>'
     + '<a href="/my-feed">my feed<span class="to-me-count">99+</span></a>'

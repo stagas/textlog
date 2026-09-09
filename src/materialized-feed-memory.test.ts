@@ -104,6 +104,9 @@ test('a warmed all feed marks visible posts read when that account opens it', as
   const body = (feed: Awaited<ReturnType<typeof load>>, read = false) => new Response(JSON.stringify({
     postIds: feed.posts.map(row => row.id),
     unreadPostIds: read ? [] : feed.unreadPostIds,
+    unreadMarkup: read || !feed.unreadPostIds?.length
+      ? ''
+      : '<span class="unread-dot" aria-label="unread"></span>',
   }))
 
   await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)), false,
@@ -123,10 +126,12 @@ test('a warmed all feed marks visible posts read when that account opens it', as
   expect(await opened.json()).toMatchObject({ unreadPostIds: expect.arrayContaining([post.id]) })
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: alice.id })).toBe(0)
 
+  invalidateMaterializedFeedMemory()
+  loaded = undefined
   const revisited = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await data()), false,
     cacheVersion, false, async () => body(await data(), true),
     async () => ((await data()).unreadPostIds?.length || 0) > 0)
-  expect(await revisited.json()).toMatchObject({ unreadPostIds: [] })
+  expect(await revisited.json()).toMatchObject({ unreadPostIds: [], unreadMarkup: '' })
 })
 
 test('my feed shows unread counters and dots once before caching its read state', async () => {

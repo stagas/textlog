@@ -64,11 +64,12 @@ function rememberMaterialization(key: string, result: MaterializedResponse, view
 
 export function materializedBody(html: string, viewerId: number) {
   if (viewerId < 0) return html
-  const token = (source: string, path: string, label: string, name: string) =>
-    source.replace(
-      new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
-      `$1{{${name}-count}}$2`,
-    )
+  const token = (source: string, path: string, label: string, name: string) => source.replace(
+    new RegExp(`<a[^>]*href="${path}"[^>]*>(?:(?!</a>)[\\s\\S])*</a>`),
+    anchor => anchor.includes(label)
+      ? anchor.replace(/(?:<span class="to-me-count">\d+\+?<\/span>)?<\/a>$/, `{{${name}-count}}</a>`)
+      : anchor,
+  )
   const accountTokens = html.replace(
     /(<form\b[^>]*action="\/account\/accounts\/select"[^>]*>[\s\S]*?<input\b[^>]*name="accountId"\s+value="(\d+)"[^>]*>[\s\S]*?<button\b[^>]*class="account-menu-account"[^>]*>)(?:<span class="unread-dot"\s+aria-label="unread activity"><\/span>)?/g,
     (_match, prefix: string, accountId: string) => `${prefix}{{account-${accountId}-unread}}`,
@@ -95,6 +96,10 @@ export function personalizedReadActionOutOfSync(kind: 'for-you' | 'to-me', html:
   // otherwise leave that stale body in memory indefinitely.
   const hasCachedUnreadRows = html.includes('class="unread-dot" aria-label="unread"')
   return actionOutOfSync || hasCachedUnreadRows
+}
+
+export function latestReadActionOutOfSync(html: string) {
+  return html.includes('class="unread-dot" aria-label="unread"')
 }
 
 export function memoryHitNeedsReadAction(kind: MaterializedFeedKind, hitActionDone: boolean, actionStale = false) {
@@ -146,17 +151,19 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
       : memory.body
     const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
       && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
+    const readActionStale = personalizedActionStale || kind === 'latest'
+      && latestReadActionOutOfSync(hydratedMemoryBody)
     let responseBody = hydratedMemoryBody
     // Personalized pages can gain new unread entries without changing this process's memory entry. Consume the
     // visible page on every visit so reads made in My Feed are reflected in All before the response is returned.
-    if (memoryHitNeedsReadAction(kind, memory.hitActionDone, personalizedActionStale) && onCacheHit) {
+    if (memoryHitNeedsReadAction(kind, memory.hitActionDone, readActionStale) && onCacheHit) {
       memory.hitActionDone = true
       const changed = await onCacheHit()
-      if (renderForCache && readActionNeedsRerender(changed, personalizedActionStale)) {
+      if (renderForCache && readActionNeedsRerender(changed, readActionStale)) {
         memory.body = materializedBody(await (await renderForCache()).text(), viewerId)
         // A newly consumed page must remain visibly unread for this response. Only replace the current response when
         // the cached dots were already consumed elsewhere and this request merely repaired stale markup.
-        if (personalizedActionStale && changed === false) {
+        if (readActionStale && changed === false) {
           responseBody = viewerId >= 0
             ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
             : memory.body
@@ -176,7 +183,9 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
         const changed = await onCacheHit?.()
         const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
           && personalizedReadActionOutOfSync(kind, cached.html)
-        const cachedHtml = onCacheHit && renderForCache && readActionNeedsRerender(changed, personalizedActionStale)
+        const readActionStale = personalizedActionStale || kind === 'latest'
+          && latestReadActionOutOfSync(cached.html)
+        const cachedHtml = onCacheHit && renderForCache && readActionNeedsRerender(changed, readActionStale)
           ? await (await renderForCache()).text()
           : cached.html
         if (cachedHtml !== cached.html) {
@@ -188,7 +197,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
             html: cachedHtml,
           })
         }
-        const responseHtml = personalizedActionStale && changed === false ? cachedHtml : cached.html
+        const responseHtml = readActionStale && changed === false ? cachedHtml : cached.html
         return { body: responseHtml, memoryBody: cachedHtml, generation: cached.generation, status: 200,
           headers: [['content-type', 'text/html;charset=utf-8'], ['cache-control', 'private, no-store'], [
             'x-feed-cache',
