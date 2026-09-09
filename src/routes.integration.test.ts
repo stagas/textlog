@@ -141,7 +141,7 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
-  expect(await response.text()).toContain("data-progressive-pagination-root")
+  expect(await response.text()).toContain('data-progressive-pagination-root')
 })
 
 test('notification sound is served as immutable MPEG audio', async () => {
@@ -1117,14 +1117,17 @@ test('accounts sharing an email can be created, switched, and selected by magic-
   await signup('persona_outsider', 'persona-outsider@example.com', 'unused', 'persona-outsider-signup')
   const outsider = database.query('SELECT id FROM users WHERE handle=?').get('persona_outsider') as { id: number }
   const forgedCancel = await request('/choose-handle/cancel', {
-    method: 'POST', cookie: selectedCookie, form: { previousAccountId: String(outsider.id) },
+    method: 'POST',
+    cookie: selectedCookie,
+    form: { previousAccountId: String(outsider.id) },
   })
   expect(forgedCancel.headers.get('location')).toBe('/choose-handle')
   expect(database.query('SELECT id FROM users WHERE id=?').get(provisional.id)).toEqual({ id: provisional.id })
   expect(database.query('SELECT id FROM users WHERE id=?').get(outsider.id)).toEqual({ id: outsider.id })
 
   const cancelled = await request('/choose-handle/cancel', {
-    method: 'POST', cookie: selectedCookie,
+    method: 'POST',
+    cookie: selectedCookie,
     form: { previousAccountId: String(second.id), next: '/account/edit' },
   })
   expect(cancelled.headers.get('location')).toBe('/account/edit')
@@ -2186,7 +2189,10 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const bobCookie = await signup('bob', 'bob@example.com', 'bob password 123')
   const bob = database.query('SELECT id FROM users WHERE handle=?').get('bob') as { id: number }
   const followAlice = await request('/follow/alice', {
-    method: 'POST', cookie: bobCookie, form: {}, acceptJson: true,
+    method: 'POST',
+    cookie: bobCookie,
+    form: {},
+    acceptJson: true,
   })
   expect(followAlice.status).toBe(200)
   expect(await followAlice.json()).toEqual({ following: true })
@@ -2280,7 +2286,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(bobProfileAsAlice).toContain('<span class="follows-you">follows you</span><button class="button" '
     + 'aria-label="follow back @bob">follow back</button>')
   const followedSharedTag = await request('/tag-follow/shared', {
-    method: 'POST', cookie: aliceCookie, acceptJson: true,
+    method: 'POST',
+    cookie: aliceCookie,
+    acceptJson: true,
   })
   expect(followedSharedTag.status).toBe(200)
   expect(await followedSharedTag.json()).toEqual({ following: true })

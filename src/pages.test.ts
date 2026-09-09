@@ -38,8 +38,8 @@ import {
   postTitle,
   Profile,
   PublicThread,
-  ReportPost,
   Reply,
+  ReportPost,
 } from './components/pages'
 import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEnglish, Post, postAgeTitle, postAnchorId,
   postedPostPath, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge,
@@ -49,10 +49,10 @@ import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './c
 import React from 'preact/compat'
 import { maskEmail } from './components/auth'
 import { WriteForm } from './components/compose'
-import { ReplyBox } from './components/reply'
 import { HotFeed } from './components/hot-feed'
 import { Layout } from './components/layout'
 import { PublicFeed } from './components/public-feed'
+import { ReplyBox } from './components/reply'
 import { TagFeed } from './components/tag-feed'
 import { renderToStaticMarkup } from './render'
 import { withAppearance } from './theme'
@@ -72,9 +72,11 @@ test('bookmarks page hides search until there are bookmarks', () => {
 })
 
 test('feed pages offer a no-script SSR redirect through the fifth chunk', () => {
-  const render = (request: Request) => withAppearance(request,
-    () => renderToStaticMarkup(React.createElement(Layout,
-      { user: null, children: React.createElement('span', null, 'feed') })))
+  const render = (request: Request) =>
+    withAppearance(request, () =>
+      renderToStaticMarkup(
+        React.createElement(Layout, { user: null, children: React.createElement('span', null, 'feed') }),
+      ))
   const initial = render(new Request('https://textlog.test/all?page=2'))
   expect(initial).toContain('<noscript><meta http-equiv="refresh" content="0; url=/all?page=2&amp;chunk=5"/>')
   expect(render(new Request('https://textlog.test/all?page=2&chunk=5'))).not.toContain('http-equiv="refresh"')
@@ -101,12 +103,16 @@ test('mobile account navigation uses an in-flow details menu', () => {
 test('embedded composers autofocus on desktop but not mobile user agents', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-01-01',
     email_verified_at: '2026-01-01' }
-  const renderComposers = (request: Request) => withAppearance(request, () => ({
-    write: renderToStaticMarkup(React.createElement(WriteForm, { user, embedded: true })),
-    reply: renderToStaticMarkup(React.createElement(ReplyBox, {
-      action: '/reply', body: '', secondary: null, primary: null,
-    })),
-  }))
+  const renderComposers = (request: Request) =>
+    withAppearance(request, () => ({
+      write: renderToStaticMarkup(React.createElement(WriteForm, { user, embedded: true })),
+      reply: renderToStaticMarkup(React.createElement(ReplyBox, {
+        action: '/reply',
+        body: '',
+        secondary: null,
+        primary: null,
+      })),
+    }))
   const desktop = renderComposers(new Request('https://textlog.test/all', {
     headers: { 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36' },
   }))
@@ -221,13 +227,13 @@ test('account menu lists linked accounts immediately before logout for one-click
   expect(html).toContain(switchForm)
   expect(html).toContain(
     '<button class="account-menu-account account-menu-account-selected" type="button" aria-current="true">'
-    + '<span>@reader</span><span class="account-menu-check" aria-label="selected">✓</span></button>',
+      + '<span>@reader</span><span class="account-menu-check" aria-label="selected">✓</span></button>',
   )
   expect(html).toContain('>settings</a>')
   expect(html).not.toContain('>account</a>')
   expect(html).toContain(
     '<form method="post" action="/account/accounts/new"><input type="hidden" name="next" value="/latest?page=2"/>'
-    + '<button class="account-menu-account account-menu-new" type="submit" title="Create new account">+new</button>',
+      + '<button class="account-menu-account account-menu-new" type="submit" title="Create new account">+new</button>',
   )
   expect(html).not.toContain('>ACCOUNTS</span>')
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/account/accounts/new"'))
@@ -1855,11 +1861,10 @@ test('promoted deep feed activity anchors at its recent branch instead of resurr
 })
 
 test('feed branch roots render their loaded parent through the normal tree', () => {
-  const parent = { id: 3209, user_id: 1, parent_id: null, body: 'Parent of 3210',
-    created_at: '2026-08-23 09:00:00', deleted_at: null, handle: 'parent', reply_count: 3 }
-  const reply = { id: 3210, user_id: 2, parent_id: parent.id, body: 'Reply 3210',
-    created_at: '2026-08-23 10:00:00', deleted_at: null, handle: 'reply', reply_count: 0, parent,
-    feed_branch_root: true }
+  const parent = { id: 3209, user_id: 1, parent_id: null, body: 'Parent of 3210', created_at: '2026-08-23 09:00:00',
+    deleted_at: null, handle: 'parent', reply_count: 3 }
+  const reply = { id: 3210, user_id: 2, parent_id: parent.id, body: 'Reply 3210', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent, feed_branch_root: true }
   const newerReply = { id: 3211, user_id: 3, parent_id: parent.id, body: 'Newer sibling',
     created_at: '2026-08-23 11:00:00', deleted_at: null, handle: 'newer', reply_count: 0, parent,
     feed_collapsed_preview: true }
@@ -2034,7 +2039,9 @@ test('appearance is one server-rendered form with CSS tabs and every choice', ()
     selected: { theme: 'sepia', accent: 'amber' },
     selectedFont: 'system',
   }))
-  expect(html).toContain('<p class="eyebrow">account settings</p><div class="account-settings-title-row"><h1>appearance</h1>')
+  expect(html).toContain(
+    '<p class="eyebrow">account settings</p><div class="account-settings-title-row"><h1>appearance</h1>',
+  )
   expect(html).toContain('class="appearance-randomize-form"')
   expect(html).toContain('name="randomize" value="yes"')
   expect(html).toContain('>randomize</button>')
@@ -2528,20 +2535,21 @@ test('posts describe whether their author wrote or replied', () => {
 })
 
 test('quizzes show the answer count after the viewer answers', () => {
-  const base = { id: 13, user_id: 1, parent_id: null, body: 'Capital? #quiz',
-    created_at: '2026-08-20 12:00:00', deleted_at: null, handle: 'quizzer', reply_count: 0 }
+  const base = { id: 13, user_id: 1, parent_id: null, body: 'Capital? #quiz', created_at: '2026-08-20 12:00:00',
+    deleted_at: null, handle: 'quizzer', reply_count: 0 }
   const options = [
     { id: 1, label: 'Rome', votes: 1, selected: false, correct: false },
     { id: 2, label: 'Athens', votes: 23, selected: true, correct: true },
   ]
   const answered = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, poll: { kind: 'quiz' as const, options, totalVotes: 24,
-      expired: false, expiresAt: null, viewerVoted: true, explanation: 'Athens is the capital.' } },
+    p: { ...base,
+      poll: { kind: 'quiz' as const, options, totalVotes: 24, expired: false, expiresAt: null, viewerVoted: true,
+        explanation: 'Athens is the capital.' } },
     user: null,
   }))
   const unanswered = renderToStaticMarkup(React.createElement(Post, {
-    p: { ...base, poll: { kind: 'quiz' as const, options, totalVotes: 24,
-      expired: false, expiresAt: null, viewerVoted: false } },
+    p: { ...base,
+      poll: { kind: 'quiz' as const, options, totalVotes: 24, expired: false, expiresAt: null, viewerVoted: false } },
     user: null,
   }))
 
@@ -2552,8 +2560,8 @@ test('quizzes show the answer count after the viewer answers', () => {
 
 test('moderators see a hidden-post label beside anonymized handles', () => {
   const html = renderToStaticMarkup(React.createElement(Post, {
-    p: { id: 9, user_id: 1, parent_id: null, body: 'hidden body', created_at: '2026-08-20 12:00:00',
-      deleted_at: null, handle: 'anon123456789abc', hidden_post: true },
+    p: { id: 9, user_id: 1, parent_id: null, body: 'hidden body', created_at: '2026-08-20 12:00:00', deleted_at: null,
+      handle: 'anon123456789abc', hidden_post: true },
     user: { id: 2, handle: 'moderator', email: 'gstagas@gmail.com', bio: '' },
   }))
   expect(html).toContain('@anon123456789abc</a>')
@@ -4384,7 +4392,10 @@ test('Post only renders owner actions when requested by the detail view', () => 
   }
   const feedHtml = renderToStaticMarkup(React.createElement(Post, props))
   const detailHtml = renderToStaticMarkup(React.createElement(Post, {
-    ...props, showOwnerActions: true, bookmarkAction: true, shareAction: true,
+    ...props,
+    showOwnerActions: true,
+    bookmarkAction: true,
+    shareAction: true,
   }))
 
   expect(feedHtml).not.toContain('/post/2/edit')
@@ -4948,8 +4959,8 @@ test('Post detail places report in the footer', () => {
 test('Report form renders as a dedicated page with no preselected reason', () => {
   const html = renderToStaticMarkup(React.createElement(ReportPost, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
-    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
   }))
 
   expect(html).toContain('<h1>Report this post?</h1>')
@@ -4964,8 +4975,8 @@ test('Report form renders as a dedicated page with no preselected reason', () =>
 test('Report cancel returns to the post before its originating feed', () => {
   const html = renderToStaticMarkup(React.createElement(ReportPost, {
     user: { id: 3, handle: 'reader', email: 'reader@example.com', bio: '' },
-    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer',
-      created_at: '2026-08-03 12:00:00', deleted_at: null },
+    post: { id: 2, user_id: 1, parent_id: null, body: 'note', handle: 'writer', created_at: '2026-08-03 12:00:00',
+      deleted_at: null },
     returnPath: '/latest#post-2',
   }))
 

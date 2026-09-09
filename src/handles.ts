@@ -161,7 +161,7 @@ export function dropUsername(database: Database, userId: number, actorId: number
 
 export function excludesDroppedUsernameUsers(database: Database, userAlias = 'u') {
   const supported = database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'banned_usernames\'',
   ).get()
   return supported
     ? `NOT EXISTS (SELECT 1 FROM banned_usernames hidden_author WHERE hidden_author.dropped_user_id=${userAlias}.id)`

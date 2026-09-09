@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
-import { isAdminEmail } from './admin'
 import { activityAnchor } from './activity-anchor'
+import { isAdminEmail } from './admin'
 import { isAdmin } from './admin'
 import { databaseIdentity } from './database-identity'
 import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
@@ -29,7 +29,7 @@ function rememberUnreadCount(key: string, count: number) {
 }
 
 export function personalizedUnreadCount(database: Database, userId: number, toMe: boolean) {
-  if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) {
+  if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_state\'').get()) {
     return personalizedFeedUnreadCount(database, userId, toMe ? 'to-me' : 'for-you')
   }
   const kind = `${toMe ? 'to-me' : 'for-you'}:v${PERSONALIZED_FEED_SNAPSHOT_VERSION}`
@@ -295,8 +295,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
             : candidate
         )
         result.push({ rows: projectedRows,
-          created_at: toMe ? row.created_at : threadActivity.get(root!) || row.created_at,
-          order: row.event_key })
+          created_at: toMe ? row.created_at : threadActivity.get(root!) || row.created_at, order: row.event_key })
       }
     }
     return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))
@@ -390,7 +389,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   const forYouUnread = forYouCount > 0
   const toMeUnread = toMeCount > 0
   const hasUnread = toMe ? toMeUnread : forYouUnread
-  const materializedUnread = (descending: boolean) => database.query(`SELECT
+  const materializedUnread = (descending: boolean) =>
+    database.query(`SELECT
       (SELECT count(*) FROM personalized_feed_groups newer WHERE newer.viewer_id=entry.viewer_id
         AND newer.feed=entry.feed AND newer.latest_sequence>entry.sequence) position,
       json_object('event_key',entry.event_key,'activity_kind',entry.event_kind,'id',entry.source_post_id) payload
@@ -400,11 +400,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR $hidePeople=0)
       AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR $hideTags=0)
     ORDER BY entry.sequence ${descending ? 'DESC' : 'ASC'} LIMIT 1`).get({
-    unreadViewer: user.id,
-    unreadFeed: toMe ? 'to-me' : 'for-you',
-    hidePeople: user.hide_people_follow_activity || 0,
-    hideTags: user.hide_hashtag_follow_activity || 0,
-  }) as { position: number; payload: string } | null
+      unreadViewer: user.id,
+      unreadFeed: toMe ? 'to-me' : 'for-you',
+      hidePeople: user.hide_people_follow_activity || 0,
+      hideTags: user.hide_hashtag_follow_activity || 0,
+    }) as { position: number; payload: string } | null
   const firstUnread = hasUnread
     ? materializedGroups ? materializedUnread(true) : database.query(`SELECT item.position,row.value payload
     FROM feed_snapshot_items item,json_each(item.payload) row

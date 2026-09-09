@@ -698,9 +698,8 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; shareAction?: boolean; foldControlId?: string;
-  collapsedExpansionControlId?: string;
-  highlightTerms?: string[]; tappable?: boolean; tappableHref?: string; tappableParent?: boolean;
-  contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
+  collapsedExpansionControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableHref?: string;
+  tappableParent?: boolean; contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; parentHref?: string; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
@@ -820,8 +819,9 @@ export function Post({
       }${contextDirectedUnread ? ' activity-item-directed-unread' : ''}`}
       id={`post-${p.id}`}
     >
-      {shareAction && <input className="post-share-toggle" id={shareControlId} type="checkbox"
-        aria-label="show sharing options" />}
+      {shareAction && (
+        <input className="post-share-toggle" id={shareControlId} type="checkbox" aria-label="show sharing options" />
+      )}
       {tappable && (
         <a className="post-hit-area" href={tappableHref || detailPath} rel={navigationRel}
           aria-label={`open post by @${p.handle}`} />
@@ -1011,7 +1011,8 @@ export function Post({
                   <form method="post" action={`/post/${p.id}/mute`}>
                     <input type="hidden" name="from" value={detailPath} />
                     <button className="quiet bookmark-link" type="submit"
-                      aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}>
+                      aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}
+                    >
                       {p.viewer_muted ? 'unmute' : 'mute'}
                     </button>
                   </form>
@@ -1026,9 +1027,7 @@ export function Post({
                     </button>
                   </form>
                 )}
-                {shareAction && (
-                  <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>
-                )}
+                {shareAction && <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>}
               </span>
             )}
           </MetaRow>
@@ -1146,57 +1145,59 @@ export function Post({
         </blockquote>
       )}
       {parent && (hasVisibleContinuation || canModerate || reportHref || bookmarkAction || shareAction
-        || showOwnerActions && !!user) && (
-        <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
-          {resolvedContinuationHref && (
-            continuationLabel === '…'
-              ? null
-              : (
-                <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
-                  {continuationLabel}
-                </a>
-              )
-          )}
-          {(canModerate || reportHref || bookmarkAction || shareAction || showOwnerActions && !!user) && (
-            <span className="post-actions">
-              {canModerate && (
-                <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
-                  moderate
-                </a>
-              )}
-              {reportHref && (
-                <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>report</a>
-              )}
-              {showOwnerActions && user && (
-                <form method="post" action={`/post/${p.id}/mute`}>
-                  <input type="hidden" name="from" value={detailPath} />
-                  <button className="quiet bookmark-link" type="submit"
-                    aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}>
-                    {p.viewer_muted ? 'unmute' : 'mute'}
-                  </button>
-                </form>
-              )}
-              {bookmarkAction && (
-                <form method="post" action={`/post/${p.id}/bookmark`}>
-                  <input type="hidden" name="from" value={detailPath} />
-                  <button className="quiet bookmark-link" type="submit"
-                    aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}
-                  >
-                    {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
-                  </button>
-                </form>
-              )}
-              {shareAction && (
-                <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>
-              )}
-            </span>
-          )}
-        </MetaRow>
-      )}
+        || showOwnerActions && !!user)
+        && (
+          <MetaRow className={`postfoot postfoot-after-quote${preview ? ' preview-post-meta' : ''}`}>
+            {resolvedContinuationHref && (
+              continuationLabel === '…'
+                ? null
+                : (
+                  <a className="quiet post-continuation-link" href={resolvedContinuationHref} rel="nofollow">
+                    {continuationLabel}
+                  </a>
+                )
+            )}
+            {(canModerate || reportHref || bookmarkAction || shareAction || showOwnerActions && !!user) && (
+              <span className="post-actions">
+                {canModerate && (
+                  <a className="quiet" href={'/admin/posts/' + p.id + '/moderate'} aria-label="moderate this post">
+                    moderate
+                  </a>
+                )}
+                {reportHref && (
+                  <a className="quiet report-link" href={reportHref} aria-label={`report post by @${p.handle}`}>
+                    report
+                  </a>
+                )}
+                {showOwnerActions && user && (
+                  <form method="post" action={`/post/${p.id}/mute`}>
+                    <input type="hidden" name="from" value={detailPath} />
+                    <button className="quiet bookmark-link" type="submit"
+                      aria-label={`${p.viewer_muted ? 'unmute' : 'mute'} replies to this post`}
+                    >
+                      {p.viewer_muted ? 'unmute' : 'mute'}
+                    </button>
+                  </form>
+                )}
+                {bookmarkAction && (
+                  <form method="post" action={`/post/${p.id}/bookmark`}>
+                    <input type="hidden" name="from" value={detailPath} />
+                    <button className="quiet bookmark-link" type="submit"
+                      aria-label={`${p.viewer_bookmarked ? 'remove' : 'add'} bookmark`}
+                    >
+                      {p.viewer_bookmarked ? 'unbookmark' : 'bookmark'}
+                    </button>
+                  </form>
+                )}
+                {shareAction && <label className="quiet post-share-link" htmlFor={shareControlId}>share</label>}
+              </span>
+            )}
+          </MetaRow>
+        )}
       {shareAction && (
         <div className="post-share-panel">
-          <InviteShare shareUrl={permalink} shareMessage={`@${p.handle} wrote on textlog`}
-            heading="share with friends" headingId={`${formPrefix}-share-heading`} />
+          <InviteShare shareUrl={permalink} shareMessage={`@${p.handle} wrote on textlog`} heading="share with friends"
+            headingId={`${formPrefix}-share-heading`} />
         </div>
       )}
     </article>
@@ -1602,9 +1603,11 @@ export function FeedThreads(
   }
   const feedPosts = posts
     .filter(post => !belongsToDeletedTopLevel(post) && !post.hidden_by_reply_gate)
-    .map(post => post.feed_branch_root && post.parent && post.parent_id !== post.parent.id
-      ? { ...post, parent_id: post.parent.id }
-      : post)
+    .map(post =>
+      post.feed_branch_root && post.parent && post.parent_id !== post.parent.id
+        ? { ...post, parent_id: post.parent.id }
+        : post
+    )
   if (!feedPosts.length) return null
   const treePosts = [...feedPosts]
   const ids = new Set(feedPosts.map(post => post.id))
@@ -1783,12 +1786,12 @@ export function FeedThreads(
             )}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
               <FeedPost p={post} user={user} showParent={false} tappable returnPath={anchoredReturnPath}
-                highlightTerms={highlightTerms}
-                topHref={post.parent
-                  ? replyAtPagePost(replyAnchorReturnPath(post.parent.top_id || post.parent.id,
-                    post.parent.top_id || post.parent.id, anchoredReturnPath))
-                  : undefined}
-                hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
+                highlightTerms={highlightTerms} topHref={post.parent
+                ? replyAtPagePost(
+                  replyAnchorReturnPath(post.parent.top_id || post.parent.id, post.parent.top_id || post.parent.id,
+                    anchoredReturnPath),
+                )
+                : undefined} hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
                 foldControlId={foldControlId} collapsedExpansionControlId={collapsed ? foldControlId : undefined}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere

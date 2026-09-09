@@ -16,10 +16,10 @@ import { htmlFragment } from './shared'
 import type { Context, Hono } from 'hono'
 import { randomInt } from 'node:crypto'
 import { instance } from '../../instance.config'
-import { executePostCode } from '../code-execution'
 import { subscribeToPosts } from '../api-broker'
+import { executePostCode } from '../code-execution'
+import { feedChunk, restoredFeedChunks } from '../components/infinite-feed'
 import { backgroundDatabaseCall, databaseService } from '../database-service'
-import { feedWarmIdle } from '../idle-work'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
 import {
   campaignAttributionCookie,
@@ -32,10 +32,10 @@ import {
   retainedAnyFeedSeedCookie,
   safeRefererPath,
 } from '../http'
+import { feedWarmIdle } from '../idle-work'
 import { rpcMaterializedFeedPage } from '../materialized-feed-service'
-import { decodePostCursor } from '../pagination'
-import { feedChunk, restoredFeedChunks } from '../components/infinite-feed'
 import { autotagText } from '../openrouter'
+import { decodePostCursor } from '../pagination'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
@@ -259,9 +259,7 @@ function rememberFeedVisitor(request: Request, user: NonNullable<ReturnType<type
   }).catch(error => console.error('Could not remember recent feed visitor', error))
 }
 
-async function warmRecentFeedTab(visitor: RecentFeedVisitor,
-  kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me')
-{
+async function warmRecentFeedTab(visitor: RecentFeedVisitor, kind: 'latest' | 'new' | 'hot' | 'for-you' | 'to-me') {
   const notificationBanner = await showNotificationBanner(visitor.request, visitor.user)
   await withRequestContext({ sessionUser: visitor.user, apiUser: null, pageSize: visitor.pageSize,
     density: visitor.density }, () =>
@@ -270,8 +268,9 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor,
         await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
           const feed = await backgroundDatabaseCall('feeds.latestPage', { viewerId: visitor.user.id, page: 1,
             pageSize: visitor.pageSize, markRead: false })
-          return page(<PublicFeed user={visitor.user} feed={feed} path="/all"
-            notificationBanner={notificationBanner} />)
+          return page(
+            <PublicFeed user={visitor.user} feed={feed} path="/all" notificationBanner={notificationBanner} />,
+          )
         }, false, viewerCacheVersion(latestFeedCacheVersion, visitor.user, notificationBanner), true)
       }
       else if (kind === 'new' || kind === 'hot') {
@@ -284,16 +283,19 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor,
           return page(kind === 'new'
             ? <PublicFeed user={visitor.user} feed={feed} path="/new" notificationBanner={notificationBanner} />
             : <HotFeed user={visitor.user} feed={feed} title="hot" notificationBanner={notificationBanner} />)
-        }, false, viewerCacheVersion(kind === 'new' ? newFeedCacheVersion : hotRankingVersion, visitor.user,
-          notificationBanner), true)
+        }, false,
+          viewerCacheVersion(kind === 'new' ? newFeedCacheVersion : hotRankingVersion, visitor.user,
+            notificationBanner), true)
       }
       else {
         const toMe = kind === 'to-me'
         await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
           const data = await backgroundDatabaseCall('feeds.personalizedPage', { user: visitor.user, page: 1,
             pageSize: visitor.pageSize, toMe, path: toMe ? '/@' : '/my-feed', markRead: false })
-          return page(<Feed user={visitor.user} data={data} title={toMe ? '@' : 'my feed'}
-            path={toMe ? '/@' : undefined} toMe={toMe} notificationBanner={notificationBanner} />)
+          return page(
+            <Feed user={visitor.user} data={data} title={toMe ? '@' : 'my feed'} path={toMe ? '/@' : undefined}
+              toMe={toMe} notificationBanner={notificationBanner} />,
+          )
         }, false, viewerCacheVersion(kind === 'for-you' ? 12 : 1, visitor.user, notificationBanner), true)
       }
     }))
@@ -393,13 +395,19 @@ export function registerFeedsRoutes(app: Hono) {
           closed = true
           if (heartbeat) clearInterval(heartbeat)
           unsubscribe()
-          try { controller.close() }
+          try {
+            controller.close()
+          }
           catch {}
         }
         const send = (value: string) => {
           if (closed) return
-          try { controller.enqueue(encoder.encode(value)) }
-          catch { close() }
+          try {
+            controller.enqueue(encoder.encode(value))
+          }
+          catch {
+            close()
+          }
         }
         const publishCounts = async () => {
           if (pending) {
@@ -416,10 +424,15 @@ export function registerFeedsRoutes(app: Hono) {
                 lastCounts = serialized
                 send(`event: feed\ndata: ${serialized}\n\n`)
               }
-            } while (rerun && !closed)
+            }
+            while (rerun && !closed)
           }
-          catch { close() }
-          finally { pending = false }
+          catch {
+            close()
+          }
+          finally {
+            pending = false
+          }
         }
         unsubscribe = subscribeToPosts(() => {
           if (initializing) queuedDuringInitialization = true
@@ -440,7 +453,9 @@ export function registerFeedsRoutes(app: Hono) {
         c.req.raw.signal.addEventListener('abort', cleanup, { once: true })
         send('event: ready\ndata: {"status":"connected"}\n\n')
       },
-      cancel() { cleanup() },
+      cancel() {
+        cleanup()
+      },
     })
     return new Response(stream, { headers: {
       'content-type': 'text/event-stream; charset=utf-8',
@@ -519,19 +534,20 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       let feed = await data()
       if (liveRefresh) {
-        const postIds = [...new Set(feed.timeline.filter(row =>
-          ['post', 'reply', 'mention'].includes(row.activity_kind)
-        ).map(row => row.id))]
+        const postIds = [
+          ...new Set(
+            feed.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)).map(row => row.id),
+          ),
+        ]
         const consumed = postIds.length
           ? await databaseService().call('api.markLatestRead', { userId: user.id, postIds })
           : 0
         if (consumed) feed = { ...feed, latestCount: Math.max(0, (feed.latestCount || 0) - consumed) }
       }
       const view = (
-        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed}
-          title="my feed" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
-          {...write} />
+        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed} title="my feed"
+          notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
+          chunk={chunk} initialChunks={initialChunks} {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -543,7 +559,8 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
-        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
+        && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
         viewerCacheVersion(12, user, notificationBanner), false, renderForCache, async () => {
@@ -580,9 +597,8 @@ export function registerFeedsRoutes(app: Hono) {
       const feed = await data()
       const view = (
         <PublicFeed user={user} feed={explicitRead ? latestFeedAfterVisibleReads(feed) : feed} path="/all"
-          notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
-          {...write} />
+          notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
+          chunk={chunk} initialChunks={initialChunks} {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -596,13 +612,13 @@ export function registerFeedsRoutes(app: Hono) {
       }
       : undefined
     const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
-        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
+        && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
-        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache,
-        user
-          ? async () => ((await data()).unreadPostIds?.length || 0) > 0
-          : undefined)
+        viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache, user
+        ? async () => ((await data()).unreadPostIds?.length || 0) > 0
+        : undefined)
       : await render()
     warmOtherFeedTabsAfterMiss(c.req.raw, user, 'latest', response)
     const remembered = rememberFeed(response, 'latest')
@@ -720,10 +736,9 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await data()
       const view = (
-        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, true) : feed}
-          title="@" path="/@" toMe notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
-          {...write} />
+        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, true) : feed} title="@" path="/@"
+          toMe notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
+          chunk={chunk} initialChunks={initialChunks} {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -735,7 +750,8 @@ export function registerFeedsRoutes(app: Hono) {
       )
     }
     const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
-        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
+        && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(1, user, notificationBanner), false, renderForCache, async () => {
@@ -778,7 +794,7 @@ export function registerFeedsRoutes(app: Hono) {
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
     const response = chunk === 0 && initialChunks === 1
-      && !write.writeHandled && !write.writeError && !write.writePreview
+        && !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,

@@ -1,11 +1,11 @@
-import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { appearanceExperimentToken } from '../appearance-experiment'
+import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
 import { sendMagicLink, sendPasswordReset } from '../email'
 import { isDevelopment } from '../environment'
-import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie, returningVisitor,
-  pendingFollow, pendingPoll, pendingPost, returningVisitorCookie, sessionCookie } from '../http'
+import { campaignAttribution, campaignAttributionCookie, clearSessionCookie, exploreWelcomeCookie, pendingFollow,
+  pendingPoll, pendingPost, returningVisitor, returningVisitorCookie, sessionCookie } from '../http'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { fontSizeCookie } from '../theme'
@@ -37,8 +37,9 @@ export function registerAuthRoutes(app: Hono) {
   app.get('/enter', c => {
     if (currentUser(c.req.raw)) return redirect('/')
     const next = safeNext(c.req.query('next'))
-    return page(<Auth next={next} returning={returningVisitor(c.req.raw)}
-      pendingNotice={pendingEntryNotice(c.req.raw, next)} />)
+    return page(
+      <Auth next={next} returning={returningVisitor(c.req.raw)} pendingNotice={pendingEntryNotice(c.req.raw, next)} />,
+    )
   })
   app.get('/login',
     c => redirect('/enter' + (c.req.query('next') ? `?next=${encodeURIComponent(safeNext(c.req.query('next')))}` : '')))
@@ -234,8 +235,8 @@ export function registerAuthRoutes(app: Hono) {
     if (limited) {
       return retryPage(
         page(
-          <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-            pendingNotice={pendingNotice} error={authRateLimitMessage(limited.retryAfter)} />,
+          <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)} pendingNotice={pendingNotice}
+            error={authRateLimitMessage(limited.retryAfter)} />,
           429,
         ),
         limited.retryAfter,
@@ -251,8 +252,8 @@ export function registerAuthRoutes(app: Hono) {
       })
     if ((!account && !emailPattern.test(identifier)) || identifier.length > 254) {
       return page(
-        <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)}
-          pendingNotice={pendingNotice} error="Enter a valid email address or handle." />,
+        <Auth email={identifier} next={next} returning={returningVisitor(c.req.raw)} pendingNotice={pendingNotice}
+          error="Enter a valid email address or handle." />,
         400,
       )
     }
@@ -266,8 +267,8 @@ export function registerAuthRoutes(app: Hono) {
       console.error('Could not send magic link', error)
       await databaseService().call('auth.deleteMagicLink', { tokenHash: link.tokenHash })
       return page(
-        <Auth email={email} next={next} returning={returningVisitor(c.req.raw)}
-          pendingNotice={pendingNotice} error="The magic link could not be sent. Please try again later." />,
+        <Auth email={email} next={next} returning={returningVisitor(c.req.raw)} pendingNotice={pendingNotice}
+          error="The magic link could not be sent. Please try again later." />,
         503,
       )
     }
@@ -355,13 +356,16 @@ export function registerAuthRoutes(app: Hono) {
     if (!user) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (user.handle_chosen_at) return redirect(safeNext(c.req.query('next')))
     const requestedPreviousId = /^\d+$/.test(c.req.query('previousAccountId') || '')
-      ? Number(c.req.query('previousAccountId')) : undefined
+      ? Number(c.req.query('previousAccountId'))
+      : undefined
     const accounts = requestedPreviousId
-      ? await databaseService().call('account.choices', { userId: user.id }) : []
+      ? await databaseService().call('account.choices', { userId: user.id })
+      : []
     const current = accounts.find(account => account.id === user.id)
     const previousAccountId = current && !current.primary && !current.handle_chosen_at
-      && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
-      ? requestedPreviousId : undefined
+        && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
+      ? requestedPreviousId
+      : undefined
     return page(<ChooseHandle next={safeNext(c.req.query('next'))} previousAccountId={previousAccountId} />)
   })
 
@@ -388,11 +392,13 @@ export function registerAuthRoutes(app: Hono) {
     const next = safeNext(f.next)
     const requestedPreviousId = /^\d+$/.test(f.previousAccountId || '') ? Number(f.previousAccountId) : undefined
     const accounts = requestedPreviousId
-      ? await databaseService().call('account.choices', { userId: user.id }) : []
+      ? await databaseService().call('account.choices', { userId: user.id })
+      : []
     const current = accounts.find(account => account.id === user.id)
     const previousAccountId = current && !current.primary && !current.handle_chosen_at
-      && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
-      ? requestedPreviousId : undefined
+        && accounts.some(account => account.id === requestedPreviousId && account.handle_chosen_at)
+      ? requestedPreviousId
+      : undefined
     if (!/^[a-z0-9_]{2,24}$/.test(handle)) {
       const characters = Array.from(submittedHandle).length
       return page(
@@ -405,10 +411,13 @@ export function registerAuthRoutes(app: Hono) {
     }
     const moderation = await moderateText(`handle: ${handle}`)
     if (!moderation.ok) {
-      return page(<ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
-        error={moderation.reason === 'flagged'
-        ? 'That handle may violate our content rules. Please choose another.'
-        : moderationMessage(moderation)} />, moderation.reason === 'flagged' ? 422 : 503)
+      return page(
+        <ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
+          error={moderation.reason === 'flagged'
+            ? 'That handle may violate our content rules. Please choose another.'
+            : moderationMessage(moderation)} />,
+        moderation.reason === 'flagged' ? 422 : 503,
+      )
     }
     const claimed = await databaseService().call('auth.claimInitialHandle', { userId: user.id, handle })
     if (claimed.status !== 'ready') {
@@ -419,8 +428,11 @@ export function registerAuthRoutes(app: Hono) {
           429,
         )
       }
-      return page(<ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
-        error="That handle is unavailable." />, 400)
+      return page(
+        <ChooseHandle handle={handle} next={next} previousAccountId={previousAccountId}
+          error="That handle is unavailable." />,
+        400,
+      )
     }
     const campaign = campaignAttribution(c.req.raw)
     if (campaign) await databaseService().call('stats.recordCampaignSignup', { campaign, userId: user.id })

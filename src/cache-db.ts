@@ -50,7 +50,7 @@ export function createCacheDatabase(path = defaultCachePath()) {
     name: string
   }>
   if (!recentVisitorColumns.some(column => column.name === 'user_agent')) {
-    database.run("ALTER TABLE recent_feed_visitors ADD COLUMN user_agent TEXT NOT NULL DEFAULT ''")
+    database.run('ALTER TABLE recent_feed_visitors ADD COLUMN user_agent TEXT NOT NULL DEFAULT \'\'')
   }
   const globalCursorColumns = database.query('PRAGMA table_info(global_feed_page_cursors)').all() as Array<{
     name: string

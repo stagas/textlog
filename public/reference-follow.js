@@ -24,8 +24,10 @@ document.addEventListener('submit', async event => {
   if (pendingActions.has(action.href)) return
   pendingActions.add(action.href)
   const matchingButtons = [...document.querySelectorAll('button')]
-    .filter(button => button.form?.hasAttribute('data-follow-enhance')
-      || button.closest('.reference-menu-popover'))
+    .filter(button =>
+      button.form?.hasAttribute('data-follow-enhance')
+      || button.closest('.reference-menu-popover')
+    )
     .filter(button => {
       const owner = button.form
       return owner && new URL(owner.action, location.href).href === action.href
@@ -39,7 +41,9 @@ document.addEventListener('submit', async event => {
   const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
   let spinnerFrame = 0
   const renderSpinner = () => {
-    matchingButtons.forEach(button => { button.textContent = spinnerFrames[spinnerFrame] })
+    matchingButtons.forEach(button => {
+      button.textContent = spinnerFrames[spinnerFrame]
+    })
     spinnerFrame = (spinnerFrame + 1) % spinnerFrames.length
   }
   matchingButtons.forEach(button => {

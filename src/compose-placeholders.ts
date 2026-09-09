@@ -36,7 +36,9 @@ export function randomComposePlaceholder(handle: string, random = Math.random) {
 }
 
 export function composePlaceholders(handle?: string) {
-  return COMPOSE_PLACEHOLDERS.map(template => handle
-    ? template.replace('{handle}', handle)
-    : template.replace(', @{handle}', ''))
+  return COMPOSE_PLACEHOLDERS.map(template =>
+    handle
+      ? template.replace('{handle}', handle)
+      : template.replace(', @{handle}', '')
+  )
 }

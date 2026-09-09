@@ -1,3 +1,6 @@
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import type { IconType } from 'react-icons'
 import {
   FaFacebookMessenger,
   FaInstagram,
@@ -6,9 +9,6 @@ import {
   FaWhatsapp,
   FaXTwitter,
 } from 'react-icons/fa6'
-import React from 'react'
-import type { IconType } from 'react-icons'
-import { renderToStaticMarkup } from 'react-dom/server'
 
 function renderedIcon(Icon: IconType) {
   return { __html: renderToStaticMarkup(React.createElement(Icon, { 'aria-hidden': 'true' })) }
@@ -46,8 +46,7 @@ export function InviteShare({
           <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`Share textlog on ${name}`} title={name}
             key={name}
           >
-            <span className="invite-share-icon" aria-hidden="true"
-              dangerouslySetInnerHTML={renderedIcon(Icon)} />
+            <span className="invite-share-icon" aria-hidden="true" dangerouslySetInnerHTML={renderedIcon(Icon)} />
           </a>
         ))}
       </div>

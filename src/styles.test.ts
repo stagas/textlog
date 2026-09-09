@@ -823,7 +823,9 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('body.corners-round {')
     expect(css).toContain('--corner-radius: 8px;')
     expect(css).toContain('body.corners-round * {\n  border-radius: var(--corner-radius);')
-    expect(css).toContain('body.corners-round :is(a:not(.button), .quiet, .reference-menu, .danger, .content-warning-action,')
+    expect(css).toContain(
+      'body.corners-round :is(a:not(.button), .quiet, .reference-menu, .danger, .content-warning-action,',
+    )
     expect(css).toContain('body.corners-round :is(button, .button) {\n  border-radius: var(--corner-radius);')
     expect(css).toContain('body.corners-round .accent-swatch {\n  border-radius: 50%;')
     expect(css).toContain('.font-sample { color: var(--ink); font-size: var(--font-size-14);')

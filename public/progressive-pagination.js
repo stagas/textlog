@@ -1,4 +1,4 @@
-(() => {
+;(() => {
   const rootSelector = '[data-progressive-pagination-root]'
   const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
   let controller = null
@@ -16,7 +16,8 @@
     stopSpinner()
     const label = pagination?.getAttribute('aria-label')?.replace(/ pagination$/i, '')
     const headings = [...pagination.closest(rootSelector)?.querySelectorAll('h2') || []]
-    const heading = headings.find(item => label && item.textContent.trim().toLowerCase().startsWith(label.toLowerCase()))
+    const heading =
+      headings.find(item => label && item.textContent.trim().toLowerCase().startsWith(label.toLowerCase()))
       || pagination.closest('section')?.querySelector('h2')
     if (!heading) return
     spinner = document.createElement('span')
@@ -55,7 +56,8 @@
       const parsed = new DOMParser().parseFromString(await response.text(), 'text/html')
       const incomingRoot = parsed.querySelector(rootSelector)
       if (!incomingRoot
-        || incomingRoot.dataset.progressivePaginationRoot !== currentRoot.dataset.progressivePaginationRoot) {
+        || incomingRoot.dataset.progressivePaginationRoot !== currentRoot.dataset.progressivePaginationRoot)
+      {
         throw new Error('Pagination response did not contain the expected content')
       }
       const remaining = 240 - (performance.now() - spinnerStartedAt)

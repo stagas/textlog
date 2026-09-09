@@ -19,7 +19,8 @@ export function searchTerms(query: string) {
   return query.match(/[\p{L}\p{N}_]+/gu) || []
 }
 
-const visibilityFilter = (database: Database) => `p.deleted_at IS NULL AND u.deleted_at IS NULL
+const visibilityFilter = (database: Database) =>
+  `p.deleted_at IS NULL AND u.deleted_at IS NULL
   AND ${excludesDroppedUsernameUsers(database)}
   AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))

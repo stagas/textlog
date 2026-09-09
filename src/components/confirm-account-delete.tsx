@@ -1,5 +1,5 @@
-import type { User } from '../types'
 import { accountDeletionReasons } from '../account-deletion'
+import type { User } from '../types'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
 import { FormActions, FormMessage } from './page-shared'
@@ -8,17 +8,17 @@ import { CenteredPanel, Panel } from './panel'
 export function ConfirmAccountDelete(
   { user, handle, passwordEnabled = false, token, confirmationUrl, sent = false, invalid = false, error, reason,
     otherReason }: {
-    user?: User | null
-    handle?: string
-    passwordEnabled?: boolean
-    token?: string
-    confirmationUrl?: string
-    sent?: boolean
-    invalid?: boolean
-    error?: string
-    reason?: string
-    otherReason?: string
-  },
+      user?: User | null
+      handle?: string
+      passwordEnabled?: boolean
+      token?: string
+      confirmationUrl?: string
+      sent?: boolean
+      invalid?: boolean
+      error?: string
+      reason?: string
+      otherReason?: string
+    },
 ) {
   const emailConfirmation = !!token
   const accountHandle = handle || user?.handle
@@ -76,8 +76,8 @@ export function ConfirmAccountDelete(
                       <>
                         <label>
                           <span>Why are you deleting your account?</span>
-                          <select className="form-control form-select" name="reason" required defaultValue={reason || ''}
-                            data-account-delete-reason
+                          <select className="form-control form-select" name="reason" required
+                            defaultValue={reason || ''} data-account-delete-reason
                           >
                             <option value="" disabled>Choose a reason</option>
                             {accountDeletionReasons.map(([value, label]) => (
@@ -86,9 +86,11 @@ export function ConfirmAccountDelete(
                           </select>
                         </label>
                         <label className="account-delete-other" hidden={reason !== 'other'}>
-                          <span>Other reason <small>(optional)</small></span>
-                          <input className="form-control" name="otherReason" maxLength={500}
-                            defaultValue={otherReason} placeholder="Tell us more" />
+                          <span>
+                            Other reason <small>(optional)</small>
+                          </span>
+                          <input className="form-control" name="otherReason" maxLength={500} defaultValue={otherReason}
+                            placeholder="Tell us more" />
                         </label>
                         <script src="/account-delete.js?v=1" defer />
                       </>

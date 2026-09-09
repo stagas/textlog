@@ -1,9 +1,9 @@
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
+import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups, feedPostsWithFetchedThread,
+  InfiniteFeedChunk } from './infinite-feed'
 import { Layout } from './layout'
-import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups,
-  feedPostsWithFetchedThread, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
@@ -59,8 +59,7 @@ export function PublicFeed(
     )
     : null
   const chunkMarkup = (
-    <InfiniteFeedChunk chunk={renderedChunk}
-      hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+    <InfiniteFeedChunk chunk={renderedChunk} hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
       {feedContent}
     </InfiniteFeedChunk>
   )
@@ -88,21 +87,21 @@ export function PublicFeed(
         )}
         <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
         <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
-        forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
-        latestCount={feed.latestCount} forYouReadStatus={user && feed.posts.length
-        ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
-        : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
-      {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
-      {feed.posts.length
-        ? chunkMarkup
-        : feed.page === 1
-        ? <GlobalFeedEmpty user={user} />
-        : (
-          <div className="empty">
-            No notes on this page. <a href={path}>Return to the first page</a>.
-          </div>
-        )}
-      <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
+          forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
+          latestCount={feed.latestCount} forYouReadStatus={user && feed.posts.length
+          ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
+          : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
+        {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
+        {feed.posts.length
+          ? chunkMarkup
+          : feed.page === 1
+          ? <GlobalFeedEmpty user={user} />
+          : (
+            <div className="empty">
+              No notes on this page. <a href={path}>Return to the first page</a>.
+            </div>
+          )}
+        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
       </div>
     </Layout>
   )

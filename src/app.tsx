@@ -1,12 +1,14 @@
 import { applyHtmlCachePolicy, campaignAttribution, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
   exploreWelcomeCelebration, exploreWelcomeCookie, GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest,
-  limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath, securityHeaders } from './http'
+  limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath,
+  securityHeaders } from './http'
 
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appearanceExperimentCandidate, appearanceExperimentCookie, appearanceExperimentToken,
-  appearanceExperimentVisitorHash, newAppearanceExperimentToken, randomAppearanceExperimentChoice } from './appearance-experiment'
+  appearanceExperimentVisitorHash, newAppearanceExperimentToken,
+  randomAppearanceExperimentChoice } from './appearance-experiment'
+import { BACKUP_CHECK_INTERVAL_MS } from './backup-automation'
 import { appName, clientIpHeaderName } from './brand'
 import { BlogBuildingWithoutJavascript } from './components/blog-building-without-javascript'
 import { BlogRecap } from './components/blog-recap'
@@ -20,8 +22,8 @@ import { shouldShowTagPicker, TagPicker } from './components/tag-picker'
 import { compressResponse } from './compression'
 import { databaseService, subscribeToFeedMutations } from './database-service'
 import { isDevelopment } from './environment'
-import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { feedWarmIdle } from './idle-work'
+import { localImageFile, usesLocalImageStorage } from './image-storage'
 import { campaignIpPseudonym } from './ip-privacy'
 import { clientIp, logError, logHttp, logReady, redactHttpPath, shouldLogHttp } from './log'
 import { MAINTENANCE_INTERVAL_MS } from './maintenance'
@@ -122,7 +124,8 @@ app.use('*', async (c, next) => {
     || !appearanceExperimentCandidate(request)) return withAppearance(request, next)
 
   const assigned = await databaseService().call('stats.assignAppearanceExperiment', {
-    token: newAppearanceExperimentToken(), visitorHash: appearanceExperimentVisitorHash(address),
+    token: newAppearanceExperimentToken(),
+    visitorHash: appearanceExperimentVisitorHash(address),
     ...randomAppearanceExperimentChoice(),
   })
   const cookieAppUrl = Bun.env.APP_URL || c.req.url
@@ -135,7 +138,8 @@ app.use('*', async (c, next) => {
     cornerCookie(assigned.corners, cookieAppUrl),
   ]
   const headers = new Headers(request.headers)
-  headers.set('cookie', `${request.headers.get('cookie') || ''}; ${cookies.map(cookie => cookie.split(';', 1)[0]).join('; ')}`)
+  headers.set('cookie',
+    `${request.headers.get('cookie') || ''}; ${cookies.map(cookie => cookie.split(';', 1)[0]).join('; ')}`)
   const experimentRequest = new Request(request, { headers })
   await withAppearance(experimentRequest, next)
   for (const cookie of cookies) c.header('set-cookie', cookie, { append: true })
@@ -154,8 +158,13 @@ const logsClientBuild = await Bun.build({
 if (!logsClientBuild.success) throw new Error('Failed to build logs client')
 const logsClient = await logsClientBuild.outputs[0].text()
 const publicScriptPaths = [
-  '/notifications.js', '/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
-  '/reference-follow.js', '/sw.js',
+  '/notifications.js',
+  '/infinite-scroll.js',
+  '/progressive-pagination.js',
+  '/compose.js',
+  '/contextual-back.js',
+  '/reference-follow.js',
+  '/sw.js',
 ] as const
 const publicScripts = devReloadEnabled ? undefined : new Map(await Promise.all(publicScriptPaths.map(async path => {
   const build = await Bun.build({
@@ -708,10 +717,11 @@ for (const path of publicScriptPaths) {
       (publicScripts?.get(path) ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
-        'cache-control': ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
-          '/reference-follow.js'].includes(path)
-          ? 'public, max-age=31536000, immutable'
-          : 'no-cache',
+        'cache-control':
+          ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+              '/reference-follow.js'].includes(path)
+            ? 'public, max-age=31536000, immutable'
+            : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
       } },
     ))

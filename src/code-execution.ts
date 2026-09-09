@@ -1,7 +1,7 @@
-import vm from 'node:vm'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import vm from 'node:vm'
 import { logError, logInfo } from './log'
 
 export type ExecutableCode = { language: string; code: string }
@@ -123,10 +123,14 @@ async function executeMermaid(diagram: string, executable: string) {
     await writeFile(filename, diagram, 'utf8')
     const proc = Bun.spawn([
       executable,
-      '--file', filename,
-      '-p', '0',
-      '-x', '5',
-      '-y', '1',
+      '--file',
+      filename,
+      '-p',
+      '0',
+      '-x',
+      '5',
+      '-y',
+      '1',
     ], { stdout: 'pipe', stderr: 'pipe' })
     const stdout = new Response(proc.stdout).text()
     const stderr = new Response(proc.stderr).text()
@@ -154,8 +158,7 @@ async function executeMermaid(diagram: string, executable: string) {
   }
 }
 
-export async function executePostCode(body: string, environment = Bun.env.NODE_ENV,
-  pistonUrl = Bun.env.PISTON_URL,
+export async function executePostCode(body: string, environment = Bun.env.NODE_ENV, pistonUrl = Bun.env.PISTON_URL,
   mermaidExecutable = Bun.env.MERMAID_ASCII_PATH?.trim() || '/usr/local/bin/mermaid-ascii'): Promise<string | null>
 {
   const diagram = mermaidDiagram(body)

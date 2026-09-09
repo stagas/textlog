@@ -164,8 +164,7 @@ export function registerProfilesRoutes(app: Hono) {
         <Connections user={user} profile={profile} people={people} tags={tags} kind={tab} page={connectionPage}
           sort={connectionSort} total={connectionTotal} tagsPage={tagsPage} tagsTotal={followingTagCount}
           noteCount={noteCount} replyCount={replyCount} followerCount={followerCount} followingCount={followingCount}
-          followingTagCount={followingTagCount} following={following} followsViewer={followsViewer}
-          blocked={blocked}
+          followingTagCount={followingTagCount} following={following} followsViewer={followsViewer} blocked={blocked}
           blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social}
           returnPath={returnPath} bioReference={bioReference} noteStreakDates={noteStreakDates} />,
       )
@@ -179,12 +178,11 @@ export function registerProfilesRoutes(app: Hono) {
       <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
         ? []
         : snapshot.posts} following={following} followsViewer={followsViewer} blocked={blocked}
-        total={moderatorBypass ? total : snapshot.totalItems}
-        noteCount={noteCount} replyCount={replyCount} tab={tab === 'replies' ? 'replies' : 'notes'}
-        followerCount={followerCount} followingCount={followingCount} followingTagCount={followingTagCount}
-        blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount} social={social} page={snapshot.page}
-        totalPages={snapshot.totalPages} returnPath={returnPath} bioReference={bioReference}
-        moderatorBypass={moderatorBypass} noteStreakDates={noteStreakDates} />,
+        total={moderatorBypass ? total : snapshot.totalItems} noteCount={noteCount} replyCount={replyCount}
+        tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount} followingCount={followingCount}
+        followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount}
+        social={social} page={snapshot.page} totalPages={snapshot.totalPages} returnPath={returnPath}
+        bioReference={bioReference} moderatorBypass={moderatorBypass} noteStreakDates={noteStreakDates} />,
     )
   })
 }

@@ -154,7 +154,8 @@ export function registerAccountRoutes(app: Hono) {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = c.req.header('content-type')?.includes('application/x-www-form-urlencoded')
-      ? await form(c.req.raw) : {}
+      ? await form(c.req.raw)
+      : {}
     const next = f.next ? safeNext(f.next) : '/account/edit'
     const created = await databaseService().call('account.createLinked', {
       userId: user.id,
@@ -475,8 +476,7 @@ export function registerAccountRoutes(app: Hono) {
         includePeopleFollowActivity={user.hide_people_follow_activity !== 1}
         includeHashtagFollowActivity={user.hide_hashtag_follow_activity !== 1}
         showNoteStreak={user.show_note_streak === 1} showTimestamps={user.show_timestamps === 1}
-        newMessageSound={user.new_message_sound !== 0}
-        returnPath={returnPath} />,
+        newMessageSound={user.new_message_sound !== 0} returnPath={returnPath} />,
     )
   })
 
@@ -490,18 +490,21 @@ export function registerAccountRoutes(app: Hono) {
     const completeAppearance = f.completeAppearance === 'yes'
     const randomize = f.randomize === 'yes'
     const randomChoice = <T,>(choices: readonly T[]) => choices[Math.floor(Math.random() * choices.length)]!
-    const selectedPrimary = (randomize ? randomChoice(PRIMARY_FONT_CHOICES)
+    const selectedPrimary = (randomize
+      ? randomChoice(PRIMARY_FONT_CHOICES)
       : f.primaryFont || primaryFontChoice(c.req.raw)) as PrimaryFontChoice
     const theme = (randomize ? randomChoice(THEME_CHOICES) : f.theme || appearance(c.req.raw).theme) as ThemeChoice
     const accent = (randomize ? randomChoice(ACCENT_CHOICES) : f.accent || appearance(c.req.raw).accent) as AccentChoice
-    const selectedFont = (randomize && selectedPrimary === 'monospace' ? randomChoice(FONT_CHOICES).value
+    const selectedFont = (randomize && selectedPrimary === 'monospace'
+      ? randomChoice(FONT_CHOICES).value
       : f.font || fontChoice(c.req.raw)) as FontChoice
     const selectedSansSerif = (randomize && selectedPrimary === 'sans-serif'
       ? randomChoice(SANS_SERIF_FONT_CHOICES).value
       : f.sansSerifFont || sansSerifFontChoice(c.req.raw)) as SansSerifFontChoice
     const selectedSize = (f.fontSize || fontSizeChoice(c.req.raw)) as FontSizeChoice
     const selectedDensity = (f.density || resolvedDensity(c.req.raw)) as DensityChoice
-    const selectedCorners = (randomize ? randomChoice(CORNER_CHOICES)
+    const selectedCorners = (randomize
+      ? randomChoice(CORNER_CHOICES)
       : f.corners || cornerChoice(c.req.raw)) as CornerChoice
     if (!THEME_CHOICES.includes(theme) || !ACCENT_CHOICES.includes(accent)
       || !FONT_CHOICES.some(font => font.value === selectedFont)
@@ -963,8 +966,10 @@ export function registerAccountRoutes(app: Hono) {
         now: Date.now(),
       })
       return account
-        ? page(<ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value}
-          reason={account.deletionReason} />)
+        ? page(
+          <ConfirmAccountDelete user={currentUser(c.req.raw)} handle={account.handle} token={value}
+            reason={account.deletionReason} />,
+        )
         : page(<ConfirmAccountDelete user={currentUser(c.req.raw)} invalid />, 400)
     }
     const user = currentUser(c.req.raw)
@@ -991,8 +996,13 @@ export function registerAccountRoutes(app: Hono) {
         return c.text('Admin accounts cannot delete themselves', 403)
       }
       const reason = deletionAccount.deletionReason || selectedReason
-      if (!reason) return page(<ConfirmAccountDelete user={user} handle={deletionAccount.handle} token={f.token}
-        error="Choose a reason for deleting your account." />, 400)
+      if (!reason) {
+        return page(
+          <ConfirmAccountDelete user={user} handle={deletionAccount.handle} token={f.token}
+            error="Choose a reason for deleting your account." />,
+          400,
+        )
+      }
       const deleted = await databaseService().call('account.delete', { userId: deletionAccount.id, reason })
       await deleteImagesAfterCommit(deleted.imageKeys)
       return redirect('/', clearSessionCookie())
@@ -1008,8 +1018,11 @@ export function registerAccountRoutes(app: Hono) {
     const limited = await authLimit(c, 'account-delete', `${user.id}:${clientAddress(c)}`, AUTH_LIMITS.sensitiveAccount)
     const passwordEnabled = account.passwordHash !== '!'
     if (!selectedReason) {
-      return page(<ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled} reason={f.reason}
-        otherReason={f.otherReason} error="Choose a reason for deleting your account." />, 400)
+      return page(
+        <ConfirmAccountDelete user={user} passwordEnabled={passwordEnabled} reason={f.reason}
+          otherReason={f.otherReason} error="Choose a reason for deleting your account." />,
+        400,
+      )
     }
     if (limited) {
       return retryPage(

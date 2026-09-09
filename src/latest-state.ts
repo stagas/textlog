@@ -15,9 +15,9 @@ function excludesExistingWhispers(database: Database) {
 }
 
 function latestAuthorVisibility(userId: number, database: Database) {
-  const hasUsers = database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()
+  const hasUsers = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()
   const hasDroppedUsernames = database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'banned_usernames\'',
   ).get()
   if (!hasUsers || !hasDroppedUsernames) return { join: '', filter: '1' }
   const viewer = database.query('SELECT email FROM users WHERE id=?').get(userId) as { email: string } | null

@@ -1,7 +1,7 @@
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
 import { locationMapProvider } from './locations'
-import { isMobileRequest } from './user-agent'
 import { activeRequest, appearanceRequestVariant } from './theme'
+import { isMobileRequest } from './user-agent'
 
 type MaterializedFeedKind = 'latest' | 'new' | 'hot' | 'for-you' | 'to-me' | 'about'
 
@@ -64,12 +64,14 @@ function rememberMaterialization(key: string, result: MaterializedResponse, view
 
 export function materializedBody(html: string, viewerId: number) {
   if (viewerId < 0) return html
-  const token = (source: string, path: string, label: string, name: string) => source.replace(
-    new RegExp(`<a[^>]*href="${path}"[^>]*>(?:(?!</a>)[\\s\\S])*</a>`),
-    anchor => anchor.includes(label)
-      ? anchor.replace(/(?:<span class="to-me-count">\d+\+?<\/span>)?<\/a>$/, `{{${name}-count}}</a>`)
-      : anchor,
-  )
+  const token = (source: string, path: string, label: string, name: string) =>
+    source.replace(
+      new RegExp(`<a[^>]*href="${path}"[^>]*>(?:(?!</a>)[\\s\\S])*</a>`),
+      anchor =>
+        anchor.includes(label)
+          ? anchor.replace(/(?:<span class="to-me-count">\d+\+?<\/span>)?<\/a>$/, `{{${name}-count}}</a>`)
+          : anchor,
+    )
   const accountTokens = html.replace(
     /(<form\b[^>]*action="\/account\/accounts\/select"[^>]*>[\s\S]*?<input\b[^>]*name="accountId"\s+value="(\d+)"[^>]*>[\s\S]*?<button\b[^>]*class="account-menu-account"[^>]*>)(?:<span class="unread-dot"\s+aria-label="unread activity"><\/span>)?/g,
     (_match, prefix: string, accountId: string) => `${prefix}{{account-${accountId}-unread}}`,
@@ -79,8 +81,10 @@ export function materializedBody(html: string, viewerId: number) {
   )
   return token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all',
     'latest')
-    .replace(/<a href="\/drafts(?:\?[^\"]*)?">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
-      '{{drafts-link}}')
+    .replace(
+      /<a href="\/drafts(?:\?[^\"]*)?">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
+      '{{drafts-link}}',
+    )
 }
 
 export function personalizedReadActionOutOfSync(kind: 'for-you' | 'to-me', html: string) {
@@ -117,7 +121,8 @@ function appearanceVariant(request: Request) {
   return `${isMobileRequest(request) ? 'mobile' : 'desktop'}|${
     locationMapProvider(request.headers.get('user-agent') || '')
   }|${appearanceRequestVariant(request)}|${
-    names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')}`
+    names.map(name => cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))?.[1] || '').join('|')
+  }`
 }
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
@@ -152,7 +157,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
       && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
     const readActionStale = personalizedActionStale || kind === 'latest'
-      && latestReadActionOutOfSync(hydratedMemoryBody)
+        && latestReadActionOutOfSync(hydratedMemoryBody)
     let responseBody = hydratedMemoryBody
     // Personalized pages can gain new unread entries without changing this process's memory entry. Consume the
     // visible page on every visit so reads made in My Feed are reflected in All before the response is returned.
@@ -184,7 +189,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
         const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
           && personalizedReadActionOutOfSync(kind, cached.html)
         const readActionStale = personalizedActionStale || kind === 'latest'
-          && latestReadActionOutOfSync(cached.html)
+            && latestReadActionOutOfSync(cached.html)
         const cachedHtml = onCacheHit && renderForCache && readActionNeedsRerender(changed, readActionStale)
           ? await (await renderForCache()).text()
           : cached.html

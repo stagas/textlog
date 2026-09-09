@@ -156,8 +156,9 @@ export function registerInteractionsRoutes(app: Hono) {
     if (result.status === 'not_found') return c.text('Not found', 404)
     if (result.status === 'own_post') return redirect(`/post/${postId}`)
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
-    return page(<ReportPost user={user} post={result.post!} reported={c.req.query('reported') === '1'}
-      returnPath={returnPath} />)
+    return page(
+      <ReportPost user={user} post={result.post!} reported={c.req.query('reported') === '1'} returnPath={returnPath} />,
+    )
   })
 
   app.post('/post/:id/report', async c => {
@@ -175,8 +176,11 @@ export function registerInteractionsRoutes(app: Hono) {
     if (result.status === 'not_found') return c.text('Not found', 404)
     if (result.status === 'own_post') return c.text('You cannot report your own post', 400)
     if (!validReason) {
-      return page(<ReportPost user={user} post={result.post!} reason={f.reason || ''}
-        error="Choose a valid reason for the report." returnPath={returnPath} />, 400)
+      return page(
+        <ReportPost user={user} post={result.post!} reason={f.reason || ''}
+          error="Choose a valid reason for the report." returnPath={returnPath} />,
+        400,
+      )
     }
     return redirect(`/post/${postId}/report?reported=1${returnPath ? `&from=${encodeURIComponent(returnPath)}` : ''}`)
   })

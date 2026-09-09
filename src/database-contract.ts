@@ -232,8 +232,7 @@ export type DatabaseDomainOperations = {
   'account.saveAppearancePreferences': {
     input: { userId: number; deviceId: string; pageSize: PageSizeChoice; density: DensityChoice;
       showLinkPreviews: boolean; showModeratedContent: boolean; hidePeopleFollowActivity: boolean;
-      hideHashtagFollowActivity: boolean; showNoteStreak: boolean; showTimestamps: boolean;
-      newMessageSound: boolean }
+      hideHashtagFollowActivity: boolean; showNoteStreak: boolean; showTimestamps: boolean; newMessageSound: boolean }
     output: null
   }
   'account.updateProfileFlags': { input: { userId: number; timezone: string }; output: null }
@@ -270,12 +269,14 @@ export type DatabaseDomainOperations = {
   'stats.recordCampaignVisitor': { input: { campaign: string; visitorHash: string }; output: boolean }
   'stats.recordCampaignSignup': { input: { campaign: string; userId: number }; output: boolean }
   'stats.assignAppearanceExperiment': { input: import('./appearance-experiment').AppearanceExperimentChoice & {
-    token: string; visitorHash: string
+    token: string
+    visitorHash: string
   }; output: import('./appearance-experiment').AppearanceExperimentChoice & { token: string } }
   'stats.recordAppearanceExperimentVisit': { input: { token: string; visitorHash: string }; output: boolean }
   'stats.qualifyAppearanceExperiment': { input: { token: string; visitorHash: string }; output: boolean }
   'stats.recordAppearanceExperimentConversion': { input: { token: string; userId: number }; output: boolean }
-  'stats.appearanceExperimentRanking': { input: Record<string, never>; output: import('./appearance-experiment').AppearanceExperimentRanking[] }
+  'stats.appearanceExperimentRanking': { input: Record<string, never>;
+    output: import('./appearance-experiment').AppearanceExperimentRanking[] }
   'seo.sitemapIndex': { input: { requestUrl: string; appUrl?: string | null }; output: SerializedDomainResponse }
   'seo.sitemapSection': { input: { requestUrl: string; file: string; appUrl?: string | null };
     output: SerializedDomainResponse | null }

@@ -26,7 +26,7 @@ export function singularHashtag(tag: string) {
   if (tag === 'news' || tag === 'emacs' || tag === 'treatwarningsaserrors' || tag === 'hiddenreplies') return tag
   if (tag.length > 2 && tag.endsWith('ses')) return tag.slice(0, -2)
   return tag.length > 1 && tag.endsWith('s') && !tag.endsWith('ss') && !tag.endsWith('us')
-    && !tag.endsWith('sis')
+      && !tag.endsWith('sis')
     ? tag.slice(0, -1)
     : tag
 }

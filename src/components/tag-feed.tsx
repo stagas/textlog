@@ -95,8 +95,8 @@ export function TagFeed(
             You blocked this tag.{' '}
             <form method="post" action={'/tag-block/' + encodeURIComponent(tag)}>
               <button className="relationship-notice-action">Unblock it</button>
-            </form>
-            {' '}to see its notes.
+            </form>{' '}
+            to see its notes.
           </div>
         )
         : posts.length

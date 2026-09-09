@@ -23,7 +23,9 @@ describe('database migrations', () => {
     expect(database.query('SELECT tag FROM post_hashtags').all()).toEqual([{ tag: 'focus' }])
     expect(database.query('SELECT tag FROM hashtag_follows').all()).toEqual([{ tag: 'focus' }])
     expect(database.query('SELECT tag FROM blocked_hashtags').all()).toEqual([{ tag: 'focus' }])
-    expect(database.query("SELECT normalized_word normalizedWord FROM wordnet_normalizations WHERE word='focus'").get())
+    expect(
+      database.query('SELECT normalized_word normalizedWord FROM wordnet_normalizations WHERE word=\'focus\'').get(),
+    )
       .toEqual({ normalizedWord: 'focus' })
   })
 
@@ -977,9 +979,10 @@ describe('database migrations', () => {
     database.run(`INSERT INTO users(id,handle,email,password) VALUES
       (1,'viewer','viewer@example.com','x'),(2,'author','author@example.com','x');
       INSERT INTO posts(id,user_id,body) VALUES(1,2,'candidate');`)
-    const generation = () => (database.query(
-      'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
-    ).get() as { generation: number }).generation
+    const generation = () =>
+      (database.query(
+        'SELECT generation FROM personalized_feed_generations WHERE viewer_id=1',
+      ).get() as { generation: number }).generation
     const initial = generation()
 
     database.run(`INSERT INTO personalized_post_candidates(viewer_id,post_id,created_at)

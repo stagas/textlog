@@ -365,8 +365,7 @@ export type User = { id: number; handle: string; email: string; bio: string; sus
   handle_chosen_at?: string | null; timezone?: string | null; show_link_previews?: number; recap_emails?: number;
   interaction_emails?: number; show_moderated_content?: number; hide_people_follow_activity?: number;
   hide_hashtag_follow_activity?: number; show_note_streak?: number; show_timestamps?: number; draft_count?: number;
-  new_message_sound?: number;
-  linked_accounts?: Array<
+  new_message_sound?: number; linked_accounts?: Array<
     { id: number; handle: string; mood?: string | null; handle_chosen_at: string | null; selected?: boolean;
       has_unread?: boolean }
   > }

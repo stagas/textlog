@@ -32,9 +32,10 @@ afterAll(() => {
 test('all feed memory is invalidated when another process advances its generation', async () => {
   const request = new Request('http://localhost/all')
   let renders = 0
-  const render = () => new Response(`<main>${++renders}</main>`, {
-    headers: { 'content-type': 'text/html;charset=utf-8' },
-  })
+  const render = () =>
+    new Response(`<main>${++renders}</main>`, {
+      headers: { 'content-type': 'text/html;charset=utf-8' },
+    })
   const cacheVersion = 2_000_000_000 + Math.floor(Math.random() * 100_000_000)
 
   const first = await rpcMaterializedFeedPage(request, 'latest', -1, render, false, cacheVersion)
@@ -43,7 +44,7 @@ test('all feed memory is invalidated when another process advances its generatio
   expect(memory.headers.get('x-feed-cache')).toBe('memory')
 
   // Bypass the configured service to model a post committed by a different application process.
-  database.run("INSERT INTO posts(id,user_id,body) VALUES(2,1,'second')")
+  database.run('INSERT INTO posts(id,user_id,body) VALUES(2,1,\'second\')')
 
   const refreshed = await rpcMaterializedFeedPage(request, 'latest', -1, render, false, cacheVersion)
   expect(refreshed.headers.get('x-feed-cache')).toBe('miss')
@@ -95,24 +96,25 @@ test('a warmed all feed marks visible posts read when that account opens it', as
   const post = createPost(database, 3, 'unread before switching to alice', null, false)
   if (!('id' in post)) throw new Error('could not create unread post')
   const cacheVersion = 2_140_000_000 + Math.floor(Math.random() * 7_000_000)
-  const load = (markRead: boolean) => executeDatabaseDomain(database, 'feeds.latestPage', {
-    viewerId: alice.id,
-    page: 1,
-    pageSize: 20,
-    markRead,
-  })
-  const body = (feed: Awaited<ReturnType<typeof load>>, read = false) => new Response(JSON.stringify({
-    postIds: feed.posts.map(row => row.id),
-    unreadPostIds: read ? [] : feed.unreadPostIds,
-    unreadMarkup: read || !feed.unreadPostIds?.length
-      ? ''
-      : '<span class="unread-dot" aria-label="unread"></span>',
-  }))
+  const load = (markRead: boolean) =>
+    executeDatabaseDomain(database, 'feeds.latestPage', {
+      viewerId: alice.id,
+      page: 1,
+      pageSize: 20,
+      markRead,
+    })
+  const body = (feed: Awaited<ReturnType<typeof load>>, read = false) =>
+    new Response(JSON.stringify({
+      postIds: feed.posts.map(row => row.id),
+      unreadPostIds: read ? [] : feed.unreadPostIds,
+      unreadMarkup: read || !feed.unreadPostIds?.length
+        ? ''
+        : '<span class="unread-dot" aria-label="unread"></span>',
+    }))
 
-  await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)), false,
+  await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)), false, cacheVersion)
+  const warmed = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)), false,
     cacheVersion)
-  const warmed = await rpcMaterializedFeedPage(request, 'latest', alice.id, async () => body(await load(false)),
-    false, cacheVersion)
   expect(warmed.headers.get('x-feed-cache')).toBe('memory')
   expect(await executeDatabaseDomain(database, 'feeds.latestUnreadCount', { userId: alice.id })).toBeGreaterThan(0)
 
@@ -138,27 +140,36 @@ test('my feed shows unread counters and dots once before caching its read state'
   const request = new Request('http://localhost/my-feed')
   const cacheVersion = 2_147_000_000 + Math.floor(Math.random() * 400_000)
   const alice: User = { id: 1, handle: 'alice', email: 'alice@example.test', bio: '' }
-  const load = () => executeDatabaseDomain(database, 'feeds.personalizedPage', {
-    user: alice,
-    page: 1,
-    pageSize: 20,
-    toMe: false,
-    path: '/my-feed',
-    markRead: false,
-  })
-  const body = (feed: Awaited<ReturnType<typeof load>>) => new Response(
-    `<a href="/my-feed">my feed${feed.forYouCount
-      ? `<span class="to-me-count">${feed.forYouCount}</span>`
-      : ''}</a><a href="/all">all${feed.latestCount
-      ? `<span class="to-me-count">${feed.latestCount}</span>`
-      : ''}</a>${feed.timeline.filter(row => row.unread)
-      .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')}`,
-  )
+  const load = () =>
+    executeDatabaseDomain(database, 'feeds.personalizedPage', {
+      user: alice,
+      page: 1,
+      pageSize: 20,
+      toMe: false,
+      path: '/my-feed',
+      markRead: false,
+    })
+  const body = (feed: Awaited<ReturnType<typeof load>>) =>
+    new Response(
+      `<a href="/my-feed">my feed${
+        feed.forYouCount
+          ? `<span class="to-me-count">${feed.forYouCount}</span>`
+          : ''
+      }</a><a href="/all">all${
+        feed.latestCount
+          ? `<span class="to-me-count">${feed.latestCount}</span>`
+          : ''
+      }</a>${
+        feed.timeline.filter(row => row.unread)
+          .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')
+      }`,
+    )
 
   await rpcMaterializedFeedPage(request, 'for-you', alice.id, async () => body(await load()), false, cacheVersion)
   invalidateMaterializedFeedMemory()
-  const open = () => rpcMaterializedFeedPage(request, 'for-you', alice.id, async () => body(await load()), false,
-    cacheVersion, false, async () => body(await load()), async () =>
+  const open = () =>
+    rpcMaterializedFeedPage(request, 'for-you', alice.id, async () => body(await load()), false, cacheVersion, false,
+      async () => body(await load()), async () =>
       await executeDatabaseDomain(database, 'feeds.markPersonalizedSnapshotPageRead', {
         userId: alice.id,
         pageSize: 20,
@@ -186,21 +197,35 @@ test('@ shows a cached directed entry unread once and consumes it on the next vi
   if (!('id' in root)) throw new Error('could not create @ read target')
   const reply = createPost(database, 2, 'cached directed activity', root.id, false)
   if (!('id' in reply)) throw new Error('could not create directed activity')
-  const load = () => executeDatabaseDomain(database, 'feeds.personalizedPage', {
-    user: alice, page: 1, pageSize: 20, toMe: true, path: '/@', markRead: false,
-  })
-  const body = (feed: Awaited<ReturnType<typeof load>>) => new Response(
-    `<a href="/@">@${feed.toMeCount
-      ? `<span class="to-me-count">${feed.toMeCount}</span>`
-      : ''}</a>${feed.timeline.filter(row => row.unread)
-      .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')}`,
-  )
+  const load = () =>
+    executeDatabaseDomain(database, 'feeds.personalizedPage', {
+      user: alice,
+      page: 1,
+      pageSize: 20,
+      toMe: true,
+      path: '/@',
+      markRead: false,
+    })
+  const body = (feed: Awaited<ReturnType<typeof load>>) =>
+    new Response(
+      `<a href="/@">@${
+        feed.toMeCount
+          ? `<span class="to-me-count">${feed.toMeCount}</span>`
+          : ''
+      }</a>${
+        feed.timeline.filter(row => row.unread)
+          .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')
+      }`,
+    )
 
   await rpcMaterializedFeedPage(request, 'to-me', alice.id, async () => body(await load()), false, cacheVersion)
-  const open = () => rpcMaterializedFeedPage(request, 'to-me', alice.id, async () => body(await load()), false,
-    cacheVersion, false, async () => body(await load()), async () =>
+  const open = () =>
+    rpcMaterializedFeedPage(request, 'to-me', alice.id, async () => body(await load()), false, cacheVersion, false,
+      async () => body(await load()), async () =>
       await executeDatabaseDomain(database, 'feeds.markPersonalizedSnapshotPageRead', {
-        userId: alice.id, pageSize: 20, toMe: true,
+        userId: alice.id,
+        pageSize: 20,
+        toMe: true,
       }) > 0)
 
   const firstVisit = await open()

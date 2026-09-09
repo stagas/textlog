@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
-import { createPost, enrichPosts, isThreadLocked, loadThreadReplies, rewireVisibleAncestorGaps } from './posts'
 import { syncPoll } from './polls'
+import { createPost, enrichPosts, isThreadLocked, loadThreadReplies, rewireVisibleAncestorGaps } from './posts'
 import type { PostView } from './types'
 import { displayPostBody, linkify } from './utils'
 
@@ -746,11 +746,11 @@ describe('post persistence', () => {
     expect(enrichPosts(db, [secret], 2)[0].hidden_by_reply_gate).toBe(true)
     expect(loadThreadReplies(db, 1, 2)).toEqual([])
 
-    db.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(4,2,1,'my answer')")
+    db.run('INSERT INTO posts(id,user_id,parent_id,body) VALUES(4,2,1,\'my answer\')')
     expect(enrichPosts(db, [root], 2)[0]).toMatchObject({ replies_hidden: false, reply_count: 3 })
     expect(loadThreadReplies(db, 1, 2).map(post => post.id)).toEqual([2, 3, 4])
     expect(loadThreadReplies(db, 1, 1)).toEqual([])
-    db.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(5,1,1,'author answer')")
+    db.run('INSERT INTO posts(id,user_id,parent_id,body) VALUES(5,1,1,\'author answer\')')
     expect(loadThreadReplies(db, 1, 1).map(post => post.id)).toEqual([2, 3, 4, 5])
   })
 

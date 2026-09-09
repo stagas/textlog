@@ -278,9 +278,7 @@ export function exploreWelcomeCelebration(request: Request) {
 export function exploreWelcomeCookie(value = '1', maxAge = 365 * 24 * 60 * 60,
   appUrl: string | undefined = Bun.env.APP_URL)
 {
-  return `${EXPLORE_WELCOME_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${
-    secureCookie(appUrl)
-  }`
+  return `${EXPLORE_WELCOME_COOKIE}=${value}; Max-Age=${maxAge}; HttpOnly; Path=/; SameSite=Lax${secureCookie(appUrl)}`
 }
 
 export function returningVisitor(request: Request) {

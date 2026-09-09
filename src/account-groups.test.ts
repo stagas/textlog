@@ -36,8 +36,8 @@ test('email login resolves the selected full account while preserving the primar
 
 test('recent feed visitors retain mood and linked accounts for startup warming', async () => {
   const { database, primary, persona } = fixture()
-  database.query("UPDATE users SET mood='🌙' WHERE id=?").run(primary.id)
-  database.query("UPDATE users SET mood='☀️' WHERE id=?").run(persona.id)
+  database.query('UPDATE users SET mood=\'🌙\' WHERE id=?').run(primary.id)
+  database.query('UPDATE users SET mood=\'☀️\' WHERE id=?').run(persona.id)
   await executeDatabaseDomain(database, 'cache.recentFeedVisitorPut', {
     userId: primary.id,
     requestUrl: 'http://localhost/all',

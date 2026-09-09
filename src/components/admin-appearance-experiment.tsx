@@ -20,19 +20,26 @@ export function AdminAppearanceExperiment({ user, ranking }: {
               ? (
                 <div className="appearance-experiment-table-wrap">
                   <table className="appearance-experiment-table">
-                    <thead><tr>
-                      <th scope="col">setting</th><th scope="col">total visits</th><th scope="col">median</th>
-                      <th scope="col">average</th><th scope="col">users</th>
-                    </tr></thead>
-                    <tbody>{rows.map(row => (
-                      <tr key={row.value}>
-                        <th scope="row">{row.label}</th>
-                        <td>{row.pageVisits.toLocaleString()}</td>
-                        <td>{row.medianPageVisits.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                        <td>{row.averagePageVisits.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
-                        <td>{row.users.toLocaleString()}</td>
+                    <thead>
+                      <tr>
+                        <th scope="col">setting</th>
+                        <th scope="col">total visits</th>
+                        <th scope="col">median</th>
+                        <th scope="col">average</th>
+                        <th scope="col">users</th>
                       </tr>
-                    ))}</tbody>
+                    </thead>
+                    <tbody>
+                      {rows.map(row => (
+                        <tr key={row.value}>
+                          <th scope="row">{row.label}</th>
+                          <td>{row.pageVisits.toLocaleString()}</td>
+                          <td>{row.medianPageVisits.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                          <td>{row.averagePageVisits.toLocaleString(undefined, { maximumFractionDigits: 1 })}</td>
+                          <td>{row.users.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
                   </table>
                 </div>
               )

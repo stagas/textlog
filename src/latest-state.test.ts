@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead, unreadLatestCount }
-  from './latest-state'
+import { initializeLatestReads, latestPostState, markAllLatestRead, markLatestPostsRead,
+  unreadLatestCount } from './latest-state'
 
 test('latest unread state includes the viewer own posts and decreases as a page is read', () => {
   const database = new Database(':memory:')

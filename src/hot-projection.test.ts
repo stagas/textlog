@@ -86,9 +86,9 @@ test('numbered hot pages use stable rank cursors without duplicate conversations
     now: '2026-08-27T10:30:00.000Z',
   })
   db.run('UPDATE hot_feed_projection SET conversation_rank=1')
-  const pages = await Promise.all([1, 2, 3].map(page =>
-    executeDatabaseDomain(db, 'feeds.hotPage', { viewerId: -1, page, pageSize: 1 as 20 })
-  ))
+  const pages = await Promise.all(
+    [1, 2, 3].map(page => executeDatabaseDomain(db, 'feeds.hotPage', { viewerId: -1, page, pageSize: 1 as 20 })),
+  )
   const roots = pages.flatMap(result => result.posts.filter(post => post.parent_id === null).map(post => post.id))
   expect(roots).toHaveLength(3)
   expect(new Set(roots).size).toBe(3)

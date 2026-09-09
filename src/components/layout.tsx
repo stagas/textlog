@@ -114,7 +114,8 @@ export function Layout({
         account.id === user.id
           ? (
             <button className="account-menu-account account-menu-account-selected" type="button" aria-current="true"
-              key={account.id}>
+              key={account.id}
+            >
               <span>@{account.handle}</span>
               {account.mood && <span className="nav-mood">{account.mood}</span>}
               <span className="account-menu-check" aria-label="selected">✓</span>
@@ -125,9 +126,9 @@ export function Layout({
               <input type="hidden" name="accountId" value={account.id} />
               <input type="hidden" name="next" value={currentPath} />
               <button className="account-menu-account" type="submit">
-            {account.has_unread && <span className="unread-dot" aria-label="unread activity" />}
-            <span>@{account.handle}</span>
-            {account.mood && <span className="nav-mood">{account.mood}</span>}
+                {account.has_unread && <span className="unread-dot" aria-label="unread activity" />}
+                <span>@{account.handle}</span>
+                {account.mood && <span className="nav-mood">{account.mood}</span>}
               </button>
             </form>
           )
@@ -243,7 +244,9 @@ export function Layout({
         {onFeedPage && <script src="/infinite-scroll.js?v=23" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
-          <noscript><meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} /></noscript>
+          <noscript>
+            <meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} />
+          </noscript>
         )}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
@@ -252,9 +255,7 @@ export function Layout({
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
         }${onWritePage ? ' write-page' : ''}${mobileWriteAction ? ' has-mobile-write-action' : ''}${
           fullScreen ? ' full-screen-page' : ''
-        }${
-          fullScreenScrollable ? ' full-screen-scrollable' : ''
-        }`}
+        }${fullScreenScrollable ? ' full-screen-scrollable' : ''}`}
       >
         {celebrateSignup && (
           <div className="welcome-celebration" aria-hidden="true">

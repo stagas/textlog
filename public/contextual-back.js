@@ -1,4 +1,4 @@
-(() => {
+;(() => {
   const url = new URL(location.href)
   const from = url.searchParams.get('from')
 
@@ -24,7 +24,8 @@
     const linkUrl = new URL(link.href, location.href)
     const linkPath = linkUrl.pathname + linkUrl.search + linkUrl.hash
     if (history.state?.textlogContextualBack && history.length > 1
-      && link.textContent.trim().toLowerCase() === 'back' && linkPath === contextualFrom) {
+      && link.textContent.trim().toLowerCase() === 'back' && linkPath === contextualFrom)
+    {
       event.preventDefault()
       history.back()
     }

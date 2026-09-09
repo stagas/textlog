@@ -36,8 +36,8 @@ describe('executable notes', () => {
       + 'cat "$2"\n')
     await chmod(renderer, 0o700)
     try {
-      const output = await executePostCode('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```', 'development',
-        undefined, renderer)
+      const output = await executePostCode('#mermaid\n```mermaid\ngraph LR\n  A --> B\n```', 'development', undefined,
+        renderer)
       expect(output).toBe('graph LR\n  A --> B')
     }
     finally {

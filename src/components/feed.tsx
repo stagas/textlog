@@ -2,8 +2,8 @@ import { activityAnchor } from '../activity-anchor'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { ComposePreview, WriteForm } from './compose'
-import { Layout } from './layout'
 import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
+import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { BioReferenceForms, FeedThreads, TagReference, UserReference } from './post'
@@ -234,24 +234,29 @@ export function Feed(
               <label className="activity-more-summary" htmlFor={`activity-more-${chunk}-${groupIndex}`}>
                 and {group.rows.length - 1} more
               </label>
-              <div className="activity-more-content"><div className="activity-more-content-inner">
-                {group.rows.slice(1).map(renderTimelineRow)}
-              </div></div>
+              <div className="activity-more-content">
+                <div className="activity-more-content-inner">
+                  {group.rows.slice(1).map(renderTimelineRow)}
+                </div>
+              </div>
             </div>
           </div>
         )
-        : renderTimelineRow(group.rows[0]))
+        : renderTimelineRow(group.rows[0])
+    )
     : null
   const chunkMarkup = (
     <InfiniteFeedChunk chunk={renderedChunk}
-      hasMore={allVisibleTimeline.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+      hasMore={allVisibleTimeline.length > (renderedChunk + 1) * FEED_CHUNK_SIZE}
+    >
       {timelineMarkup}
     </InfiniteFeedChunk>
   )
   if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
-      hasUnreadActivity={data.toMeCount > 0 || data.forYouCount > 0}>
+      hasUnreadActivity={data.toMeCount > 0 || data.forYouCount > 0}
+    >
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
           location={writePreviewLocation} />
@@ -262,36 +267,36 @@ export function Feed(
         <span hidden data-live-counts={`${data.toMeCount}:${data.forYouCount}:${data.latestCount || 0}`} />
         <h1 className="visually-hidden">Your feed</h1>
         <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
-        ? hasUnread && unreadPage !== null && unreadPage > data.page
-        : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount} unreadHref={data.unreadHref}
-        lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread} toMeUnread={data.toMeUnread}
-        latestCount={data.latestCount} />
-      {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
-      {displayTimeline.length
-        ? chunkMarkup
-        : data.page === 1
-        ? (
-          <div className="empty empty-actions">
-            <p>
-              {toMe
-                ? 'No replies, mentions, or new followers yet.'
-                : 'Your timeline is empty. Follow people or hashtags to shape it.'}
-            </p>
-            <ActionPair primary={<a className="button" href="/explore">explore tags &amp; people</a>} secondary={
-              <>
-                <a href="/">browse notes</a>
-                <span className="action-separator">or</span>
-                <a href={writeHref()}>write your first note</a>
-              </>
-            } />
-          </div>
-        )
-        : (
-          <div className="empty">
-            No activity on this page. <a href="/my-feed">Return to the first page</a>.
-          </div>
-        )}
-      <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} />
+          ? hasUnread && unreadPage !== null && unreadPage > data.page
+          : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount}
+          unreadHref={data.unreadHref} lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread}
+          toMeUnread={data.toMeUnread} latestCount={data.latestCount} />
+        {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
+        {displayTimeline.length
+          ? chunkMarkup
+          : data.page === 1
+          ? (
+            <div className="empty empty-actions">
+              <p>
+                {toMe
+                  ? 'No replies, mentions, or new followers yet.'
+                  : 'Your timeline is empty. Follow people or hashtags to shape it.'}
+              </p>
+              <ActionPair primary={<a className="button" href="/explore">explore tags &amp; people</a>} secondary={
+                <>
+                  <a href="/">browse notes</a>
+                  <span className="action-separator">or</span>
+                  <a href={writeHref()}>write your first note</a>
+                </>
+              } />
+            </div>
+          )
+          : (
+            <div className="empty">
+              No activity on this page. <a href="/my-feed">Return to the first page</a>.
+            </div>
+          )}
+        <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} />
       </div>
     </Layout>
   )

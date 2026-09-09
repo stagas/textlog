@@ -364,8 +364,10 @@ test('new feed folds gated-replies notices with the conversation', () => {
 test('profile feeds omit gated-replies notices', () => {
   const post = { id: 23, user_id: 2, parent_id: null, body: 'profile note', created_at: '2026-08-19 10:00:00',
     deleted_at: null, handle: 'alice', reply_count: 2, replies_hidden: true }
-  const html = renderToStaticMarkup(<Profile user={null}
-    profile={{ id: 2, handle: 'alice', email: 'alice@example.com', bio: '' }} posts={[post]} following={false} />)
+  const html = renderToStaticMarkup(
+    <Profile user={null} profile={{ id: 2, handle: 'alice', email: 'alice@example.com', bio: '' }} posts={[post]}
+      following={false} />,
+  )
 
   expect(html).not.toContain('(replies are hidden until you answer the quiz)')
 })

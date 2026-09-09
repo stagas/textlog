@@ -27,7 +27,7 @@ function hiddenReplyGateState(database: Database, postIds: number[], viewerId: n
   const hiddenDescendants = new Set<number>()
   if (!postIds.length || moderator) return { hiddenRoots, hiddenDescendants }
   const supportsPollVotes = !!database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='poll_votes'",
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'poll_votes\'',
   ).get()
   const ancestorRows = database.query(`WITH RECURSIVE ancestors(id,parent_id,body) AS (
     SELECT id,parent_id,body FROM posts WHERE id IN (${postIds.map(() => '?').join(',')})
@@ -385,11 +385,12 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   if (!posts.length) return posts
   const moderator = moderatorViewer(database, viewerId)
   const hiddenAuthorIds = moderator && database.query(
-    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
-  ).get()
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'banned_usernames\'',
+    ).get()
     ? new Set((database.query(`SELECT DISTINCT dropped_user_id id FROM banned_usernames
-      WHERE dropped_user_id IN (${posts.map(() => '?').join(',')})`).all(...posts.map(post => post.user_id)) as
-        Array<{ id: number }>).map(row => row.id))
+      WHERE dropped_user_id IN (${posts.map(() => '?').join(',')})`).all(...posts.map(post => post.user_id)) as Array<
+      { id: number }
+    >).map(row => row.id))
     : new Set<number>()
   const blockViewerId = moderator ? -1 : viewerId
   const blockers = moderator && viewerId >= 0

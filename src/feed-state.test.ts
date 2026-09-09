@@ -17,10 +17,10 @@ test('materialized post reasons deduplicate and feed state advances through repr
 
   const entries = database.query(`SELECT sequence,feed,reason FROM personalized_feed_entries
     WHERE viewer_id=1 AND source_post_id=10 ORDER BY feed`).all() as Array<{
-      sequence: number
-      feed: string
-      reason: number
-    }>
+    sequence: number
+    feed: string
+    reason: number
+  }>
   expect(entries).toHaveLength(2)
   expect(entries.find(entry => entry.feed === 'for-you')!.reason & (2 | 4 | 8)).toBe(2 | 4 | 8)
   expect(entries.find(entry => entry.feed === 'to-me')!.reason & 8).toBe(8)
@@ -46,8 +46,9 @@ test('personalized page query uses the viewer/feed sequence index', () => {
   const database = new Database(':memory:')
   runMigrations(database)
   const plan = database.query(`EXPLAIN QUERY PLAN SELECT source_post_id FROM personalized_feed_entries
-    WHERE viewer_id=? AND feed=? AND sequence<? ORDER BY sequence DESC LIMIT ?`).all(1, 'for-you', 100, 20) as
-    Array<{ detail: string }>
+    WHERE viewer_id=? AND feed=? AND sequence<? ORDER BY sequence DESC LIMIT ?`).all(1, 'for-you', 100, 20) as Array<
+    { detail: string }
+  >
   expect(plan.some(row => row.detail.includes('personalized_feed_entries_page'))).toBeTrue()
 })
 
@@ -58,13 +59,13 @@ test('feed badges and global cursors retain indexed query plans', () => {
     WHERE viewer_id=? AND feed=?`).all(1, 'for-you') as Array<{ detail: string }>
   const latest = database.query(`EXPLAIN QUERY PLAN SELECT conversation_id FROM conversation_heads
     WHERE latest_post_id<? ORDER BY latest_post_id DESC,conversation_id DESC LIMIT ?`).all(100, 20) as Array<{
-      detail: string
-    }>
+    detail: string
+  }>
   const fresh = database.query(`EXPLAIN QUERY PLAN SELECT id FROM posts
     WHERE parent_id IS NULL AND (created_at<? OR (created_at=? AND id<?))
     ORDER BY created_at DESC,id DESC LIMIT ?`).all('2026-01-01', '2026-01-01', 100, 20) as Array<{
-      detail: string
-    }>
+    detail: string
+  }>
   const unread = database.query(`EXPLAIN QUERY PLAN SELECT id FROM posts
     WHERE id>? ORDER BY id DESC LIMIT 1`).all(100) as Array<{ detail: string }>
 
@@ -98,7 +99,7 @@ test('relationship activity is materialized for For You and To Me without duplic
 test('numbered materialized pages use stable keyset boundaries across concurrent inserts', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
-  database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'viewer','viewer@example.com','!')")
+  database.run('INSERT INTO users(id,handle,email,password) VALUES(1,\'viewer\',\'viewer@example.com\',\'!\')')
   const insert = database.query(`INSERT INTO personalized_feed_entries(
     viewer_id,feed,event_key,event_kind,actor_id,reason,created_at) VALUES(1,'for-you',?,'signup',1,0,?)`)
   for (let id = 1; id <= 5; id++) insert.run(`signup:${id}`, `2026-01-0${id}`)
@@ -113,7 +114,7 @@ test('numbered materialized pages use stable keyset boundaries across concurrent
 test('watermark advancement and repairs retain scattered legacy read exceptions', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
-  database.run("INSERT INTO users(id,handle,email,password) VALUES(1,'viewer','viewer@example.com','!')")
+  database.run('INSERT INTO users(id,handle,email,password) VALUES(1,\'viewer\',\'viewer@example.com\',\'!\')')
   const insert = database.query(`INSERT INTO personalized_feed_entries(
     viewer_id,feed,event_key,event_kind,actor_id,reason,created_at)
     VALUES(1,'for-you',?,'signup',1,0,?) RETURNING sequence`)
@@ -121,14 +122,14 @@ test('watermark advancement and repairs retain scattered legacy read exceptions'
   for (let id = 1; id <= 4; id++) {
     sequences.push((insert.get(`signup:${id}`, `2026-01-0${id}`) as { sequence: number }).sequence)
   }
-  database.run("INSERT INTO for_you_reads(user_id,event_key) VALUES(1,'signup:4')")
+  database.run('INSERT INTO for_you_reads(user_id,event_key) VALUES(1,\'signup:4\')')
 
   markPersonalizedFeedThrough(database, 1, 'for-you', sequences[0])
   expect(personalizedFeedState(database, 1, 'for-you')).toMatchObject({
     last_seen_sequence: sequences[0],
     unread_count: 2,
   })
-  database.run("DELETE FROM personalized_feed_entries WHERE viewer_id=1 AND event_key='signup:2'")
+  database.run('DELETE FROM personalized_feed_entries WHERE viewer_id=1 AND event_key=\'signup:2\'')
   expect(personalizedFeedState(database, 1, 'for-you')?.unread_count).toBe(1)
 })
 
@@ -247,15 +248,15 @@ test('soft deletion and restoration repair materialized membership and feed stat
     INSERT INTO posts(id,user_id,body,created_at) VALUES(10,2,'post','2026-01-02');`)
   const entry = database.query(`SELECT sequence,eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=10`).get() as {
-      sequence: number
-      eligible: number
-    }
+    sequence: number
+    eligible: number
+  }
   expect(personalizedFeedState(database, 1, 'for-you')).toMatchObject({
     latest_sequence: entry.sequence,
     unread_count: 1,
   })
 
-  database.run("UPDATE posts SET deleted_at='2026-01-03' WHERE id=10")
+  database.run('UPDATE posts SET deleted_at=\'2026-01-03\' WHERE id=10')
   expect(database.query('SELECT eligible FROM personalized_feed_entries WHERE sequence=?').get(entry.sequence))
     .toEqual({ eligible: 0 })
   expect(personalizedFeedState(database, 1, 'for-you')).toMatchObject({ latest_sequence: 0, unread_count: 0 })
@@ -282,7 +283,7 @@ test('account suspension and restoration repair materialized activity state', ()
     INSERT INTO posts(id,user_id,body,created_at) VALUES(10,2,'post','2026-01-02');`)
   expect(personalizedFeedState(database, 1, 'for-you')?.unread_count).toBe(1)
 
-  database.run("UPDATE users SET suspended_at='2026-01-03' WHERE id=2")
+  database.run('UPDATE users SET suspended_at=\'2026-01-03\' WHERE id=2')
   expect(database.query(`SELECT eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND source_post_id=10`).get()).toEqual({ eligible: 0 })
   expect(personalizedFeedState(database, 1, 'for-you')).toMatchObject({ latest_sequence: 0, unread_count: 0 })
@@ -308,7 +309,7 @@ test('relationship and post-tag removals recompute overlapping materialized reas
   database.run('DELETE FROM follows WHERE follower_id=1 AND following_id=2')
   expect(database.query(`SELECT reason,eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=10`).get()).toEqual({ reason: 4, eligible: 1 })
-  database.run("DELETE FROM hashtag_follows WHERE user_id=1 AND tag='bun'")
+  database.run('DELETE FROM hashtag_follows WHERE user_id=1 AND tag=\'bun\'')
   expect(database.query(`SELECT reason,eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=10`).get()).toEqual({ reason: 0, eligible: 0 })
 
@@ -317,10 +318,10 @@ test('relationship and post-tag removals recompute overlapping materialized reas
     INSERT INTO post_hashtags(post_id,tag) VALUES(11,'bun');`)
   expect(database.query(`SELECT reason FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=11`).get()).toEqual({ reason: 4 })
-  database.run("DELETE FROM post_hashtags WHERE post_id=11 AND tag='bun'")
+  database.run('DELETE FROM post_hashtags WHERE post_id=11 AND tag=\'bun\'')
   expect(database.query(`SELECT reason,eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=11`).get()).toEqual({ reason: 0, eligible: 0 })
-  database.run("INSERT INTO post_hashtags(post_id,tag) VALUES(11,'bun')")
+  database.run('INSERT INTO post_hashtags(post_id,tag) VALUES(11,\'bun\')')
   expect(database.query(`SELECT reason,eligible FROM personalized_feed_entries
     WHERE viewer_id=1 AND feed='for-you' AND source_post_id=11`).get()).toEqual({ reason: 4, eligible: 1 })
 })

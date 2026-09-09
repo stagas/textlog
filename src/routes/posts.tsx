@@ -300,9 +300,9 @@ export function registerPostsRoutes(app: Hono) {
     if (!Number.isInteger(id) || id < 1) return c.text('Not found', 404)
     const user = currentUser(c.req.raw)
     const requestUrl = new URL(c.req.url)
-    const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${
-      locationMapProvider(c.req.header('user-agent') || '')
-    }\0${appearanceRequestVariant(c.req.raw)}\0${requestUrl.pathname}${requestUrl.search}`
+    const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${locationMapProvider(c.req.header('user-agent') || '')}\0${
+      appearanceRequestVariant(c.req.raw)
+    }\0${requestUrl.pathname}${requestUrl.search}`
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
@@ -337,8 +337,7 @@ export function registerPostsRoutes(app: Hono) {
         return target.pathname + target.search + target.hash
       })()
       return htmlFragment(
-        <FeedThreads posts={[post, ...replies]} user={user || null} returnPath={fetchedReturnPath}
-          expandedByDefault />,
+        <FeedThreads posts={[post, ...replies]} user={user || null} returnPath={fetchedReturnPath} expandedByDefault />,
       )
     }
     const requestedReplyToId = Number(c.req.query('to'))
@@ -460,8 +459,8 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'autotag') {
       if (!body.trim()) {
         return page(
-          <Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath}
-            showBack={showBack} error={postBodyValidationMessage(body)} />,
+          <Compose user={user} body={body} draftId={editingDraftId} returnPath={returnPath} showBack={showBack}
+            error={postBodyValidationMessage(body)} />,
           400,
         )
       }
@@ -688,8 +687,8 @@ export function registerPostsRoutes(app: Hono) {
     if (f.action === 'autotag') {
       if (!body.trim()) {
         return page(
-          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath}
-            moderator={moderating} error={postBodyValidationMessage(body)} />,
+          <EditPost user={user} post={post} parent={parent} body={body} returnPath={returnPath} moderator={moderating}
+            error={postBodyValidationMessage(body)} />,
           400,
         )
       }

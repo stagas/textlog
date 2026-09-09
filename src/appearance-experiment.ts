@@ -13,7 +13,7 @@ export type AppearanceExperimentChoice = {
   corners: typeof CORNER_CHOICES[number]
 }
 
-const randomChoice = <T,>(choices: readonly T[]) => choices[Math.floor(Math.random() * choices.length)]!
+const randomChoice = <T>(choices: readonly T[]) => choices[Math.floor(Math.random() * choices.length)]!
 
 export function randomAppearanceExperimentChoice(): AppearanceExperimentChoice {
   return {

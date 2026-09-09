@@ -1,4 +1,4 @@
-(() => {
+;(() => {
   const textareaSelector = ':is(.write-compose, .reply-compose) textarea[name="body"][data-character-limit]'
 
   const update = textarea => {
@@ -37,7 +37,8 @@
     if (!key) return null
     try {
       return localStorage.getItem(key)
-    } catch {
+    }
+    catch {
       return null
     }
   }
@@ -47,7 +48,8 @@
     try {
       if (textarea.value) localStorage.setItem(key, textarea.value)
       else localStorage.removeItem(key)
-    } catch {
+    }
+    catch {
       // Storage can be unavailable in private or restricted browser contexts.
     }
   }
@@ -56,7 +58,8 @@
     if (!key) return
     try {
       localStorage.removeItem(key)
-    } catch {
+    }
+    catch {
       // Storage can be unavailable in private or restricted browser contexts.
     }
   }
@@ -70,7 +73,8 @@
     let placeholders
     try {
       placeholders = JSON.parse(encodedPlaceholders)
-    } catch {
+    }
+    catch {
       return
     }
     if (!Array.isArray(placeholders) || !placeholders.length) return

@@ -17,8 +17,9 @@ export function ReportPost({ user, post, reason = '', error, reported = false, r
   const back = `/post/${post.id}${returnPath ? `?from=${encodeURIComponent(returnPath)}` : ''}`
   return (
     <Layout user={user} title={`report @${post.handle}'s post`}>
-      <CenteredPanel shellClassName="auth-shell report-post-shell" className="auth-panel report-post-panel"
-        width="wide" tone={reported ? 'default' : 'danger'}>
+      <CenteredPanel shellClassName="auth-shell report-post-shell" className="auth-panel report-post-panel" width="wide"
+        tone={reported ? 'default' : 'danger'}
+      >
         <p className="eyebrow">community safety</p>
         <h1>{reported ? 'Report received' : 'Report this post?'}</h1>
         {reported

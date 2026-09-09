@@ -287,8 +287,8 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       OR (ps.notify_mentions=1 AND ps.user_id!=? AND EXISTS(
         SELECT 1 FROM post_mentions pm WHERE pm.post_id=? AND pm.user_id=ps.user_id)))
     ORDER BY ps.endpoint,is_reply DESC,is_mention DESC,ps.user_id`)
-      .all(actorId, postId, actorId, postId, actorId, actorId, postId, postId, actorId, actorId, actorId, postId, postId,
-        postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
+      .all(actorId, postId, actorId, postId, actorId, actorId, postId, postId, actorId, actorId, actorId, postId,
+        postId, postId, actorId, postId, actorId, postId) as (PushSubscriptionRow & {
           user_id: number
           is_reply: number
           is_mention: number

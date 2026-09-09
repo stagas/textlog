@@ -6,8 +6,8 @@ import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { InviteShare } from './invite-share'
 import { Layout } from './layout'
-import { FormMessage, GuestCommunityActions, Pagination, PostingHelp, PostingSuggestionResults,
-  NoteStreak, type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
+import { FormMessage, GuestCommunityActions, NoteStreak, Pagination, PostingHelp, PostingSuggestionResults,
+  type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
 import { FeedThreads, Post } from './post'
 import { writeHref } from './write-link'
 
@@ -302,8 +302,8 @@ export function Profile(
                 You blocked this user.{' '}
                 <form method="post" action={'/block/' + profile.handle}>
                   <button className="relationship-notice-action">Unblock them</button>
-                </form>
-                {' '}to see their notes.
+                </form>{' '}
+                to see their notes.
               </>
             )
             : 'This profile is unavailable.'}

@@ -1,8 +1,8 @@
+import { appName } from '../brand'
+import { composePlaceholders, randomComposePlaceholder } from '../compose-placeholders'
 import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { canPublishPosts } from '../posting-policy'
-import { appName } from '../brand'
 import { activeRequest, activeThemeLogoSvg } from '../theme'
-import { composePlaceholders, randomComposePlaceholder } from '../compose-placeholders'
 import type { User } from '../types'
 import type { LocationView, PostView } from '../types'
 import { isMobileRequest } from '../user-agent'
@@ -49,9 +49,8 @@ export function Compose(
         {preview && (
           <ComposePreview user={user} body={body} executionOutput={previewExecutionOutput} location={previewLocation} />
         )}
-        <WriteForm user={user} error={error} body={body} returnPath={returnPath}
-          suggestionSearch={suggestionSearch} draftId={draftId} autoFocus={!preview} embedded standalone
-          showBack={showBack} />
+        <WriteForm user={user} error={error} body={body} returnPath={returnPath} suggestionSearch={suggestionSearch}
+          draftId={draftId} autoFocus={!preview} embedded standalone showBack={showBack} />
       </WritePageShell>
     </Layout>
   )
@@ -63,8 +62,7 @@ function WritePageShell({ returnPath, children }: { returnPath: string; children
     <section className="write-page-shell">
       <div className="write-page-bar">
         <a className="brand" href="/" aria-label={`${name} home`}>
-          <span className="brand-logo" aria-hidden="true"
-            dangerouslySetInnerHTML={{ __html: activeThemeLogoSvg() }} />
+          <span className="brand-logo" aria-hidden="true" dangerouslySetInnerHTML={{ __html: activeThemeLogoSvg() }} />
           <span>{name}</span>
         </a>
         <a className="profile-edit-link compose-back-link" href={returnPath}>back</a>
@@ -148,14 +146,12 @@ export function WriteForm(
   const moreActions = (
     <>
       <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-        formAction={embedded && !standalone ? returnPath : undefined}
-        title="Enrich post with hashtags"
+        formAction={embedded && !standalone ? returnPath : undefined} title="Enrich post with hashtags"
       >
         autotag
       </button>
       <button className="secondary-action" name="action" value="preview"
-        formAction={embedded && !standalone ? returnPath : undefined}
-        title="Preview this post before publishing"
+        formAction={embedded && !standalone ? returnPath : undefined} title="Preview this post before publishing"
       >
         preview
       </button>
@@ -183,23 +179,21 @@ export function WriteForm(
     <>
       <Panel className={`compose write-compose${embedded ? ' embedded-write-compose' : ''}`}>
         <form method="post" action="/post">
-        <input type="hidden" name="from" value={returnPath} />
-        {showBack && <input type="hidden" name="show_back" value="1" />}
-        {embedded && !standalone && <input type="hidden" name="embedded" value="1" />}
-        {draftId && <input type="hidden" name="draft_id" value={draftId} />}
-        <FormMessage error={error} />
-        <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
-            data-auto-focus={shouldAutoFocus ? '' : undefined}
-            data-compose-storage-key={storageKey}
-            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
-            accessKey={embedded ? 'w' : undefined} defaultValue={body}
-            placeholder={embedded ? placeholder : undefined}
-            aria-label={`What’s on your mind, @${user.handle}?`} autoComplete="off" inputMode="text"
-            enterkeyhint="enter" />
-          <PostingSuggestionResults search={suggestionSearch} />
-          {controls}
-        </div>
+          <input type="hidden" name="from" value={returnPath} />
+          {showBack && <input type="hidden" name="show_back" value="1" />}
+          {embedded && !standalone && <input type="hidden" name="embedded" value="1" />}
+          {draftId && <input type="hidden" name="draft_id" value={draftId} />}
+          <FormMessage error={error} />
+          <div className="compose-editor-row">
+            <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+              data-auto-focus={shouldAutoFocus ? '' : undefined} data-compose-storage-key={storageKey}
+              data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
+              accessKey={embedded ? 'w' : undefined} defaultValue={body}
+              placeholder={embedded ? placeholder : undefined} aria-label={`What’s on your mind, @${user.handle}?`}
+              autoComplete="off" inputMode="text" enterkeyhint="enter" />
+            <PostingSuggestionResults search={suggestionSearch} />
+            {controls}
+          </div>
         </form>
       </Panel>
       <script src="/compose.js?v=9" data-typewriter-placeholders={typewriterPlaceholders} defer />
@@ -218,8 +212,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
   const helpId = 'anonymous-posting-help'
   const moreActions = (
     <>
-      <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-        formAction={returnPath}
+      <button className="secondary-action compose-autotag-action" name="action" value="autotag" formAction={returnPath}
         title="Enrich post with hashtags"
       >
         autotag
@@ -236,27 +229,27 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
     <>
       <Panel className="compose write-compose embedded-write-compose anonymous-write-compose">
         <form method="post" action="/post">
-        <input type="hidden" name="from" value={returnPath} />
-        <input type="hidden" name="embedded" value="1" />
-        <FormMessage error={error} />
-        <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
-            data-auto-focus={autoFocus ? '' : undefined} data-compose-storage-key={storageKey} defaultValue={body}
-            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
-            placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
-            enterkeyhint="enter" />
-          <div className="composefoot">
-            <PostingHelp controlledBy={helpId} actions={moreActions} />
-            <div className="compose-controls-row">
-              <output className="compose-character-count" hidden aria-live="polite" />
-              <FormActions secondary={
-                <span className="edit-post-actions">
-                  <PostingHelpAction id={helpId} />
-                </span>
-              } primary={<button className="button" title="Join and publish this post">post →</button>} />
+          <input type="hidden" name="from" value={returnPath} />
+          <input type="hidden" name="embedded" value="1" />
+          <FormMessage error={error} />
+          <div className="compose-editor-row">
+            <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+              data-auto-focus={autoFocus ? '' : undefined} data-compose-storage-key={storageKey} defaultValue={body}
+              data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
+              placeholder="What's on your mind?" aria-label="What's on your mind?" autoComplete="off" inputMode="text"
+              enterkeyhint="enter" />
+            <div className="composefoot">
+              <PostingHelp controlledBy={helpId} actions={moreActions} />
+              <div className="compose-controls-row">
+                <output className="compose-character-count" hidden aria-live="polite" />
+                <FormActions secondary={
+                  <span className="edit-post-actions">
+                    <PostingHelpAction id={helpId} />
+                  </span>
+                } primary={<button className="button" title="Join and publish this post">post →</button>} />
+              </div>
             </div>
           </div>
-        </div>
         </form>
       </Panel>
       <script src="/compose.js?v=9" data-typewriter-placeholders={typewriterPlaceholders} defer />

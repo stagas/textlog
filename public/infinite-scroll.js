@@ -1,4 +1,4 @@
-(() => {
+;(() => {
   document.documentElement.classList.add('feed-thread-expansion-enabled')
   const sentinelSelector = '[data-feed-next]'
   let loading = false
@@ -28,7 +28,9 @@
       removeEventListener('pointerdown', unlockDing)
       removeEventListener('keydown', unlockDing)
       removeEventListener('touchend', unlockDing)
-    }).catch(() => { ding.volume = previousVolume })
+    }).catch(() => {
+      ding.volume = previousVolume
+    })
   }
 
   addEventListener('pointerdown', unlockDing)
@@ -69,8 +71,9 @@
   }
 
   const liveTabSelectors = { 'to-me': 'a[href="/@"]', 'for-you': 'a[href="/my-feed"]', latest: 'a[href="/all"]' }
-  const activeLiveTab = () => Object.entries(liveTabSelectors)
-    .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
+  const activeLiveTab = () =>
+    Object.entries(liveTabSelectors)
+      .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
 
   const syncLiveCountsFromDocument = () => {
     const values = document.querySelector('[data-feed-view] [data-live-counts]')?.dataset.liveCounts?.split(':')
@@ -132,7 +135,7 @@
     const button = document.createElement('button')
     button.className = 'activity-side-link'
     button.type = 'button'
-    button.textContent = 'click to show new posts'
+    button.textContent = 'show new notes'
     button.addEventListener('click', () => {
       const target = new URL(location.href)
       target.hash = ''
@@ -143,8 +146,9 @@
     tabs.after(banner)
   }
 
-  const loadedThrough = () => Math.max(0, ...[...document.querySelectorAll('[data-feed-chunk]')]
-    .map(element => Number(element.dataset.feedChunk) || 0))
+  const loadedThrough = () =>
+    Math.max(0, ...[...document.querySelectorAll('[data-feed-chunk]')]
+      .map(element => Number(element.dataset.feedChunk) || 0))
 
   const rememberLoadedChunks = () => {
     const url = new URL(location.href)
@@ -323,7 +327,8 @@
     const continuation = event.target.closest('.feed-thread a.post-continuation-link[href]')
     if (continuation && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey
       && !event.shiftKey && !event.altKey && !continuation.target && !continuation.download
-      && new URL(continuation.href).origin === location.origin) {
+      && new URL(continuation.href).origin === location.origin)
+    {
       event.preventDefault()
       void expandCompleteThread(continuation)
       return
@@ -344,14 +349,22 @@
     const events = new EventSource('/feed/events')
     events.addEventListener('baseline', event => {
       let counts
-      try { counts = JSON.parse(event.data) }
-      catch { return }
+      try {
+        counts = JSON.parse(event.data)
+      }
+      catch {
+        return
+      }
       applyLiveCounts(counts)
     })
     events.addEventListener('feed', event => {
       let counts
-      try { counts = JSON.parse(event.data) }
-      catch { return }
+      try {
+        counts = JSON.parse(event.data)
+      }
+      catch {
+        return
+      }
       const incoming = {
         'to-me': Number(counts.toMeCount) || 0,
         'for-you': Number(counts.forYouCount) || 0,

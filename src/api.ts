@@ -1,6 +1,6 @@
 import type { Database } from 'bun:sqlite'
-import { excludesDroppedUsernameUsers } from './handles'
 import { extractHashtags, extractMentions } from './content'
+import { excludesDroppedUsernameUsers } from './handles'
 import { encodeHotCursor, getHotPosts, type HotCursor, hotCursor } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
 import { decodeHtmlEntities } from './link-preview'

@@ -2,9 +2,9 @@ import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
+import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups, feedPostsWithFetchedThread,
+  InfiniteFeedChunk } from './infinite-feed'
 import { Layout } from './layout'
-import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups,
-  feedPostsWithFetchedThread, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
@@ -43,8 +43,7 @@ export function HotFeed(
     returnPath = target.pathname + target.search
   }
   const chunkMarkup = (
-    <InfiniteFeedChunk chunk={renderedChunk}
-      hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
+    <InfiniteFeedChunk chunk={renderedChunk} hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
       <FeedThreads posts={chunkPosts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
         expandedByDefault={!user && path === '/hot'} promoteAncestors />
     </InfiniteFeedChunk>

@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test'
-import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, appearanceRequestVariant, cornerChoice, cornerCookie, fontChoice,
-  fontCookie, fontSizeChoice, fontSizeCookie, primaryFontChoice, primaryFontCookie, sansSerifFontChoice,
-  sansSerifFontCookie, themeLogoSvg, themeStyles, versionedAppearance, withAppearance } from './theme'
+import { activeAppearance, activeThemeBackgrounds, appearance, appearanceCookie, appearanceRequestVariant, cornerChoice,
+  cornerCookie, fontChoice, fontCookie, fontSizeChoice, fontSizeCookie, primaryFontChoice, primaryFontCookie,
+  sansSerifFontChoice, sansSerifFontCookie, themeLogoSvg, themeStyles, versionedAppearance,
+  withAppearance } from './theme'
 
 test('appearance reads valid choices and falls back safely', () => {
   expect(appearance(new Request('http://localhost', { headers: { cookie: 'appearance=sepia.amber' } })))

@@ -42,7 +42,12 @@ export function markPersonalizedFeedThrough(database: Database, viewerId: number
         AND (feed!='for-you' OR event_kind!='tag_follow' OR
           coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=viewer_id),0)=0))
     WHERE viewer_id=? AND feed=?`).run(
-    representedSequence, viewerId, feed, representedSequence, viewerId, feed,
+    representedSequence,
+    viewerId,
+    feed,
+    representedSequence,
+    viewerId,
+    feed,
   )
 }
 
@@ -103,8 +108,9 @@ export function materializedPersonalizedEventPage(database: Database, viewerId: 
     ORDER BY sequence DESC LIMIT ?`).all(viewerId, feed, before, before, limit + 1) as MaterializedFeedEntry[]
   const hasNext = entries.length > limit
   const visible = entries.slice(0, limit)
-  if (hasNext && visible.length) putCursor.run(viewerId, feed, limit, currentPage + 1,
-    visible[visible.length - 1].sequence, generation)
+  if (hasNext && visible.length) {
+    putCursor.run(viewerId, feed, limit, currentPage + 1, visible[visible.length - 1].sequence, generation)
+  }
   return { entries: visible, page: currentPage, hasNext }
 }
 
@@ -143,7 +149,11 @@ export function materializedPersonalizedGroupPage(database: Database, viewerId: 
       WHERE viewer_id=? AND feed=? AND (? IS NULL OR latest_sequence<?)
         ${visibleGroup}
       ORDER BY latest_sequence DESC,group_key DESC LIMIT ?`).all(
-      viewerId, feed, before, before, limit,
+      viewerId,
+      feed,
+      before,
+      before,
+      limit,
     ) as Array<{ latest_sequence: number }>
     const boundary = rows.at(-1)
     if (!boundary) return { groups: [] as string[], page: currentPage, totalItems: 0, totalPages: 1 }
@@ -155,10 +165,9 @@ export function materializedPersonalizedGroupPage(database: Database, viewerId: 
     WHERE viewer_id=? AND feed=? AND (? IS NULL OR latest_sequence<?)
       ${visibleGroup}
     ORDER BY latest_sequence DESC,group_key DESC LIMIT ?`).all(viewerId, feed, before, before, limit + 1) as Array<{
-      group_key: string
-      latest_sequence: number
-    }>
+    group_key: string
+    latest_sequence: number
+  }>
   if (rows.length > limit) put.run(viewerId, feed, limit, currentPage + 1, rows[limit - 1].latest_sequence, generation)
-  return { groups: rows.slice(0, limit).map(row => row.group_key), page: currentPage, totalItems,
-    totalPages }
+  return { groups: rows.slice(0, limit).map(row => row.group_key), page: currentPage, totalItems, totalPages }
 }

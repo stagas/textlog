@@ -33,13 +33,13 @@ test('muting a post marks new direct and deep replies read outside the mention f
 test('unmuting restores unread activity for future replies', async () => {
   const database = fixture()
   await executeDatabaseDomain(database, 'interactions.togglePostMute', { userId: 1, postId: 1 })
-  database.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(2,2,1,'muted reply')")
+  database.run('INSERT INTO posts(id,user_id,parent_id,body) VALUES(2,2,1,\'muted reply\')')
   expect(await executeDatabaseDomain(database, 'interactions.togglePostMute', { userId: 1, postId: 1 }))
     .toEqual({ status: 'ready', muted: false })
-  database.run("INSERT INTO posts(id,user_id,parent_id,body) VALUES(3,2,1,'new reply')")
+  database.run('INSERT INTO posts(id,user_id,parent_id,body) VALUES(3,2,1,\'new reply\')')
 
-  expect(database.query("SELECT 1 FROM for_you_reads WHERE user_id=1 AND event_key LIKE '%3'").get()).toBeNull()
-  expect(database.query("SELECT 1 FROM to_me_reads WHERE user_id=1 AND event_key LIKE '%3'").get()).toBeNull()
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=1 AND event_key LIKE \'%3\'').get()).toBeNull()
+  expect(database.query('SELECT 1 FROM to_me_reads WHERE user_id=1 AND event_key LIKE \'%3\'').get()).toBeNull()
   expect(unreadLatestCount(1, database)).toBe(1)
 })
 
@@ -65,8 +65,8 @@ test('an explicit mention stays unread under @ and sends a mention push in a mut
     INSERT INTO posts(id,user_id,parent_id,body) VALUES(2,2,1,'hello @owner');
     INSERT INTO post_mentions(post_id,user_id) VALUES(2,1)`)
 
-  expect(database.query("SELECT 1 FROM for_you_reads WHERE user_id=1 AND event_key LIKE '%2'").get()).toBeNull()
-  expect(database.query("SELECT 1 FROM to_me_reads WHERE user_id=1 AND event_key LIKE '%2'").get()).toBeNull()
+  expect(database.query('SELECT 1 FROM for_you_reads WHERE user_id=1 AND event_key LIKE \'%2\'').get()).toBeNull()
+  expect(database.query('SELECT 1 FROM to_me_reads WHERE user_id=1 AND event_key LIKE \'%2\'').get()).toBeNull()
   expect(database.query('SELECT 1 FROM post_mentions WHERE post_id=2 AND user_id=1').get()).not.toBeNull()
   expect(unreadLatestCount(1, database)).toBe(0)
   const delivery = await executeDatabaseDomain(database, 'push.postDelivery', { postId: 2, actorId: 2 })

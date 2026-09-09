@@ -27,7 +27,8 @@ hljs.registerLanguage('mermaid', api => {
   grammar.contains = [
     {
       className: 'keyword',
-      begin: /\b(?:graph|flowchart|subgraph|end|direction|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|pie|gantt|requirementDiagram|sankey-beta|timeline|quadrantChart)(?:\s+(?:LR|TB|TD|RL|BT))?\b/,
+      begin:
+        /\b(?:graph|flowchart|subgraph|end|direction|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|pie|gantt|requirementDiagram|sankey-beta|timeline|quadrantChart)(?:\s+(?:LR|TB|TD|RL|BT))?\b/,
     },
     ...(grammar.contains || []),
   ]
@@ -531,8 +532,10 @@ function executableFenceIndexes(body: string, tokens: LinkToken[]) {
   const indexes = new Set<number>()
   for (const marker of body.matchAll(/(?:^|\s)#(exec|mermaid)\s*$/gm)) {
     if (fencedRanges.some(token => marker.index! >= token.index && marker.index! < token.lastIndex)) continue
-    const fence = fences.find(token => token.index >= marker.index! + marker[0].length
-      && (marker[1] === 'exec' ? !!token.language : token.language === 'mermaid'))
+    const fence = fences.find(token =>
+      token.index >= marker.index! + marker[0].length
+      && (marker[1] === 'exec' ? !!token.language : token.language === 'mermaid')
+    )
     if (fence) indexes.add(fence.index)
   }
   return indexes

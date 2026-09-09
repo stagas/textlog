@@ -47,8 +47,13 @@ describe('progressive feed chunks', () => {
 
   test('replaces a projected conversation with its fetched SSR thread in place', () => {
     const post = (id: number, parentId: number | null): PostView => ({
-      id, user_id: 1, parent_id: parentId, body: String(id), handle: 'writer',
-      created_at: '2026-09-09 12:00:00', deleted_at: null,
+      id,
+      user_id: 1,
+      parent_id: parentId,
+      body: String(id),
+      handle: 'writer',
+      created_at: '2026-09-09 12:00:00',
+      deleted_at: null,
     })
     const root = { ...post(123, null), reply_count: 2 } satisfies PostView & ParentPost
     const projected: PostView = { ...post(125, 123), parent: root }

@@ -3244,7 +3244,7 @@ export const migrations: Migration[] = [
     name: 'preserve_hidden_replies_tag',
     up(database) {
       if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()) {
-        database.run("INSERT OR IGNORE INTO tag_invariants(tag) VALUES('hiddenreplies')")
+        database.run('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(\'hiddenreplies\')')
       }
       if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
         database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
@@ -3304,7 +3304,9 @@ export const migrations: Migration[] = [
           PRIMARY KEY(assignment_token,user_id),
           FOREIGN KEY(assignment_token) REFERENCES appearance_experiment_assignments(token) ON DELETE CASCADE,
           FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)`)
-      database.run('INSERT INTO appearance_experiment_conversions_new SELECT * FROM appearance_experiment_conversions_old')
+      database.run(
+        'INSERT INTO appearance_experiment_conversions_new SELECT * FROM appearance_experiment_conversions_old',
+      )
       database.run('DROP TABLE appearance_experiment_conversions_old')
       database.run('DROP TABLE appearance_experiment_assignments_old')
       database.run('ALTER TABLE appearance_experiment_conversions_new RENAME TO appearance_experiment_conversions')
@@ -3325,7 +3327,7 @@ export const migrations: Migration[] = [
     version: 195,
     name: 'muted_post_replies',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()) return
       database.run(`CREATE TABLE IF NOT EXISTS muted_posts (
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
@@ -3365,8 +3367,8 @@ export const migrations: Migration[] = [
     version: 196,
     name: 'muted_post_explicit_mentions',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='posts'").get()
-        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_mentions'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'posts\'').get()
+        || !database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_mentions\'').get()) return
       database.run(`CREATE TRIGGER IF NOT EXISTS muted_post_mentions_unread AFTER INSERT ON post_mentions BEGIN
         DELETE FROM for_you_reads WHERE user_id=NEW.user_id
           AND event_key='post:' || printf('%020d',NEW.post_id)
@@ -3395,12 +3397,14 @@ export const migrations: Migration[] = [
     version: 197,
     name: 'account_deletion_reasons',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) {
         addColumn(database, 'users', 'deletion_reason', 'TEXT')
         addColumn(database, 'users', 'deleted_handle', 'TEXT')
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='account_deletion_tokens'").get()) {
-        addColumn(database, 'account_deletion_tokens', 'deletion_reason', "TEXT NOT NULL DEFAULT ''")
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_deletion_tokens\'')
+        .get())
+      {
+        addColumn(database, 'account_deletion_tokens', 'deletion_reason', 'TEXT NOT NULL DEFAULT \'\'')
       }
     },
   },
@@ -3409,9 +3413,9 @@ export const migrations: Migration[] = [
     name: 'invalidate_personalized_feeds_from_candidates',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_post_candidates'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_post_candidates\'',
       ).get() || !database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS personalized_candidates_generation_insert;
         DROP TRIGGER IF EXISTS personalized_candidates_generation_update;
@@ -3443,24 +3447,26 @@ export const migrations: Migration[] = [
     version: 199,
     name: 'restore_focus_tag',
     up(database) {
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
         database.run(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
             SELECT post_id,'focus' FROM post_hashtags WHERE tag='focu';
           DELETE FROM post_hashtags WHERE tag='focu';`)
       }
       for (const table of ['hashtag_follows', 'blocked_hashtags']) {
-        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
         database.run(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
             SELECT user_id,'focus',created_at FROM ${table} WHERE tag='focu';
           DELETE FROM ${table} WHERE tag='focu';`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_display_names\'').get()) {
         database.run(`INSERT OR IGNORE INTO tag_display_names(tag,display_name,created_at)
             SELECT 'focus',display_name,created_at FROM tag_display_names WHERE tag='focu';
           DELETE FROM tag_display_names WHERE tag='focu';`)
       }
-      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='wordnet_normalizations'").get()) {
-        database.run("UPDATE wordnet_normalizations SET normalized_word='focus' WHERE normalized_word='focu'")
+      if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'')
+        .get())
+      {
+        database.run('UPDATE wordnet_normalizations SET normalized_word=\'focus\' WHERE normalized_word=\'focu\'')
       }
     },
   },
@@ -3470,24 +3476,24 @@ export const migrations: Migration[] = [
     up(database) {
       const repairs = [['emac', 'emacs'], ['diagnosi', 'diagnosis']] as const
       for (const [corrupted, restored] of repairs) {
-        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_hashtags'").get()) {
+        if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'post_hashtags\'').get()) {
           database.query(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
             SELECT post_id,? FROM post_hashtags WHERE tag=?`).run(restored, corrupted)
           database.query('DELETE FROM post_hashtags WHERE tag=?').run(corrupted)
         }
         for (const table of ['hashtag_follows', 'blocked_hashtags']) {
-          if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+          if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?').get(table)) continue
           database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
             SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(restored, corrupted)
           database.query(`DELETE FROM ${table} WHERE tag=?`).run(corrupted)
         }
-        if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tag_display_names'").get()) {
+        if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_display_names\'').get()) {
           database.query(`INSERT OR IGNORE INTO tag_display_names(tag,display_name,created_at)
             SELECT ?,display_name,created_at FROM tag_display_names WHERE tag=?`).run(restored, corrupted)
           database.query('DELETE FROM tag_display_names WHERE tag=?').run(corrupted)
         }
         if (database.query(
-          "SELECT 1 FROM sqlite_master WHERE type='table' AND name='wordnet_normalizations'",
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'wordnet_normalizations\'',
         ).get()) {
           database.query('UPDATE wordnet_normalizations SET normalized_word=? WHERE normalized_word=?')
             .run(restored, corrupted)
@@ -3501,9 +3507,11 @@ export const migrations: Migration[] = [
     up(database) {
       const required = ['users', 'posts', 'follows', 'post_mentions', 'post_hashtags', 'hashtag_follows', 'blocks',
         'blocked_hashtags', 'muted_posts', 'personalized_post_candidates', 'for_you_reads', 'to_me_reads']
-      if (required.some(table => !database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-      ).get(table))) return
+      if (required.some(table =>
+        !database.query(
+          'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=?',
+        ).get(table)
+      )) return
       database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_entries (
           sequence INTEGER PRIMARY KEY AUTOINCREMENT,
           viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -3722,7 +3730,7 @@ export const migrations: Migration[] = [
     name: 'materialized_relationship_feed_events',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_follow_insert;
         DROP TRIGGER IF EXISTS materialized_feed_follow_delete;
@@ -3874,7 +3882,7 @@ export const migrations: Migration[] = [
     version: 203,
     name: 'preserve_materialized_page_boundaries',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_state\'').get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
         CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
           INSERT INTO feed_state(viewer_id,feed,latest_sequence,unread_count)
@@ -3900,9 +3908,10 @@ export const migrations: Migration[] = [
     name: 'materialized_post_eligibility',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
-      addColumn(database, 'personalized_feed_entries', 'eligible', 'INTEGER NOT NULL DEFAULT 1 CHECK(eligible IN (0,1))')
+      addColumn(database, 'personalized_feed_entries', 'eligible',
+        'INTEGER NOT NULL DEFAULT 1 CHECK(eligible IN (0,1))')
       database.run(`UPDATE personalized_feed_entries AS entry SET eligible=0
         WHERE event_kind='post' AND source_post_id IN (
           SELECT p.id FROM posts p LEFT JOIN posts parent ON parent.id=p.parent_id
@@ -3994,9 +4003,10 @@ export const migrations: Migration[] = [
     name: 'materialized_whisper_targets',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
-      const whisperTarget = (post: string, viewer: string) => `EXISTS (
+      const whisperTarget = (post: string, viewer: string) =>
+        `EXISTS (
         WITH RECURSIVE targets(id,user_id,parent_id,whisper_root) AS (
           SELECT seed.id,seed.user_id,seed.parent_id,EXISTS(SELECT 1 FROM post_hashtags tag
             WHERE tag.post_id=seed.id AND tag.tag='whisper') FROM posts seed WHERE seed.id=${post}
@@ -4007,7 +4017,8 @@ export const migrations: Migration[] = [
           LEFT JOIN posts whisper_parent ON whisper_parent.id=target.parent_id AND target.whisper_root=1
           LEFT JOIN post_mentions mention ON mention.post_id=target.id AND mention.user_id=${viewer}
           WHERE target.user_id=${viewer} OR whisper_parent.user_id=${viewer} OR mention.user_id IS NOT NULL)`
-      const whisperThread = (post: string) => `EXISTS(WITH RECURSIVE ancestry(id,parent_id) AS (
+      const whisperThread = (post: string) =>
+        `EXISTS(WITH RECURSIVE ancestry(id,parent_id) AS (
         SELECT id,parent_id FROM posts WHERE id=${post}
         UNION ALL SELECT parent.id,parent.parent_id FROM posts parent JOIN ancestry ON parent.id=ancestry.parent_id
       ) SELECT 1 FROM ancestry JOIN post_hashtags tag ON tag.post_id=ancestry.id WHERE tag.tag='whisper')`
@@ -4026,10 +4037,11 @@ export const migrations: Migration[] = [
             WHERE ph.post_id=p.id AND bh.user_id=candidate.viewer_id)`
       database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_whisper_candidate
         AFTER INSERT ON personalized_post_candidates BEGIN
-        ${insert.replaceAll('candidate.viewer_id', 'NEW.viewer_id')
-          .replace('FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id',
-            'FROM posts p')
-          .replace('WHERE p.user_id!=NEW.viewer_id', 'WHERE p.id=NEW.post_id AND p.user_id!=NEW.viewer_id')};
+        ${
+        insert.replaceAll('candidate.viewer_id', 'NEW.viewer_id')
+          .replace('FROM personalized_post_candidates candidate JOIN posts p ON p.id=candidate.post_id', 'FROM posts p')
+          .replace('WHERE p.user_id!=NEW.viewer_id', 'WHERE p.id=NEW.post_id AND p.user_id!=NEW.viewer_id')
+      };
       END;
       ${insert};`)
     },
@@ -4039,7 +4051,7 @@ export const migrations: Migration[] = [
     name: 'materialized_personalized_feed_groups',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`CREATE TABLE IF NOT EXISTS personalized_feed_groups (
           viewer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -4141,7 +4153,7 @@ export const migrations: Migration[] = [
     name: 'materialized_muted_thread_eligibility',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       const muted = `EXISTS (WITH RECURSIVE ancestors(id,parent_id) AS (
         SELECT p.id,p.parent_id FROM posts p WHERE p.id=personalized_feed_entries.source_post_id
@@ -4230,7 +4242,7 @@ export const migrations: Migration[] = [
     name: 'materialized_post_restore_eligibility',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_post_delete;
         CREATE TRIGGER materialized_feed_post_delete AFTER UPDATE OF deleted_at ON posts
@@ -4279,7 +4291,7 @@ export const migrations: Migration[] = [
     name: 'materialized_account_visibility_eligibility',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_account_unavailable
         AFTER UPDATE OF deleted_at,suspended_at ON users
@@ -4323,9 +4335,10 @@ export const migrations: Migration[] = [
     name: 'materialized_post_reason_maintenance',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
-      const reasons = (viewer: string, post: string) => `(CASE WHEN EXISTS(SELECT 1 FROM posts p
+      const reasons = (viewer: string, post: string) =>
+        `(CASE WHEN EXISTS(SELECT 1 FROM posts p
           WHERE p.id=${post} AND p.user_id=${viewer}) THEN 1 ELSE 0 END)
         | (CASE WHEN EXISTS(SELECT 1 FROM posts p JOIN follows f ON f.following_id=p.user_id
           WHERE p.id=${post} AND f.follower_id=${viewer}
@@ -4348,10 +4361,12 @@ export const migrations: Migration[] = [
                 AND f.following_id=ancestry.ancestor_user_id
                 AND (f.created_at IS NULL OR p.created_at>=f.created_at))))) THEN 64 ELSE 0 END)
         | (personalized_feed_entries.reason&32)`
-      database.run(`UPDATE personalized_feed_entries SET reason=${reasons(
-        'personalized_feed_entries.viewer_id',
-        'personalized_feed_entries.source_post_id',
-      )} WHERE source_post_id IS NOT NULL;
+      database.run(`UPDATE personalized_feed_entries SET reason=${
+        reasons(
+          'personalized_feed_entries.viewer_id',
+          'personalized_feed_entries.source_post_id',
+        )
+      } WHERE source_post_id IS NOT NULL;
 
         CREATE TRIGGER IF NOT EXISTS materialized_feed_entry_reason_fill
           AFTER INSERT ON personalized_feed_entries WHEN NEW.source_post_id IS NOT NULL BEGIN
@@ -4404,11 +4419,11 @@ export const migrations: Migration[] = [
     name: 'materialized_admin_signup_events',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       const administrators = instance.administrators.map(email => email.trim().toLowerCase())
       if (!administrators.length) return
-      const adminSql = administrators.map(email => `'${email.replaceAll("'", "''")}'`).join(',')
+      const adminSql = administrators.map(email => `'${email.replaceAll('\'', '\'\'')}'`).join(',')
       database.run(`CREATE TRIGGER IF NOT EXISTS materialized_feed_signup_complete
         AFTER UPDATE OF handle_chosen_at ON users
         WHEN OLD.handle_chosen_at IS NULL AND NEW.handle_chosen_at IS NOT NULL BEGIN
@@ -4440,7 +4455,7 @@ export const migrations: Migration[] = [
     name: 'materialized_legacy_read_exceptions',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       const unread = `entry.eligible=1 AND entry.sequence>feed_state.last_seen_sequence
         AND ((entry.feed='for-you' AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
@@ -4517,7 +4532,7 @@ export const migrations: Migration[] = [
     name: 'repair_unqualified_materialized_posts',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`UPDATE personalized_feed_entries SET eligible=0
         WHERE feed='for-you' AND source_post_id IS NOT NULL AND reason=0 AND eligible=1`)
@@ -4528,11 +4543,11 @@ export const migrations: Migration[] = [
     name: 'materialized_moderator_feeds',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       const administrators = instance.administrators.map(email => email.trim().toLowerCase())
       if (!administrators.length) return
-      const adminSql = administrators.map(email => `'${email.replaceAll("'", "''")}'`).join(',')
+      const adminSql = administrators.map(email => `'${email.replaceAll('\'', '\'\'')}'`).join(',')
       database.run(`CREATE TABLE IF NOT EXISTS moderator_feed_viewers (
           viewer_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE);
         INSERT OR IGNORE INTO moderator_feed_viewers(viewer_id)
@@ -4692,7 +4707,7 @@ export const migrations: Migration[] = [
     name: 'repair_materialized_read_counters',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_entries_insert;
         CREATE TRIGGER materialized_feed_entries_insert AFTER INSERT ON personalized_feed_entries BEGIN
@@ -4745,7 +4760,7 @@ export const migrations: Migration[] = [
     name: 'repair_materialized_event_chronology',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`CREATE TEMP TABLE materialized_feed_sequence_repair(
           old_sequence INTEGER PRIMARY KEY,
@@ -4811,7 +4826,7 @@ export const migrations: Migration[] = [
     name: 'invalidate_reordered_personalized_feeds',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_generations'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_generations\'',
       ).get()) return
       database.run(`UPDATE personalized_feed_generations SET generation=generation+1;
         DELETE FROM personalized_feed_page_cursors;
@@ -4824,7 +4839,7 @@ export const migrations: Migration[] = [
     name: 'keep_self_only_posts_dormant',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_nonempty_reason;
         CREATE TRIGGER materialized_feed_nonempty_reason
@@ -4861,7 +4876,7 @@ export const migrations: Migration[] = [
     name: 'reinstall_self_post_dormancy',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_self_eligibility;
         CREATE TRIGGER materialized_feed_self_eligibility
@@ -4889,7 +4904,7 @@ export const migrations: Migration[] = [
     name: 'make_feed_insert_triggers_order_independent',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_group_insert;
         CREATE TRIGGER materialized_feed_group_insert AFTER INSERT ON personalized_feed_entries
@@ -4959,7 +4974,7 @@ export const migrations: Migration[] = [
     name: 'reinstall_personalized_conversation_groups',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_groups'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_groups\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_group_conversation;
         CREATE TRIGGER materialized_feed_group_conversation
@@ -5000,7 +5015,7 @@ export const migrations: Migration[] = [
     name: 'keep_self_posts_visible_and_read',
     up(database) {
       if (!database.query(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+        'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
       ).get()) return
       database.run(`DROP TRIGGER IF EXISTS materialized_feed_self_eligibility;
         DROP TRIGGER IF EXISTS materialized_feed_self_read;
@@ -5059,7 +5074,7 @@ export const migrations: Migration[] = [
     version: 223,
     name: 'new_message_sound_preference',
     up(database) {
-      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'users\'').get()) return
       addColumn(database, 'users', 'new_message_sound', 'INTEGER NOT NULL DEFAULT 1 CHECK(new_message_sound IN (0,1))')
     },
   },

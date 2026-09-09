@@ -22,50 +22,47 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 export function ReplyBox(
   { action, body, error, placeholder, hidden, beforeTextarea, secondary, primary, moreActions,
     className = 'replybox reply-compose', suggestionSearch, draftId, helpId = 'reply-posting-help', autoFocus = true,
-    storageKey }:
-      {
-        action: string
-        body: string
-        error?: string
-        placeholder?: string
-        hidden?: React.ReactNode
-        beforeTextarea?: React.ReactNode
-        secondary: React.ReactNode
-        primary: React.ReactNode
-        moreActions?: React.ReactNode
-        className?: string
-        suggestionSearch?: PostingSuggestionSearch | null
-        draftId?: string
-        helpId?: string
-        autoFocus?: boolean
-        storageKey?: string
-      },
+    storageKey }: {
+      action: string
+      body: string
+      error?: string
+      placeholder?: string
+      hidden?: React.ReactNode
+      beforeTextarea?: React.ReactNode
+      secondary: React.ReactNode
+      primary: React.ReactNode
+      moreActions?: React.ReactNode
+      className?: string
+      suggestionSearch?: PostingSuggestionSearch | null
+      draftId?: string
+      helpId?: string
+      autoFocus?: boolean
+      storageKey?: string
+    },
 ) {
   const shouldAutoFocus = autoFocus && !isMobileRequest(activeRequest())
   return (
     <>
       <Panel className={className}>
         <form method="post" action={action}>
-        {hidden}
-        {draftId && <input type="hidden" name="draft_id" value={draftId} />}
-        <FormMessage error={error} />
-        {beforeTextarea}
-        <div className="compose-editor-row">
-          <textarea className="form-control" name="body" data-character-limit={POST_MAX}
-            data-auto-focus={shouldAutoFocus ? '' : undefined}
-            data-compose-storage-key={storageKey}
-            data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
-            defaultValue={body}
-            placeholder={placeholder} autoComplete="off" inputMode="text" enterkeyhint="enter" />
-          <PostingSuggestionResults search={suggestionSearch} />
-          <div className="composefoot">
-            <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
-            <div className="compose-controls-row">
-              <output className="compose-character-count" hidden aria-live="polite" />
-              <FormActions secondary={secondary} primary={primary} />
+          {hidden}
+          {draftId && <input type="hidden" name="draft_id" value={draftId} />}
+          <FormMessage error={error} />
+          {beforeTextarea}
+          <div className="compose-editor-row">
+            <textarea className="form-control" name="body" data-character-limit={POST_MAX}
+              data-auto-focus={shouldAutoFocus ? '' : undefined} data-compose-storage-key={storageKey}
+              data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
+              defaultValue={body} placeholder={placeholder} autoComplete="off" inputMode="text" enterkeyhint="enter" />
+            <PostingSuggestionResults search={suggestionSearch} />
+            <div className="composefoot">
+              <PostingHelp search={suggestionSearch} controlledBy={helpId} actions={moreActions} />
+              <div className="compose-controls-row">
+                <output className="compose-character-count" hidden aria-live="polite" />
+                <FormActions secondary={secondary} primary={primary} />
+              </div>
             </div>
           </div>
-        </div>
         </form>
       </Panel>
       <script src="/compose.js?v=6" defer />
@@ -126,16 +123,17 @@ export function ReplyComposer(
       placeholder={user && replyParent.user_id === user.id ? 'Continue writing…' : `Reply to @${replyParent.handle}…`}
       className={`replybox reply-compose${inline ? '' : ' root-reply-compose'}${
         user ? '' : ' anonymous-reply-compose'
-    }`} autoFocus={autoFocus} hidden={
+      }`} autoFocus={autoFocus} hidden={
       <>
         <input type="hidden" name="reply_page_id" value={replyPageId} />
         {returnPath && <input type="hidden" name="from" value={returnPath} />}
       </>
-    } helpId={helpId} storageKey={`textlog:compose:${user?.id ?? 'guest'}:reply:${replyParent.id}`} secondary={
-      <span className="edit-post-actions">
-        <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
-      </span>
-    } primary={<button className="button" accessKey={user ? 'p' : undefined}>post →</button>} moreActions={
+    } helpId={helpId} storageKey={`textlog:compose:${user?.id ?? 'guest'}:reply:${replyParent.id}`}
+      secondary={
+        <span className="edit-post-actions">
+          <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
+        </span>
+      } primary={<button className="button" accessKey={user ? 'p' : undefined}>post →</button>} moreActions={
       <>
         <button className="secondary-action compose-autotag-action" name="action" value="autotag"
           title="Enrich post with hashtags"
@@ -167,8 +165,8 @@ export function HiddenRepliesNotice() {
 
 export function Reply(
   { user, post, replies = [], showForm, error, body = '', social, preview = false, returnPath, topHref, flatHref,
-    treeHref, flat = false, suggestionSearch,
-    draftId, previewExecutionOutput, previewLocation, autoFocus = true, replyTo, backTargetId }: {
+    treeHref, flat = false, suggestionSearch, draftId, previewExecutionOutput, previewLocation, autoFocus = true,
+    replyTo, backTargetId }: {
       user: User
       post: PostView
       replies?: PostView[]
@@ -216,10 +214,9 @@ export function Reply(
           <Post p={post} user={user} showParent={false} showReplyAction={showForm && !!replyTo} showOwnerActions
             showModerateAction bookmarkAction shareAction suppressContentWarning={showForm} returnPath={returnPath}
             backHref={returnPath} canonicalTimestamp parentHref={parentHref} topHref={topHref} flatHref={flatHref}
-            treeHref={treeHref}
-            reportHref={user.id !== post.user_id
-              ? `/post/${post.id}/report${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
-              : undefined} />
+            treeHref={treeHref} reportHref={user.id !== post.user_id
+            ? `/post/${post.id}/report${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
+            : undefined} />
         </div>
         {preview && !replyTo && (
           <ReplyPreview parent={replyParent} user={user} body={body} executionOutput={previewExecutionOutput}
