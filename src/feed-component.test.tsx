@@ -779,7 +779,8 @@ test('a followed-you event offers to follow back', () => {
   expect(html).toContain('>follow back</button>')
   expect(html).toContain('href="/u/carol?from=%2Fmy-feed%23a-IEy7ZWXnSxMC"')
   expect(html).not.toContain('reference-menu-popover')
-  expect(html).toContain('</div><form method="post" action="/follow/carol"><input type="hidden" '
+  expect(html).toContain('</div><form method="post" action="/follow/carol" data-follow-enhance="true">'
+    + '<input type="hidden" '
     + 'name="from" value="/my-feed#a-IEy7ZWXnSxMC"/><button class="button">follow back</button>')
 })
 

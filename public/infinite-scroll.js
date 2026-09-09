@@ -370,14 +370,13 @@
         'for-you': Number(counts.forYouCount) || 0,
         latest: Number(counts.latestCount) || 0,
       }
-      const personalizedIncrease = incoming['to-me'] > liveCounts['to-me']
-        || incoming['for-you'] > liveCounts['for-you']
+      const directedIncrease = incoming['to-me'] > liveCounts['to-me']
       Object.entries(incoming).forEach(([kind, count]) => {
         if (count > liveCounts[kind]) pendingLiveTabs.add(kind)
         if (count === 0) pendingLiveTabs.delete(kind)
       })
       applyLiveCounts(counts)
-      if (personalizedIncrease) playBackgroundDing()
+      if (directedIncrease) playBackgroundDing()
       renderNewPostsBanner()
     })
   }

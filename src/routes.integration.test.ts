@@ -128,12 +128,12 @@ test('web manifest is cached by browsers', async () => {
 })
 
 test('reference follow enhancement is served as immutable JavaScript', async () => {
-  const response = await request('/reference-follow.js?v=6')
+  const response = await request('/reference-follow.js?v=7')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   expect(await response.text()).toMatch(/headers\s*:\s*\{\s*Accept\s*:\s*["']application\/json["']\s*\}/)
-  expect(await (await request('/hot', { cookie: undefined })).text()).not.toContain('/reference-follow.js?v=6')
+  expect(await (await request('/hot', { cookie: undefined })).text()).not.toContain('/reference-follow.js?v=7')
 })
 
 test('progressive pagination enhancement is served as immutable JavaScript', async () => {

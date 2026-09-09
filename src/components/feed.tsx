@@ -204,6 +204,7 @@ export function Feed(
               : row.activity_kind === 'user_follow'
               ? `/follow/${row.target_handle}`
               : `/tag-follow/${row.target_tag}`}
+              data-follow-enhance="true"
             >
               <input type="hidden" name="from" value={activityReturnPath} />
               {(!row.target_is_viewer && (row.activity_kind === 'user_follow'

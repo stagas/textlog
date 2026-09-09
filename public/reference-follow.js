@@ -35,6 +35,8 @@ document.addEventListener('submit', async event => {
   const buttonState = matchingButtons.map(button => ({
     button,
     content: button.innerHTML,
+    followLabel: button.textContent?.trim().startsWith('follow back') ? 'follow back' : 'follow',
+    suffix: button.textContent?.trim().match(/^(?:unfollow|follow back|follow)(.*)$/)?.[1] || '',
     width: button.style.width,
     ariaLabel: button.getAttribute('aria-label'),
   }))
@@ -74,7 +76,9 @@ document.addEventListener('submit', async event => {
         button.setAttribute('aria-pressed', String(following))
         button.title = `${following ? 'Unfollow' : 'Follow'} ${button.textContent?.trim() || ''}`
       }
-      else button.textContent = following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'
+      else button.textContent = `${following ? 'unfollow' : followsViewer ? 'follow back' : state?.followLabel || 'follow'}${
+        state?.suffix || ''
+      }`
       button.classList.toggle('button-muted', following)
     })
   }
