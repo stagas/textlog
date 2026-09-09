@@ -2216,7 +2216,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     + 'href="/u/bob?from=%2F%40%23a-')
   expect(followedPersonToMe).not.toContain('reference-profile-tabs')
   expect(followedPersonToMe).toContain('<p class="profile-bio">Bob builds things</p>')
-  expect(followedPersonToMe).toContain('<form method="post" action="/follow/bob">'
+  expect(followedPersonToMe).toContain('<form method="post" action="/follow/bob" data-follow-enhance="true">'
     + '<input type="hidden" name="from" value="/@#a-')
   expect(followedPersonToMe).toContain('<button class="button button-muted">unfollow</button>')
   expect(followedPersonToMe).not.toContain('action="/follow/alice"')
@@ -2322,7 +2322,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(followedTagFeed).toContain('<a class="reference-menu-trigger" '
     + 'href="/tag/shared?from=%2Fmy-feed%23a-')
   expect(followedTagFeed).not.toContain('activity-follow-stats')
-  expect(followedTagFeed).toContain('<form method="post" action="/tag-follow/shared">'
+  expect(followedTagFeed).toContain('<form method="post" action="/tag-follow/shared" data-follow-enhance="true">'
     + '<input type="hidden" name="from" value="/my-feed#a-')
   expect(followedTagFeed).not.toContain('<time dateTime="2099-01-02 00:00:00"')
   expect(followedTagFeed).not.toContain('<span aria-hidden="true">·</span><span>0 notes</span></a>')
