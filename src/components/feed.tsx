@@ -49,7 +49,7 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 export function Feed(
   { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId, writeError,
     writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId, chunk = 0,
-    initialChunks = 1 }: {
+    initialChunks = 1, fetchedThread }: {
       user: User
       data: PersonalizedFeedData
       title?: string
@@ -66,11 +66,17 @@ export function Feed(
       writeDraftId?: string
       chunk?: number
       initialChunks?: number
+      fetchedThread?: import('../types').PostView[]
     },
 ) {
   const feedPath = path
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
-  const returnPath = feedChunkReturnPath(feedPath + (data.page > 1 ? `?page=${data.page}` : ''), renderedChunk)
+  let returnPath = feedChunkReturnPath(feedPath + (data.page > 1 ? `?page=${data.page}` : ''), renderedChunk)
+  if (fetchedThread?.length) {
+    const target = new URL(returnPath, 'http://textlog.local')
+    target.searchParams.set('fetch', String(fetchedThread[0]!.id))
+    returnPath = target.pathname + target.search
+  }
   const hasUnread = toMe ? data.toMeUnread : data.forYouUnread
   const unreadPage = data.unreadHref
     ? Number(new URL(data.unreadHref, 'http://localhost').searchParams.get('page') || 1)
@@ -92,6 +98,7 @@ export function Feed(
   }
   const threadPosts = (row: PersonalizedTimelineRow) => {
     const rootId = conversationRootId(row)
+    if (fetchedThread?.[0]?.id === rootId) return fetchedThread
     return timelinePosts.filter(candidate => conversationRootId(candidate) === rootId)
       .map(candidate => candidate.renderedPost!)
   }

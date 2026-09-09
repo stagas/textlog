@@ -38,6 +38,16 @@ export function feedConversationGroups(posts: PostView[]) {
   return [...groups.values()]
 }
 
+export function feedPostsWithFetchedThread(posts: PostView[], fetchedThread?: PostView[]) {
+  if (!fetchedThread?.length) return posts
+  const rootId = fetchedThread[0]!.id
+  const first = posts.findIndex(post => feedConversationId(post) === rootId)
+  if (first < 0) return posts
+  const retained = posts.filter(post => feedConversationId(post) !== rootId)
+  retained.splice(first, 0, ...fetchedThread)
+  return retained
+}
+
 export function chunkFeedPosts(posts: PostView[], chunk: number, initialChunks = 1) {
   const groups = feedConversationGroups(posts)
   const start = chunk === 0 ? 0 : chunk * FEED_CHUNK_SIZE

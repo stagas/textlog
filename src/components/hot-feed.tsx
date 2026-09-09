@@ -4,14 +4,14 @@ import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
 import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups,
-  InfiniteFeedChunk } from './infinite-feed'
+  feedPostsWithFetchedThread, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1 }: {
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: {
       feed?: PostFeedPage
       cursor?: HotCursor | null
       user: User | null
@@ -28,13 +28,20 @@ export function HotFeed(
       writeDraftId?: string
       chunk?: number
       initialChunks?: number
+      fetchedThread?: import('../types').PostView[]
     },
 ) {
+  feed = { ...feed, posts: feedPostsWithFetchedThread(feed.posts, fetchedThread) }
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
   const conversationCount = feedConversationGroups(feed.posts).length
   const chunkPosts = chunkFeedPosts(feed.posts, chunk, initialChunks)
   const feedPath = path
-  const returnPath = feedChunkReturnPath(feedPath + (feed.page > 1 ? `?page=${feed.page}` : ''), renderedChunk)
+  let returnPath = feedChunkReturnPath(feedPath + (feed.page > 1 ? `?page=${feed.page}` : ''), renderedChunk)
+  if (fetchedThread?.length) {
+    const target = new URL(returnPath, 'http://textlog.local')
+    target.searchParams.set('fetch', String(fetchedThread[0]!.id))
+    returnPath = target.pathname + target.search
+  }
   const chunkMarkup = (
     <InfiniteFeedChunk chunk={renderedChunk}
       hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>

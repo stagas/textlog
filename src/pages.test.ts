@@ -1141,6 +1141,24 @@ test('feed conversations stay expanded when all visible replies fit the preview'
   expect(unread).not.toContain('class="quiet thread-fold"')
 })
 
+test('fetched feed replies replace the existing return anchor for inline reply targeting', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
+    handle: 'root', reply_count: 1 }
+  const reply = { id: 2, user_id: 2, parent_id: 1, body: 'Fetched reply', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'reply', reply_count: 0, parent: root }
+  const html = renderToStaticMarkup(React.createElement(FeedThreads, {
+    user: null,
+    returnPath: '/latest?expand=1#post-1',
+    expandedByDefault: true,
+    posts: [root, reply],
+  }))
+
+  expect(html).toContain(
+    'href="/post/1?from=%2Flatest%3Fexpand%3D1%23post-2#post-2"',
+  )
+  expect(html).not.toContain('%23post-1%23post-2')
+})
+
 test('folded feed conversations preview the two newest replies from a recent burst', () => {
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-23 09:00:00', deleted_at: null,
     handle: 'root', reply_count: 4 }

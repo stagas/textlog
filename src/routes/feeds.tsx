@@ -43,6 +43,15 @@ import type { PersonalizedFeedData, PostFeedPage } from '../types'
 import { currentUser } from '../utils'
 import { previewLocation } from './posts'
 
+async function requestedFetchedThread(c: Context, viewerId: number) {
+  const id = positiveInteger(c.req.query('fetch'))
+  if (!id) return undefined
+  const detail = await databaseService().call('posts.detail', { id, viewerId })
+  if (detail.status !== 'ready') return undefined
+  const replies = await databaseService().call('posts.threadReplies', { parentId: id, viewerId })
+  return [detail.post, ...replies]
+}
+
 async function showNotificationBanner(request: Request, user: ReturnType<typeof currentUser>) {
   if (!user) return false
   // Keep the selected banner stable for this account state. Random selection fragmented the materialized feed cache:
@@ -401,6 +410,7 @@ export function registerFeedsRoutes(app: Hono) {
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user.id)
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
@@ -420,7 +430,8 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const view = (
         <Feed user={user} data={await data()} title="my feed" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} chunk={chunk} initialChunks={initialChunks} {...write} />
+          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
+          {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -433,6 +444,7 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
         viewerCacheVersion(12, user, notificationBanner), false, renderForCache, async () => {
         return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
@@ -454,6 +466,7 @@ export function registerFeedsRoutes(app: Hono) {
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
@@ -465,7 +478,8 @@ export function registerFeedsRoutes(app: Hono) {
       const feed = await data()
       const view = (
         <PublicFeed user={user} feed={feed} path="/all" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} chunk={chunk} initialChunks={initialChunks} {...write} />
+          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
+          {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -480,6 +494,7 @@ export function registerFeedsRoutes(app: Hono) {
       : undefined
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'latest', user ? user.id : -1, render, false,
         viewerCacheVersion(latestFeedCacheVersion, user, notificationBanner), false, renderForCache,
         user
@@ -500,6 +515,7 @@ export function registerFeedsRoutes(app: Hono) {
     const initialChunks = requestedRestoredChunks(c)
     if (initialChunks === null) return c.text('Invalid restored feed chunk', 400)
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     const requestedSeed = anySeed(c.req.query('seed'))
     const retainedSeed = retainedAnyFeedSeed(c.req.raw)
     if (!requestedSeed && !retainedSeed) {
@@ -516,7 +532,7 @@ export function registerFeedsRoutes(app: Hono) {
     const view = (
       <PublicFeed user={user} feed={feed} path={`/any?seed=${seed.toString(36)}`}
         notificationBanner={notificationBanner} expandedRootId={expandedRootId} chunk={chunk}
-        initialChunks={initialChunks} {...write} />
+        fetchedThread={fetchedThread} initialChunks={initialChunks} {...write} />
     )
     const response = rememberFeed(chunk > 0 ? htmlFragment(view) : page(view), 'random')
     response.headers.append('set-cookie', retainedAnyFeedSeedCookie(seed))
@@ -532,6 +548,7 @@ export function registerFeedsRoutes(app: Hono) {
     const initialChunks = requestedRestoredChunks(c)
     if (initialChunks === null) return c.text('Invalid restored feed chunk', 400)
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const render = async () => {
       const feed = await databaseService().call('feeds.newPage', {
@@ -541,12 +558,14 @@ export function registerFeedsRoutes(app: Hono) {
       })
       const view = (
         <PublicFeed user={user} feed={feed} path="/new" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} chunk={chunk} initialChunks={initialChunks} {...write} />
+          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
+          {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !expandedRootId
+        && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
         viewerCacheVersion(newFeedCacheVersion, user, notificationBanner))
       : await render()
@@ -579,6 +598,7 @@ export function registerFeedsRoutes(app: Hono) {
     if (initialChunks === null) return c.text('Invalid restored feed chunk', 400)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user.id)
     if (cursorValue && !decodeForYouCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
@@ -594,7 +614,8 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const view = (
         <Feed user={user} data={await data()} title="@" path="/@" toMe notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} chunk={chunk} initialChunks={initialChunks} {...write} />
+          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
+          {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
@@ -607,6 +628,7 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const response = !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue && !expandedRootId
+        && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'to-me', user.id, render, false,
         viewerCacheVersion(1, user, notificationBanner), false, renderForCache, async () => {
         return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
@@ -634,6 +656,7 @@ export function registerFeedsRoutes(app: Hono) {
     rememberFeedVisitor(c.req.raw, user)
     const cursorValue = c.req.query('cursor')
     const expandedRootId = positiveInteger(c.req.query('expand'))
+    const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     if (cursorValue && !decodeHotCursor(cursorValue)) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const render = async () => {
@@ -641,14 +664,15 @@ export function registerFeedsRoutes(app: Hono) {
         page: currentPage(c.req.query('page')), pageSize: resolvedPageSize(c.req.raw) })
       const view = (
         <HotFeed user={user} feed={feed} title="hot" notificationBanner={notificationBanner}
-          expandedRootId={expandedRootId} chunk={chunk} initialChunks={initialChunks} {...write} />
+          expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
+          {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
     const response = chunk === 0 && initialChunks === 1
       && !write.writeHandled && !write.writeError && !write.writePreview
         && currentPage(c.req.query('page')) === 1 && !cursorValue
-        && !expandedRootId
+        && !expandedRootId && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'hot', user?.id ?? -1, render, false,
         viewerCacheVersion(hotRankingVersion, user, notificationBanner))
       : await render()

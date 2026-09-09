@@ -473,6 +473,12 @@ export function replyAnchorReturnPath(threadRootId: number, replyId: number, ret
   return `/post/${threadRootId}${returnQuery}#post-${replyId}`
 }
 
+function withPostAnchor(path: string, postId: number) {
+  const target = new URL(path, 'http://textlog.local')
+  target.hash = `post-${postId}`
+  return target.pathname + target.search + target.hash
+}
+
 export function postedPostPath(postId: number) {
   return `/all?expand=${postId}#post-${postId}`
 }
@@ -1437,13 +1443,13 @@ export function ThreadReplies(
     const replyPageId = visibleReplyPageId(reply)
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
     const postReturnPath = reply.id === suppressReplyActionId && activeReplyReturnPath
-      ? `${activeReplyReturnPath}#post-${reply.id}`
+      ? withPostAnchor(activeReplyReturnPath, reply.id)
       : continuationReturnPath
-      ? `${continuationReturnPath}#post-${reply.id}`
+      ? withPostAnchor(continuationReturnPath, reply.id)
       : anchoredReturnPath
     const continuationHref = continuesElsewhere
       ? '/post/' + reply.id + '?from=' + encodeURIComponent(
-        continuationReturnPath ? `${continuationReturnPath}#post-${reply.id}` : anchoredReturnPath,
+        continuationReturnPath ? withPostAnchor(continuationReturnPath, reply.id) : anchoredReturnPath,
       )
       : undefined
     const omissionMarker = (label: string) =>

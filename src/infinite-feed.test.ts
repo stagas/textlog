@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { chunkFeedPosts, feedChunk, feedChunkReturnPath, restoredFeedChunks } from './components/infinite-feed'
+import { chunkFeedPosts, feedChunk, feedChunkReturnPath, feedPostsWithFetchedThread,
+  restoredFeedChunks } from './components/infinite-feed'
 import type { PostView } from './types'
 
 describe('progressive feed chunks', () => {
@@ -42,5 +43,18 @@ describe('progressive feed chunks', () => {
 
     expect(chunkFeedPosts(posts, 0).map(post => post.id)).toContain(100)
     expect(chunkFeedPosts(posts, 1).map(post => post.id)).toEqual([21])
+  })
+
+  test('replaces a projected conversation with its fetched SSR thread in place', () => {
+    const post = (id: number, parentId: number | null): PostView => ({
+      id, user_id: 1, parent_id: parentId, body: String(id), handle: 'writer',
+      created_at: '2026-09-09 12:00:00', deleted_at: null,
+    })
+    const root = post(123, null)
+    const projected = { ...post(125, 123), parent: root }
+    const fetched = [root, { ...post(124, 123), parent: root }, projected]
+
+    expect(feedPostsWithFetchedThread([post(10, null), projected, post(20, null)], fetched).map(item => item.id))
+      .toEqual([10, 123, 124, 125, 20])
   })
 })

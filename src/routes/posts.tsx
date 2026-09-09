@@ -331,8 +331,13 @@ export function registerPostsRoutes(app: Hono) {
       viewerId: user?.id ?? -1,
     })
     if (c.req.header('X-Textlog-Feed-Expansion') === '1') {
+      const fetchedReturnPath = (() => {
+        const target = new URL(returnPath || '/all', 'http://textlog.local')
+        target.searchParams.set('fetch', String(post.id))
+        return target.pathname + target.search + target.hash
+      })()
       return htmlFragment(
-        <FeedThreads posts={[post, ...replies]} user={user || null} returnPath={returnPath || '/all'}
+        <FeedThreads posts={[post, ...replies]} user={user || null} returnPath={fetchedReturnPath}
           expandedByDefault />,
       )
     }

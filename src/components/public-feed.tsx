@@ -3,14 +3,14 @@ import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
 import { Layout } from './layout'
 import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups,
-  InfiniteFeedChunk } from './infinite-feed'
+  feedPostsWithFetchedThread, InfiniteFeedChunk } from './infinite-feed'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
 import { FeedThreads } from './post'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1 }: {
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: {
       feed?: PostFeedPage
       cursor?: unknown
       user?: User | null
@@ -26,18 +26,25 @@ export function PublicFeed(
       writeDraftId?: string
       chunk?: number
       initialChunks?: number
+      fetchedThread?: import('../types').PostView[]
     },
 ) {
+  feed = { ...feed, posts: feedPostsWithFetchedThread(feed.posts, fetchedThread) }
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
   const conversationCount = feedConversationGroups(feed.posts).length
   const chunkPosts = chunkFeedPosts(feed.posts, chunk, initialChunks)
   const feedPath = path
   const random = path.startsWith('/any')
   const newest = path === '/new'
-  const returnPath = feedChunkReturnPath(
+  let returnPath = feedChunkReturnPath(
     feedPath + (feed.page > 1 ? `${feedPath.includes('?') ? '&' : '?'}page=${feed.page}` : ''),
     renderedChunk,
   )
+  if (fetchedThread?.length) {
+    const target = new URL(returnPath, 'http://textlog.local')
+    target.searchParams.set('fetch', String(fetchedThread[0]!.id))
+    returnPath = target.pathname + target.search
+  }
   const unreadPostIds = new Set(feed.unreadPostIds || [])
   const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
   const unreadPage = feed.unreadHref
