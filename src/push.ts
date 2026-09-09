@@ -45,7 +45,8 @@ export function vapidPublicKey() {
 
 async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions: T[],
   messageFor: (subscription: T) => PushMessage, database: Database | undefined, vapid: VapidConfiguration,
-  service?: DatabaseService, logDelivery = false)
+  service?: DatabaseService, logDelivery = false, maxAttempts = 1,
+  retryDelay: (milliseconds: number) => Promise<unknown> = milliseconds => Bun.sleep(milliseconds))
 {
   if (isDevelopment() || !subscriptions.length) return
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
@@ -58,28 +59,40 @@ async function sendToSubscriptions<T extends PushSubscriptionRow>(subscriptions:
     const target = `username=${JSON.stringify(subscription.username ? `@${subscription.username}` : 'unknown')}`
       + ` endpoint=${JSON.stringify(pushEndpointLabel(subscription.endpoint))}`
     if (logDelivery) logInfo(`admin push delivery status=started ${target}`)
-    try {
-      await webpush.sendNotification({
-        endpoint: subscription.endpoint,
-        keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-      }, JSON.stringify(messageFor(subscription)))
-      if (logDelivery) logInfo(`admin push delivery status=succeeded ${target}`)
-    }
-    catch (error) {
-      const statusCode = typeof error === 'object' && error && 'statusCode' in error
-        ? Number(error.statusCode)
-        : 0
-      if (statusCode === 404 || statusCode === 410) {
-        if (database) database.query('DELETE FROM push_subscriptions WHERE endpoint=?').run(subscription.endpoint)
-        else await (service || databaseService()).call('push.removeEndpoint', { endpoint: subscription.endpoint })
-        if (logDelivery) logInfo(`admin push delivery status=removed status_code=${statusCode} ${target}`)
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await webpush.sendNotification({
+          endpoint: subscription.endpoint,
+          keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+        }, JSON.stringify(messageFor(subscription)))
+        if (logDelivery) logInfo(`admin push delivery status=succeeded ${target}`)
+        return
       }
-      else {
+      catch (error) {
+        const statusCode = typeof error === 'object' && error && 'statusCode' in error
+          ? Number(error.statusCode)
+          : 0
+        if (statusCode === 404 || statusCode === 410) {
+          if (database) database.query('DELETE FROM push_subscriptions WHERE endpoint=?').run(subscription.endpoint)
+          else await (service || databaseService()).call('push.removeEndpoint', { endpoint: subscription.endpoint })
+          if (logDelivery) logInfo(`admin push delivery status=removed status_code=${statusCode} ${target}`)
+          return
+        }
+        const retryable = statusCode === 429 || statusCode >= 500
+        if (retryable && attempt < maxAttempts) {
+          const delayMs = 1_000 * 2 ** (attempt - 1)
+          logInfo(
+            `push delivery status=retrying status_code=${statusCode} attempt=${attempt + 1}/${maxAttempts} ${target}`,
+          )
+          await retryDelay(delayMs)
+          continue
+        }
         transientErrors.push(error)
         logError(
           `${logDelivery ? 'admin ' : ''}push delivery status=failed status_code=${statusCode || 'unknown'} ${target}`,
           error,
         )
+        return
       }
     }
   }))
@@ -373,7 +386,8 @@ export async function sendPushForTagFollow(actorId: number, actorHandle: string,
 }
 
 export async function sendPushForSignup(userId: number, handle: string, database?: Database,
-  vapid: VapidConfiguration | null = vapidConfiguration())
+  vapid: VapidConfiguration | null = vapidConfiguration(),
+  retryDelay: (milliseconds: number) => Promise<unknown> = milliseconds => Bun.sleep(milliseconds))
 {
   if (!vapid || !ADMIN_EMAILS.size) return
   const administratorEmails = [...ADMIN_EMAILS]
@@ -388,5 +402,5 @@ export async function sendPushForSignup(userId: number, handle: string, database
     title: `@${handle} signed up`,
     body: `@${handle} signed up`,
     url: `/admin/users/${userId}`,
-  }), database, vapid)
+  }), database, vapid, undefined, false, 3, retryDelay)
 }

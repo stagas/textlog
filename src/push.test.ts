@@ -359,6 +359,28 @@ describe('Web Push activity delivery', () => {
     }])
   })
 
+  test('retries a signup alert after a transient provider failure', async () => {
+    const database = fixture()
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (3,'admin','gstagas@gmail.com','!'),(5,'new_user','new@example.com','!');
+      INSERT INTO push_subscriptions(endpoint,user_id,p256dh,auth,notify_signups)
+      VALUES('https://push.example/admin',3,'admin-key','admin-auth',1)`)
+    let attempts = 0
+    const delays: number[] = []
+    webpush.sendNotification = (async () => {
+      attempts++
+      if (attempts === 1) throw { statusCode: 500 }
+      return {} as never
+    }) as typeof webpush.sendNotification
+
+    await sendPushForSignup(5, 'new_user', database, vapid, async milliseconds => {
+      delays.push(milliseconds)
+    })
+
+    expect(attempts).toBe(2)
+    expect(delays).toEqual([1_000])
+  })
+
   test('sends followed-person and followed-tag activity to matching subscribers', async () => {
     const database = fixture()
     database.run(`INSERT INTO users(id,handle,email,password) VALUES(3,'watcher','watcher@example.com','!');
