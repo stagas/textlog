@@ -64,7 +64,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <SearchForm placeholder="search notes, tags or people" />
         </section>
       )}
-      <div className="explore-content">
+      <div className="explore-content" data-progressive-pagination-root="explore">
         <section className="explore-tags" id="explore-tags">
           <div className={paginationHeadingClass()}>
             <h2>Trending tags</h2>

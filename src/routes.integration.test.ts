@@ -136,6 +136,14 @@ test('reference follow enhancement is served as immutable JavaScript', async () 
   expect(await (await request('/hot', { cookie: undefined })).text()).not.toContain('/reference-follow.js?v=4')
 })
 
+test('progressive pagination enhancement is served as immutable JavaScript', async () => {
+  const response = await request('/progressive-pagination.js?v=1')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  expect(await response.text()).toContain("data-progressive-pagination-root")
+})
+
 test('PWA launch marks the client standalone and removes the launch parameter', async () => {
   const response = await request('/?pwa')
   expect(response.status).toBe(303)

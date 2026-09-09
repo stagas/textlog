@@ -71,6 +71,9 @@ export function Layout({
   const onWritePage = requestUrl.pathname === '/write'
   const onDraftsPage = requestUrl.pathname === '/drafts'
   const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
+  const onProgressivePaginationPage = requestUrl.pathname === '/explore'
+    || (requestUrl.pathname.startsWith('/u/')
+      && ['following', 'followers', 'blocked'].includes(requestUrl.searchParams.get('tab') || ''))
   const noScriptFeedUrl = (() => {
     if (!onFeedPage || request.method !== 'GET' || requestUrl.searchParams.get('chunk') === '5') return null
     const destination = new URL(requestUrl)
@@ -235,6 +238,7 @@ export function Layout({
           && <script src="/reference-follow.js?v=4" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onFeedPage && <script src="/infinite-scroll.js?v=13" defer />}
+        {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript><meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} /></noscript>
         )}

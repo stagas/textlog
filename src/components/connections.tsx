@@ -72,6 +72,7 @@ export function Connections(
       <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
         following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
         blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
+      <div data-progressive-pagination-root="profile-connections">
       {(kind === 'following' || kind === 'blocked') && (people.length || tags.length)
         ? (
           <div className={`columns connections-columns${kind === 'following' ? ' connections-columns-stacked' : ''}`}>
@@ -217,6 +218,7 @@ export function Connections(
           `/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`,
         )} label="People pagination" compact anchor="connections-people-heading" instantScroll />
       )}
+      </div>
       {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )

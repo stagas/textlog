@@ -688,7 +688,8 @@ app.get('/embed.css', () =>
     'cache-control': 'public, max-age=86400',
   } }))
 for (const path of [
-  '/notifications.js', '/infinite-scroll.js', '/compose.js', '/contextual-back.js', '/reference-follow.js', '/sw.js',
+  '/notifications.js', '/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+  '/reference-follow.js', '/sw.js',
 ]) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
   const body = devReloadEnabled ? undefined : await Bun.file(assetUrl).text()
@@ -697,7 +698,8 @@ for (const path of [
       (body ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
-        'cache-control': ['/infinite-scroll.js', '/compose.js', '/contextual-back.js', '/reference-follow.js'].includes(path)
+        'cache-control': ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+          '/reference-follow.js'].includes(path)
           ? 'public, max-age=31536000, immutable'
           : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),

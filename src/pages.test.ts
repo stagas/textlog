@@ -1008,6 +1008,7 @@ test('explore renders tag toggles above a full-width people section', () => {
   }))
 
   expect(html).toContain('class="explore-tags" id="explore-tags"')
+  expect(html).toContain('data-progressive-pagination-root="explore"')
   expect(html).toContain('class="button explore-tag-chip button-muted" aria-pressed="true"')
   expect(html).toContain('class="button explore-tag-chip" aria-pressed="false"')
   expect(html).toContain('name="from" value="/explore#explore-tags"')
@@ -3711,6 +3712,7 @@ test('Following and follower links return to the originating connection', () => 
   }))
 
   expect(following).toContain('<div class="explore-tag-card" id="tag-notes">')
+  expect(following).toContain('data-progressive-pagination-root="profile-connections"')
   expect(following).toContain('<form method="post" action="/tag-follow/notes">')
   expect(following).toContain('value="/u/reader?tab=following&amp;page=2&amp;tagsPage=3#tag-notes"')
   expect(following).toContain(
