@@ -8250,6 +8250,23 @@ a.hidden-replies-notice:focus-visible {
   border-bottom: 0;
 }
 
+.feed-thread-expansion-enabled .feed-thread a.thread-ancestor-gap.post-continuation-link {
+  cursor: cell;
+}
+
+.feed-thread-expanding {
+  overflow: hidden;
+}
+
+.feed-thread-fetched-post {
+  animation: feed-thread-reply-reveal 120ms ease;
+}
+
+@keyframes feed-thread-reply-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .collapsed-preview-gap.thread-fold-expander {
   color: var(--muted);
   cursor: cell;
@@ -8471,6 +8488,10 @@ a.post-continuation-link:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .feed-thread-fetched-post {
+    animation: none;
+  }
+
   .thread-fold::after,
   .post-spoiler-summary::before,
   .post-spoiler-content,

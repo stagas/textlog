@@ -9,12 +9,12 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { conversationTopPath, MAX_VISIBLE_REPLY_DEPTH, postAnchorId, postedPostPath,
+import { conversationTopPath, FeedThreads, MAX_VISIBLE_REPLY_DEPTH, postAnchorId, postedPostPath,
   postedReplyPath } from '../components/post'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
-import { form, page, redirect, safeNext } from './shared'
+import { form, htmlFragment, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import type { ComponentProps } from 'preact/compat'
@@ -330,6 +330,12 @@ export function registerPostsRoutes(app: Hono) {
       parentId: post.id,
       viewerId: user?.id ?? -1,
     })
+    if (c.req.header('X-Textlog-Feed-Expansion') === '1') {
+      return htmlFragment(
+        <FeedThreads posts={[post, ...replies]} user={user || null} returnPath={returnPath || '/all'}
+          expandedByDefault />,
+      )
+    }
     const requestedReplyToId = Number(c.req.query('to'))
     const replyToId = c.req.query('reply_to') === 'post'
       ? null
