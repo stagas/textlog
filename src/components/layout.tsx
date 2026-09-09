@@ -219,6 +219,7 @@ export function Layout({
           <meta name="twitter:image:alt" content={share.imageAlt || `Post by ${title || `a ${name} user`}`} />
         </>
         <link rel="icon" href={`/favicon-theme.svg?v=${appearanceVersion}`} type="image/svg+xml" sizes="any" />
+        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {user && <link rel="manifest" href="/site.webmanifest" />}
         <link rel="sitemap" href="/sitemap.xml" type="application/xml" />

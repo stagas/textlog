@@ -158,8 +158,10 @@ const publicAssets = await Promise.all([
   ['/favicon-16x16.png', 'image/png'],
   ['/favicon-32x32.png', 'image/png'],
   ['/apple-touch-icon.png', 'image/png'],
+  ['/apple-touch-icon-precomposed.png', 'image/png'],
   ['/android-chrome-192x192.png', 'image/png'],
   ['/android-chrome-512x512.png', 'image/png'],
+  ['/notification-badge-96x96.png', 'image/png'],
   ['/maskable-icon-512x512.png', 'image/png'],
   ['/email-logo.png', 'image/png'],
 ].map(async ([path, contentType]) => ({
@@ -839,7 +841,7 @@ export default {
     const url = new URL(request.url)
     const authenticated = Boolean(currentUser(request))
     const navigationChallengeAsset =
-      /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon\.png|\/android-chrome-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
+      /^(?:\/styles\.css|\/theme\.css|\/textlog\.svg|\/favicon-theme\.svg|\/favicon\.ico|\/favicon-\d+x\d+\.png|\/apple-touch-icon(?:-precomposed)?\.png|\/android-chrome-\d+x\d+\.png|\/notification-badge-\d+x\d+\.png|\/maskable-icon-\d+x\d+\.png|\/uploads\/)/
         .test(url.pathname)
     if (!authenticated && navigationCaptchaGate.check(address) && url.pathname !== '/navigation-check'
       && !navigationChallengeAsset)

@@ -3,6 +3,7 @@ self.addEventListener('push', event => {
   event.waitUntil(self.registration.showNotification(data.title || '__APP_NAME__', {
     body: data.body || '',
     icon: '/android-chrome-192x192.png',
+    badge: '/notification-badge-96x96.png',
     data: { url: data.url || '/' },
   }))
 })

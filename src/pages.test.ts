@@ -1955,6 +1955,7 @@ test('pages advertise icons to everyone and the manifest only to signed-in users
   }))
 
   expect(guestHtml).toContain('href="/favicon-theme.svg?v=system.theme" type="image/svg+xml" sizes="any"')
+  expect(guestHtml).toContain('rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png"')
   expect(guestHtml).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png"')
   expect(guestHtml).not.toContain('rel="manifest"')
   expect(signedInHtml).toContain('rel="manifest" href="/site.webmanifest"')
