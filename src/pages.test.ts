@@ -71,6 +71,16 @@ test('bookmarks page hides search until there are bookmarks', () => {
   expect(html).not.toContain('placeholder="search bookmarks"')
 })
 
+test('feed pages offer a no-script SSR redirect through the fifth chunk', () => {
+  const render = (request: Request) => withAppearance(request,
+    () => renderToStaticMarkup(React.createElement(Layout,
+      { user: null, children: React.createElement('span', null, 'feed') })))
+  const initial = render(new Request('https://textlog.test/all?page=2'))
+  expect(initial).toContain('<noscript><meta http-equiv="refresh" content="0; url=/all?page=2&amp;chunk=5"/>')
+  expect(render(new Request('https://textlog.test/all?page=2&chunk=5'))).not.toContain('http-equiv="refresh"')
+  expect(render(new Request('https://textlog.test/all', { method: 'POST' }))).not.toContain('http-equiv="refresh"')
+})
+
 test('mobile account navigation uses an in-flow details menu', () => {
   const request = new Request('https://textlog.test/', {
     headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },

@@ -71,6 +71,13 @@ export function Layout({
   const onWritePage = requestUrl.pathname === '/write'
   const onDraftsPage = requestUrl.pathname === '/drafts'
   const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
+  const noScriptFeedUrl = (() => {
+    if (!onFeedPage || request.method !== 'GET' || requestUrl.searchParams.get('chunk') === '5') return null
+    const destination = new URL(requestUrl)
+    destination.searchParams.delete('_feed_chunk')
+    destination.searchParams.set('chunk', '5')
+    return destination.pathname + destination.search + destination.hash
+  })()
   const currentPath = requestUrl.pathname + requestUrl.search
   const writeShortcutHref = onWritePage ? '/write' : writeHref()
   const draftsHref = onDraftsPage ? '/drafts' : '/drafts?from=' + encodeURIComponent(currentPath)
@@ -227,6 +234,9 @@ export function Layout({
           && <script src="/reference-follow.js?v=4" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onFeedPage && <script src="/infinite-scroll.js?v=6" defer />}
+        {noScriptFeedUrl && (
+          <noscript><meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} /></noscript>
+        )}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       </head>
       <body
