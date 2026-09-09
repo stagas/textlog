@@ -77,7 +77,7 @@
 
     const typingDelay = 85
     const backspaceDelay = 28
-    const displayDelay = 5000
+    const displayDelay = 10000
     let current = placeholders.indexOf(textarea.placeholder)
     let timer
 
