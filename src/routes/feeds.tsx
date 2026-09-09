@@ -88,7 +88,7 @@ function personalizedFeedAfterVisibleReads(data: PersonalizedFeedData, toMe: boo
   const unreadEventKeys = [...new Set(data.timeline.filter(row => row.unread).map(row => row.event_key))]
   const consumed = unreadEventKeys.length
   const latestConsumed = toMe ? 0 : unreadEventKeys.filter(eventKey => /^post:\d+$/.test(eventKey)).length
-  const latestCount = Math.max(0, data.latestCount - latestConsumed)
+  const latestCount = Math.max(0, (data.latestCount || 0) - latestConsumed)
   return {
     ...data,
     forYouCount: Math.max(0, data.forYouCount - consumed),
