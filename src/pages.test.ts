@@ -3712,7 +3712,7 @@ test('Following and follower links return to the originating connection', () => 
     user: profile,
     profile,
     people: [person],
-    tags: [{ tag: 'notes', count: 1, viewerFollowing: true }],
+    tags: [{ tag: 'notes', displayName: 'Notes', count: 1, viewerFollowing: true }],
     kind: 'following',
     page: 2,
     total: 11,
@@ -3740,6 +3740,7 @@ test('Following and follower links return to the originating connection', () => 
 
   expect(following).toContain('<div class="explore-tag-card" id="tag-notes">')
   expect(following).toContain('data-progressive-pagination-root="profile-connections"')
+  expect(following).toContain('title="Unfollow #Notes">#Notes</button>')
   expect(following).toContain(
     '<form method="post" action="/tag-follow/notes" data-follow-enhance="true">',
   )

@@ -104,9 +104,9 @@ export function Connections(
                                   <button
                                     className={`button explore-tag-chip${tag.viewerFollowing ? ' button-muted' : ''}`}
                                     aria-pressed={!!tag.viewerFollowing}
-                                    title={`${tag.viewerFollowing ? 'Unfollow' : 'Follow'} #${tag.tag}`}
+                                    title={`${tag.viewerFollowing ? 'Unfollow' : 'Follow'} #${tag.displayName || tag.tag}`}
                                   >
-                                    #{tag.tag}
+                                    #{tag.displayName || tag.tag}
                                   </button>
                                 </form>
                               )
@@ -116,7 +116,7 @@ export function Connections(
                                     encodeURIComponent(connectionReturnPath(`#tag-${tag.tag}`))
                                   }`}
                                 >
-                                  #{tag.tag}
+                                  #{tag.displayName || tag.tag}
                                 </a>
                               )}
                             <a className="explore-tag-link"
