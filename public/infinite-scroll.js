@@ -75,6 +75,8 @@
       if (count === 0) pendingLiveTabs.delete(kind)
       updateLiveBadge(kind, count)
     })
+    const baseTitle = document.title.replace(/^•\s*/, '')
+    document.title = liveCounts['to-me'] > 0 || liveCounts['for-you'] > 0 ? `• ${baseTitle}` : baseTitle
   }
 
   const reconcileLiveCounts = async () => {
@@ -327,9 +329,8 @@
       Object.entries(incoming).forEach(([kind, count]) => {
         if (count > liveCounts[kind]) pendingLiveTabs.add(kind)
         if (count === 0) pendingLiveTabs.delete(kind)
-        liveCounts[kind] = count
-        updateLiveBadge(kind, count)
       })
+      applyLiveCounts(counts)
       renderNewPostsBanner()
     })
   }

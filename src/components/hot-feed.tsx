@@ -53,6 +53,7 @@ export function HotFeed(
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
       feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
+      hasUnreadActivity={!!user && ((feed.toMeCount || 0) > 0 || (feed.forYouCount || 0) > 0)}
     >
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}

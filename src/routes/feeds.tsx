@@ -88,7 +88,7 @@ async function showNotificationBanner(request: Request, user: ReturnType<typeof 
 function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>,
   banner: Awaited<ReturnType<typeof showNotificationBanner>> = false)
 {
-  const feedPresentationVersion = 8
+  const feedPresentationVersion = 11
   const bannerVersion = banner
     ? ['notifications', 'appearance', 'invite', 'bio', 'notification-update', 'donate'].indexOf(banner) + 1
     : 0
@@ -517,7 +517,16 @@ export function registerFeedsRoutes(app: Hono) {
       return dataPromise
     }
     const render = async () => {
-      const feed = await data()
+      let feed = await data()
+      if (liveRefresh) {
+        const postIds = [...new Set(feed.timeline.filter(row =>
+          ['post', 'reply', 'mention'].includes(row.activity_kind)
+        ).map(row => row.id))]
+        const consumed = postIds.length
+          ? await databaseService().call('api.markLatestRead', { userId: user.id, postIds })
+          : 0
+        if (consumed) feed = { ...feed, latestCount: Math.max(0, (feed.latestCount || 0) - consumed) }
+      }
       const view = (
         <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed}
           title="my feed" notificationBanner={notificationBanner}

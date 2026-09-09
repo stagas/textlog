@@ -70,6 +70,7 @@ export function PublicFeed(
       mobileWriteAction notificationBanner={notificationBanner} feeds={random ? undefined : newest
       ? { title: 'New conversations', rss: '/new.rss', atom: '/new.atom' }
       : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
+      hasUnreadActivity={!!user && ((feed.toMeCount || 0) > 0 || (feed.forYouCount || 0) > 0)}
     >
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}

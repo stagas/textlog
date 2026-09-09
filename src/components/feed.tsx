@@ -250,7 +250,8 @@ export function Feed(
   )
   if (chunk > 0) return chunkMarkup
   return (
-    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction>
+    <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction
+      hasUnreadActivity={data.toMeCount > 0 || data.forYouCount > 0}>
       {writePreview && (
         <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
           location={writePreviewLocation} />

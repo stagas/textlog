@@ -36,6 +36,7 @@ export function Layout({
   mobileWriteAction = false,
   fullScreen = false,
   fullScreenScrollable = false,
+  hasUnreadActivity = false,
   children,
 }: {
   title?: string
@@ -49,6 +50,7 @@ export function Layout({
   mobileWriteAction?: boolean
   fullScreen?: boolean
   fullScreenScrollable?: boolean
+  hasUnreadActivity?: boolean
   children: React.ReactNode
 }) {
   const selectedAppearance = activeAppearance()
@@ -199,7 +201,7 @@ export function Layout({
               <meta name="theme-color" content={themeBackgrounds.dark} media="(prefers-color-scheme: dark)" />
             </>
           )}
-        <title>{`${title ? `${title} · ` : ''}${name}`}</title>
+        <title>{`${hasUnreadActivity ? '• ' : ''}${title ? `${title} · ` : ''}${name}`}</title>
         <>
           <meta name="description" content={share.description} />
           <meta property="og:type" content={share.type || 'article'} />
@@ -237,7 +239,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=6" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=18" defer />}
+        {onFeedPage && <script src="/infinite-scroll.js?v=20" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript><meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} /></noscript>
