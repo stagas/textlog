@@ -5315,7 +5315,7 @@ form.report-panel {
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 :is(.write-compose, .reply-compose) .composefoot .compose-controls-row .form-actions {
@@ -5330,7 +5330,7 @@ form.report-panel {
 }
 
 :is(.write-compose, .reply-compose) .composefoot :is(.form-actions, .posting-help-content) {
-  pointer-events: auto;
+  pointer-events: all;
 }
 
 :is(.write-compose, .reply-compose) .composefoot .form-actions {

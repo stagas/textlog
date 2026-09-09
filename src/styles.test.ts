@@ -703,6 +703,15 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.posting-help-summary-link {\n  display: inline-block;')
     expect(css).toContain('width: fit-content;\n  line-height: 1.5;')
     expect(css).not.toContain('.posting-help-popover')
+    expect(css).toContain(
+      ':is(.write-compose, .reply-compose) .compose-controls-row {\n'
+        + '  grid-column: 1 / -1;\n  grid-row: 1;\n  display: flex;\n  align-items: center;\n'
+        + '  justify-content: space-between;\n  min-width: 0;\n  pointer-events: none;',
+    )
+    expect(css).toContain(
+      ':is(.write-compose, .reply-compose) .composefoot :is(.form-actions, .posting-help-content) {\n'
+        + '  pointer-events: all;',
+    )
   })
 
   test('gives the mobile edit composer the same posting-help layout as write', async () => {
