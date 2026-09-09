@@ -349,7 +349,7 @@ export type DatabaseDomainOperations = {
   'api.latestState': { input: { userId: number }; output: { unreadIds: number[]; unreadCount: number } }
   'feeds.unreadCounts': {
     input: { userId: number }
-    output: { forYouCount: number; toMeCount: number; latestCount: number }
+    output: { forYouCount: number; toMeCount: number; latestCount: number; newCount: number }
   }
   'api.markLatestRead': { input: { userId: number; postIds: number[] }; output: number }
   'api.markAllLatestRead': { input: { userId: number }; output: number }
@@ -494,7 +494,10 @@ export type DatabaseDomainOperations = {
     input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean; sampleSeed?: number }
     output: PostFeedPage
   }
-  'feeds.newPage': { input: { viewerId: number; page: number; pageSize: PageSizeChoice }; output: PostFeedPage }
+  'feeds.newPage': {
+    input: { viewerId: number; page: number; pageSize: PageSizeChoice; markRead?: boolean }
+    output: PostFeedPage
+  }
   'feeds.randomPage': { input: { viewerId: number; pageSize: PageSizeChoice; sampleSeed?: number };
     output: PostFeedPage }
   'feeds.latestUnreadCount': { input: { userId: number }; output: number }

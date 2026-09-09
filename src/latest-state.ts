@@ -122,6 +122,27 @@ export function unreadLatestCount(userId: number, database: Database) {
     : [userId, userId, userId, userId])) as { count: number }).count
 }
 
+export function unreadNewCount(userId: number, database: Database) {
+  const authorVisibility = latestAuthorVisibility(userId, database)
+  const read = usesCompactReads(database)
+    ? `p.id<=coalesce((SELECT through_post_id FROM latest_read_state WHERE user_id=?),0)
+      OR EXISTS (SELECT 1 FROM latest_read_exceptions r WHERE r.user_id=? AND r.post_id=p.id)`
+    : 'EXISTS (SELECT 1 FROM latest_reads r WHERE r.user_id=? AND r.post_id=p.id)'
+  return (database.query(`SELECT count(*) count FROM (SELECT 1 FROM posts p ${authorVisibility.join}
+    WHERE p.deleted_at IS NULL AND p.parent_id IS NULL
+      AND ${authorVisibility.filter}
+      AND ${excludesExistingWhispers(database)}
+      AND ${excludesMetaPosts()}
+      AND NOT (${read})
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+        (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
+      AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
+      WHERE ph.post_id=p.id AND bh.user_id=?)
+    ORDER BY p.id DESC LIMIT 99)`).get(...(usesCompactReads(database)
+    ? [userId, userId, userId, userId, userId]
+    : [userId, userId, userId, userId])) as { count: number }).count
+}
+
 export function initializeLatestReads(userId: number, database: Database) {
   if (usesCompactReads(database)) {
     database.query(`INSERT INTO latest_read_state(user_id,through_post_id)

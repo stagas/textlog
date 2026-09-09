@@ -265,13 +265,14 @@ export function Feed(
       <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
         draftId={writeDraftId} />
       <div data-feed-view>
-        <span hidden data-live-counts={`${data.toMeCount}:${data.forYouCount}:${data.latestCount || 0}`} />
+        <span hidden data-live-counts={`${data.toMeCount}:${data.forYouCount}:${data.latestCount || 0}:${
+          data.newCount || 0}`} />
         <h1 className="visually-hidden">Your feed</h1>
         <FeedTabs active="following" user={user} forYouReadStatus={data.timeline.length
           ? hasUnread && unreadPage !== null && unreadPage > data.page
           : undefined} toMe={toMe} toMeCount={data.toMeCount} forYouCount={data.forYouCount}
           unreadHref={data.unreadHref} lastUnreadHref={data.lastUnreadHref} forYouUnread={data.forYouUnread}
-          toMeUnread={data.toMeUnread} latestCount={data.latestCount} />
+          toMeUnread={data.toMeUnread} latestCount={data.latestCount} newCount={data.newCount} />
         {showTopPagination && <Pagination page={data.page} totalPages={data.totalPages} path={feedPath} top />}
         {displayTimeline.length
           ? chunkMarkup

@@ -67,7 +67,8 @@ export function HotFeed(
       <div data-feed-view>
         <h1 className="visually-hidden">Hot notes</h1>
         <FeedTabs active="hot" user={user} forYouCount={feed.forYouCount} forYouUnread={feed.forYouUnread}
-          toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount} />
+          toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread} latestCount={feed.latestCount}
+          newCount={feed.newCount} />
         {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
         {feed.posts.length
           ? chunkMarkup

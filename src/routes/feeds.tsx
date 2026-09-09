@@ -101,11 +101,14 @@ function personalizedFeedAfterVisibleReads(data: PersonalizedFeedData, toMe: boo
   const consumed = unreadEventKeys.length
   const latestConsumed = toMe ? 0 : unreadEventKeys.filter(eventKey => /^post:\d+$/.test(eventKey)).length
   const latestCount = Math.max(0, (data.latestCount || 0) - latestConsumed)
+  const consumedRoots = new Set(data.timeline.filter(row => row.unread && row.activity_kind === 'post')
+    .map(row => row.id)).size
   return {
     ...data,
     forYouCount: Math.max(0, data.forYouCount - consumed),
     toMeCount: Math.max(0, data.toMeCount - (toMe ? consumed : 0)),
     latestCount,
+    newCount: Math.max(0, (data.newCount || 0) - consumedRoots),
     forYouUnread: toMe ? data.forYouUnread : data.forYouCount > consumed,
     toMeUnread: toMe ? data.toMeCount > consumed : data.toMeUnread,
     timeline: data.timeline.map(row => ({ ...row, unread: 0 })),
@@ -116,6 +119,11 @@ function latestFeedAfterVisibleReads(feed: PostFeedPage): PostFeedPage {
   const consumed = new Set(feed.unreadPostIds || []).size
   const latestCount = Math.max(0, (feed.latestCount || 0) - consumed)
   return { ...feed, latestCount, latestUnread: latestCount > 0, unreadPostIds: [], directedUnreadPostIds: [] }
+}
+
+function newFeedAfterVisibleReads(feed: PostFeedPage): PostFeedPage {
+  const consumed = new Set(feed.unreadPostIds || []).size
+  return { ...feed, newCount: Math.max(0, (feed.newCount || 0) - consumed), unreadPostIds: [] }
 }
 
 const positiveInteger = (value?: string) => {
@@ -534,6 +542,8 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       let feed = await data()
       if (liveRefresh) {
+        const consumedRoots = new Set(feed.timeline.filter(row => row.unread && row.activity_kind === 'post')
+          .map(row => row.id)).size
         const postIds = [
           ...new Set(
             feed.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)).map(row => row.id),
@@ -542,7 +552,9 @@ export function registerFeedsRoutes(app: Hono) {
         const consumed = postIds.length
           ? await databaseService().call('api.markLatestRead', { userId: user.id, postIds })
           : 0
-        if (consumed) feed = { ...feed, latestCount: Math.max(0, (feed.latestCount || 0) - consumed) }
+        if (consumed) feed = { ...feed,
+          latestCount: Math.max(0, (feed.latestCount || 0) - consumed),
+          newCount: Math.max(0, (feed.newCount || 0) - consumedRoots) }
       }
       const view = (
         <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed} title="my feed"
@@ -669,24 +681,36 @@ export function registerFeedsRoutes(app: Hono) {
     const expandedRootId = positiveInteger(c.req.query('expand'))
     const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
+    const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
+    let dataPromise: Promise<PostFeedPage> | undefined
+    const data = () => dataPromise ||= databaseService().call('feeds.newPage', {
+      viewerId: user?.id ?? -1,
+      page: currentPage(c.req.query('page')),
+      pageSize: resolvedPageSize(c.req.raw),
+      markRead: !liveRefresh,
+    })
     const render = async () => {
-      const feed = await databaseService().call('feeds.newPage', {
-        viewerId: user?.id ?? -1,
-        page: currentPage(c.req.query('page')),
-        pageSize: resolvedPageSize(c.req.raw),
-      })
+      const feed = await data()
       const view = (
-        <PublicFeed user={user} feed={feed} path="/new" notificationBanner={notificationBanner}
+        <PublicFeed user={user} feed={explicitRead ? newFeedAfterVisibleReads(feed) : feed} path="/new"
+          notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
           {...write} />
       )
       return chunk > 0 ? htmlFragment(view) : page(view)
     }
-    const response = !write.writeHandled && !write.writeError && !write.writePreview
+    const renderForCache = user
+      ? async () => page(<PublicFeed user={user} feed={newFeedAfterVisibleReads(await data())} path="/new"
+        notificationBanner={notificationBanner} expandedRootId={expandedRootId} />)
+      : undefined
+    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
-        viewerCacheVersion(newFeedCacheVersion, user, notificationBanner))
+        viewerCacheVersion(newFeedCacheVersion, user, notificationBanner), false, renderForCache, user
+        ? async () => ((await data()).unreadPostIds?.length || 0) > 0
+        : undefined)
       : await render()
     warmOtherFeedTabsAfterMiss(c.req.raw, user, 'new', response)
     return rememberFeed(response, 'new')

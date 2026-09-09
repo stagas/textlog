@@ -117,6 +117,48 @@ test('reading My Feed reduces the All counter before All renders', async () => {
   expect(allFeed.latestUnread).toBe(false)
 })
 
+test('New counts and consumes only top-level posts, including roots read in My Feed', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-08-27 08:00:00');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(1,2,'root','2026-08-27 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at)
+      VALUES(2,2,1,'reply','2026-08-27 10:00:00');`)
+
+  const counts = await executeDatabaseDomain(database, 'feeds.unreadCounts', { userId: 1 })
+  expect(counts).toMatchObject({ latestCount: 2, newCount: 1 })
+
+  const myFeed = await openPersonalized(database, false)
+  expect(myFeed.newCount).toBe(0)
+
+  const newFeed = await executeDatabaseDomain(database, 'feeds.newPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+  expect(newFeed.newCount).toBe(0)
+  expect(newFeed.unreadPostIds).toEqual([])
+})
+
+test('opening New consumes its visible roots but leaves unread replies in All', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(1,2,'root','2026-08-27 09:00:00');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at)
+      VALUES(2,2,1,'reply','2026-08-27 10:00:00');`)
+
+  const first = await executeDatabaseDomain(database, 'feeds.newPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+  expect(first.newCount).toBe(1)
+  expect(first.unreadPostIds).toEqual([1])
+
+  const counts = await executeDatabaseDomain(database, 'feeds.unreadCounts', { userId: 1 })
+  expect(counts).toMatchObject({ latestCount: 1, newCount: 0 })
+})
+
 test('reading All does not consume matching unread My Feed activity', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

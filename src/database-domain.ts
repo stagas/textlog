@@ -30,7 +30,7 @@ import { getImageUrl, isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
 import { projectRecentConversation } from './latest-conversation'
 import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
-  unreadLatestCount } from './latest-state'
+  unreadLatestCount, unreadNewCount } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { runBoundedCleanup } from './maintenance'
@@ -253,8 +253,8 @@ export function materializedFeedTemplate(html: string) {
     /(<(?:summary|a)\b[^>]*class="account-menu-handle"[^>]*>)(?:\s*<span class="unread-dot"\s+aria-label="unread account activity"><\/span>)?/,
     '$1{{linked-account-unread}}',
   )
-  return token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all',
-    'latest')
+  return token(token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
+    '\/new', 'new', 'new'), '\/all', 'all', 'latest')
     .replace(
       /<a href="\/drafts(?:\?[^\"]*)?">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
       '{{drafts-link}}',
@@ -262,7 +262,7 @@ export function materializedFeedTemplate(html: string) {
 }
 
 export function hydrateMaterializedFeedCounts(html: string,
-  counts: { forYou: number; toMe: number; latest: number; drafts?: number })
+  counts: { forYou: number; toMe: number; latest: number; new?: number; drafts?: number })
 {
   const count = (value: number) =>
     value
@@ -271,6 +271,7 @@ export function hydrateMaterializedFeedCounts(html: string,
   return html.replaceAll('{{for-you-count}}', count(counts.forYou))
     .replaceAll('{{to-me-count}}', count(counts.toMe))
     .replaceAll('{{latest-count}}', count(counts.latest))
+    .replaceAll('{{new-count}}', count(counts.new || 0))
     .replaceAll('{{drafts-link}}', counts.drafts ? '<a href="/drafts">drafts</a>' : '')
 }
 
@@ -404,6 +405,7 @@ export function hydrateMaterializedFeed(html: string, database: Database, viewer
   const forYou = personalizedUnreadCount(database, viewerId, false)
   const toMe = personalizedUnreadCount(database, viewerId, true)
   const latest = unreadLatestCount(viewerId, database)
+  const newCount = unreadNewCount(viewerId, database)
   const drafts = (database.query('SELECT count(*) count FROM drafts WHERE user_id=?').get(viewerId) as {
     count: number
   }).count
@@ -415,7 +417,7 @@ export function hydrateMaterializedFeed(html: string, database: Database, viewer
     }
   }
   const unreadDot = '<span class="unread-dot" aria-label="unread activity"></span>'
-  const hydrated = hydrateMaterializedFeedCounts(html, { forYou, toMe, latest, drafts })
+  const hydrated = hydrateMaterializedFeedCounts(html, { forYou, toMe, latest, new: newCount, drafts })
     .replace(/\{\{account-(\d+)-unread\}\}/g,
       (_match, accountId: string) => accountUnread.get(Number(accountId)) ? unreadDot : '')
   return hydrated.replace('{{linked-account-unread}}', [...accountUnread.values()].some(Boolean)
@@ -2238,6 +2240,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         forYouCount: personalizedUnreadCount(database, userId, false),
         toMeCount: personalizedUnreadCount(database, userId, true),
         latestCount: unreadLatestCount(userId, database),
+        newCount: unreadNewCount(userId, database),
       } as DatabaseDomainOutput<K>
     }
     case 'api.markLatestRead': {
@@ -3495,7 +3498,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const result = { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount, toMeCount, forYouUnread: forYouCount > 0, toMeUnread: toMeCount > 0,
-        latestUnread: unread.length > 0, latestCount: unread.length, unreadPostIds, directedUnreadPostIds,
+        latestUnread: unread.length > 0, latestCount: unread.length,
+        newCount: viewerId >= 0 ? unreadNewCount(viewerId, database) : 0, unreadPostIds, directedUnreadPostIds,
         unreadHref: href(remainingUnread[0]),
         lastUnreadHref: href(remainingUnread.length > 1 ? remainingUnread.at(-1) : undefined) }
       return result as DatabaseDomainOutput<K>
@@ -3505,7 +3509,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return unreadLatestCount(userId, database) as DatabaseDomainOutput<K>
     }
     case 'feeds.newPage': {
-      const { viewerId, page, pageSize } = input as DatabaseDomainInput<'feeds.newPage'>
+      const { viewerId, page, pageSize, markRead = true } = input as DatabaseDomainInput<'feeds.newPage'>
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
       const visibility = `p.deleted_at IS NULL AND p.parent_id IS NULL
         AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)}
@@ -3591,8 +3595,15 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const forYouCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, false) : 0
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
+      const newCount = viewerId >= 0 ? unreadNewCount(viewerId, database) : 0
+      const unreadRoots = viewerId >= 0
+        ? new Set(latestUnreadPostState(viewerId, database).map(row => row.id))
+        : new Set<number>()
+      const unreadPostIds = snapshot.items.filter(id => unreadRoots.has(id))
+      if (viewerId >= 0 && markRead && unreadPostIds.length) markLatestPostsRead(viewerId, unreadPostIds, database)
       return { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount, toMeCount, latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
+        newCount, unreadPostIds, latestUnread: newCount > 0,
         forYouUnread: forYouCount > 0, toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
     }
     case 'feeds.flushRelationshipInvalidation': {
@@ -3717,7 +3728,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const toMeCount = viewerId >= 0 ? personalizedUnreadCount(database, viewerId, true) : 0
       const enriched = rewireVisibleAncestorGaps(database, enrichPosts(database, posts, viewerId))
       return { posts: enriched, page: safePage, totalItems, totalPages, forYouCount, toMeCount,
-        latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0, forYouUnread: forYouCount > 0,
+        latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
+        newCount: viewerId >= 0 ? unreadNewCount(viewerId, database) : 0, forYouUnread: forYouCount > 0,
         toMeUnread: toMeCount > 0 } as DatabaseDomainOutput<K>
     }
     case 'feeds.refreshHotProjection': {

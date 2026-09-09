@@ -635,7 +635,7 @@ function TabCount({ count }: { count: number }) {
 
 export function FeedTabs(
   { active, user, forYouReadStatus, activityReadStatus, toMe = false, toMeCount = 0, forYouCount = 0, unreadHref,
-    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, readAction }: {
+    lastUnreadHref, forYouUnread = false, toMeUnread = false, latestCount = 0, newCount = 0, readAction }: {
       active: 'following' | 'activity' | 'hot' | 'latest' | 'new' | 'random'
       user: User | null
       forYouReadStatus?: boolean
@@ -648,6 +648,7 @@ export function FeedTabs(
       forYouUnread?: boolean
       toMeUnread?: boolean
       latestCount?: number
+      newCount?: number
       readAction?: string
     },
 ) {
@@ -692,6 +693,7 @@ export function FeedTabs(
           >
             <TabHighlight active={active === 'new'} />
             new
+            <TabCount count={newCount} />
           </a>
           <a className={active === 'latest' ? 'active' : ''} aria-current={active === 'latest' ? 'page' : undefined}
             href="/all"

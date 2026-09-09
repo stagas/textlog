@@ -37,6 +37,18 @@ test('materialized feed templates refresh tab counts without rerendering the pag
   )
 })
 
+test('materialized feed templates refresh the New tab count', () => {
+  const template = materializedFeedTemplate('<a href="/new">new<span class="to-me-count">2</span></a>')
+  expect(template).toBe('<a href="/new">new{{new-count}}</a>')
+  expect(hydrateMaterializedFeedCounts(template, { forYou: 0, toMe: 0, latest: 0, new: 4 }))
+    .toBe('<a href="/new">new<span class="to-me-count">4</span></a>')
+})
+
+test('in-memory materialized feeds refresh the New tab count', () => {
+  const html = '<a href="/new">new<span class="to-me-count">2</span></a>'
+  expect(materializedBody(html, 1)).toBe('<a href="/new">new{{new-count}}</a>')
+})
+
 test('materialized feed templates add a drafts link when a first draft is created', () => {
   const html = '<span class="account-nav-row account-nav-secondary"><a href="/explore">explore</a></span>'
     + '<span class="account-nav-row account-nav-primary"></span>'

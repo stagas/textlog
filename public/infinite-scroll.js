@@ -6,7 +6,7 @@
   let navigationController = null
   let navigationSpinnerTimer = null
   let navigationSpinner = null
-  const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0 }
+  const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0, new: 0 }
   const pendingLiveTabs = new Set()
   const dingEnabled = document.querySelector('meta[name="textlog-new-message-sound"]')?.content !== 'off'
   const ding = dingEnabled ? new Audio('/ding.mp3') : null
@@ -70,7 +70,8 @@
     navigationSpinner = null
   }
 
-  const liveTabSelectors = { 'to-me': 'a[href="/@"]', 'for-you': 'a[href="/my-feed"]', latest: 'a[href="/all"]' }
+  const liveTabSelectors = { 'to-me': 'a[href="/@"]', 'for-you': 'a[href="/my-feed"]',
+    latest: 'a[href="/all"]', new: 'a[href="/new"]' }
   const activeLiveTab = () =>
     Object.entries(liveTabSelectors)
       .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
@@ -78,8 +79,8 @@
   const syncLiveCountsFromDocument = () => {
     const values = document.querySelector('[data-feed-view] [data-live-counts]')?.dataset.liveCounts?.split(':')
       .map(Number)
-    if (!values || values.length !== 3) return
-    ;[liveCounts['to-me'], liveCounts['for-you'], liveCounts.latest] = values
+    if (!values || values.length !== 4) return
+    ;[liveCounts['to-me'], liveCounts['for-you'], liveCounts.latest, liveCounts.new] = values
   }
 
   const updateLiveBadge = (kind, count) => {
@@ -103,6 +104,7 @@
       'to-me': Number(counts.toMeCount) || 0,
       'for-you': Number(counts.forYouCount) || 0,
       latest: Number(counts.latestCount) || 0,
+      new: Number(counts.newCount) || 0,
     }
     // Opening a feed consumes the visible unread snapshot on the server, so the SSE baseline can already be zero
     // while this page intentionally still shows the arrivals it just rendered. Keep that active-tab count for this
@@ -374,6 +376,7 @@
         'to-me': Number(counts.toMeCount) || 0,
         'for-you': Number(counts.forYouCount) || 0,
         latest: Number(counts.latestCount) || 0,
+        new: Number(counts.newCount) || 0,
       }
       const directedIncrease = incoming['to-me'] > liveCounts['to-me']
       Object.entries(incoming).forEach(([kind, count]) => {

@@ -83,12 +83,13 @@ export function PublicFeed(
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
       <div data-feed-view>
         {user && (
-          <span hidden data-live-counts={`${feed.toMeCount || 0}:${feed.forYouCount || 0}:${feed.latestCount || 0}`} />
+          <span hidden data-live-counts={`${feed.toMeCount || 0}:${feed.forYouCount || 0}:${feed.latestCount || 0}:${
+            feed.newCount || 0}`} />
         )}
         <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
         <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
           forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
-          latestCount={feed.latestCount} forYouReadStatus={user && feed.posts.length
+          latestCount={feed.latestCount} newCount={feed.newCount} forYouReadStatus={user && feed.posts.length
           ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
           : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
         {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}

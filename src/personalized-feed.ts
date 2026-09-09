@@ -8,7 +8,7 @@ import { materializedPersonalizedGroupPage, personalizedFeedUnreadCount } from '
 import { markForYouEntriesRead, unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { excludesDroppedUsernameUsers, resolveHandle } from './handles'
 import { projectRecentConversation } from './latest-conversation'
-import { unreadLatestCount } from './latest-state'
+import { unreadLatestCount, unreadNewCount } from './latest-state'
 import { enrichPosts, loadBioReferenceData, loadWordNetNormalizations, visibleTagFollowerCounts,
   visibleUserProfileStats } from './posts'
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
@@ -429,6 +429,7 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
     return `${path}${page > 1 ? `${path.includes('?') ? '&' : '?'}page=${page}` : ''}#${anchor}`
   }
   return { timeline: resultTimeline, page: snapshot.page, totalPages: snapshot.totalPages, toMeCount, forYouCount,
-    latestCount: unreadLatestCount(user.id, database), forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
+    latestCount: unreadLatestCount(user.id, database), newCount: unreadNewCount(user.id, database),
+    forYouUnread, toMeUnread, unreadHref: unreadHref(firstUnread),
     lastUnreadHref: lastUnread?.payload !== firstUnread?.payload ? unreadHref(lastUnread) : undefined }
 }

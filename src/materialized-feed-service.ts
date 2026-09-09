@@ -19,7 +19,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 48
+const MATERIALIZED_HTML_VERSION = 49
 let memoryGeneration = 0
 const DEFERRED_CACHE_DELAY_MS = 25
 
@@ -79,8 +79,8 @@ export function materializedBody(html: string, viewerId: number) {
     /(<(?:summary|a)\b[^>]*class="account-menu-handle"[^>]*>)(?:\s*<span class="unread-dot"\s+aria-label="unread account activity"><\/span>)?/,
     '$1{{linked-account-unread}}',
   )
-  return token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'), '\/all', 'all',
-    'latest')
+  return token(token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
+    '\/new', 'new', 'new'), '\/all', 'all', 'latest')
     .replace(
       /<a href="\/drafts(?:\?[^\"]*)?">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
       '{{drafts-link}}',
