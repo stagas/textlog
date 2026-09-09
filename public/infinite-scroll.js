@@ -98,12 +98,17 @@
     badge.textContent = count >= 99 ? '99+' : String(count)
   }
 
-  const applyLiveCounts = counts => {
+  const applyLiveCounts = (counts, preserveActiveCount = false) => {
     const incoming = {
       'to-me': Number(counts.toMeCount) || 0,
       'for-you': Number(counts.forYouCount) || 0,
       latest: Number(counts.latestCount) || 0,
     }
+    // Opening a feed consumes the visible unread snapshot on the server, so the SSE baseline can already be zero
+    // while this page intentionally still shows the arrivals it just rendered. Keep that active-tab count for this
+    // visit; subsequent feed events still reconcile every badge normally.
+    const active = preserveActiveCount ? activeLiveTab() : null
+    if (active) incoming[active] = Math.max(incoming[active], liveCounts[active])
     Object.entries(incoming).forEach(([kind, count]) => {
       liveCounts[kind] = count
       if (count === 0) pendingLiveTabs.delete(kind)
@@ -355,7 +360,7 @@
       catch {
         return
       }
-      applyLiveCounts(counts)
+      applyLiveCounts(counts, true)
     })
     events.addEventListener('feed', event => {
       let counts
