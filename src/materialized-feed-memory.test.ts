@@ -144,6 +144,8 @@ test('my feed shows unread counters and dots once before caching its read state'
   const body = (feed: Awaited<ReturnType<typeof load>>) => new Response(
     `<a href="/my-feed">my feed${feed.forYouCount
       ? `<span class="to-me-count">${feed.forYouCount}</span>`
+      : ''}</a><a href="/all">all${feed.latestCount
+      ? `<span class="to-me-count">${feed.latestCount}</span>`
       : ''}</a>${feed.timeline.filter(row => row.unread)
       .map(() => '<span class="unread-dot" aria-label="unread"></span>').join('')}`,
   )
@@ -167,6 +169,7 @@ test('my feed shows unread counters and dots once before caching its read state'
   const secondVisit = await open()
   const secondHtml = await secondVisit.text()
   expect(secondHtml).not.toContain('to-me-count')
+  expect(secondHtml).toContain('<a href="/all">all</a>')
   expect(secondHtml).not.toContain('aria-label="unread"')
 })
 

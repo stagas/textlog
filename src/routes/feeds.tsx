@@ -85,11 +85,15 @@ function viewerCacheVersion(base: number, user: ReturnType<typeof currentUser>,
 }
 
 function personalizedFeedAfterVisibleReads(data: PersonalizedFeedData, toMe: boolean): PersonalizedFeedData {
-  const consumed = new Set(data.timeline.filter(row => row.unread).map(row => row.event_key)).size
+  const unreadEventKeys = [...new Set(data.timeline.filter(row => row.unread).map(row => row.event_key))]
+  const consumed = unreadEventKeys.length
+  const latestConsumed = toMe ? 0 : unreadEventKeys.filter(eventKey => /^post:\d+$/.test(eventKey)).length
+  const latestCount = Math.max(0, data.latestCount - latestConsumed)
   return {
     ...data,
     forYouCount: Math.max(0, data.forYouCount - consumed),
     toMeCount: Math.max(0, data.toMeCount - (toMe ? consumed : 0)),
+    latestCount,
     forYouUnread: toMe ? data.forYouUnread : data.forYouCount > consumed,
     toMeUnread: toMe ? data.toMeCount > consumed : data.toMeUnread,
     timeline: data.timeline.map(row => ({ ...row, unread: 0 })),
