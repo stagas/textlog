@@ -6416,6 +6416,8 @@ form.report-panel {
 .font-size-small>span:first-of-type { font-size: var(--font-size-14); }
 .font-size-regular>span:first-of-type { font-size: var(--font-size-16); }
 .font-size-large>span:first-of-type { font-size: var(--font-size-18); }
+.appearance-panel-font:has(input[name="primaryFont"][value="monospace"]:checked) .sans-serif-fonts,
+.appearance-panel-font:has(input[name="primaryFont"][value="sans-serif"]:checked) .monospace-fonts { display: none; }
 
 .poll { position: relative; z-index: 2; display: grid; gap: var(--space-1); margin: .5lh 0; font-size: var(--font-size-13); }
 .thread-root>.post>.poll { font-size: var(--font-size-15); letter-spacing: -.5px; }

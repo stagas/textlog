@@ -118,7 +118,7 @@ export function ChangeAppearance(
                 ))}
               </div>
             </fieldset>
-            <fieldset>
+            <fieldset className="monospace-fonts">
               <legend>monospace fonts</legend>
               <div className="font-options">
                 {FONT_CHOICES.map(font => (
@@ -129,7 +129,7 @@ export function ChangeAppearance(
                 ))}
               </div>
             </fieldset>
-            <fieldset>
+            <fieldset className="sans-serif-fonts">
               <legend>sans serif fonts</legend>
               <div className="font-options">
                 {SANS_SERIF_FONT_CHOICES.map(font => (
