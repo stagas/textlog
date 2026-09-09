@@ -217,7 +217,7 @@ test('account menu lists linked accounts immediately before logout for one-click
   expect(html).not.toContain('>account</a>')
   expect(html).toContain(
     '<form method="post" action="/account/accounts/new"><input type="hidden" name="next" value="/latest?page=2"/>'
-    + '<button class="account-menu-account" type="submit">+new</button>',
+    + '<button class="account-menu-account account-menu-new" type="submit" title="Create new account">+new</button>',
   )
   expect(html).not.toContain('>ACCOUNTS</span>')
   expect(html.indexOf(switchForm)).toBeLessThan(html.indexOf('action="/account/accounts/new"'))

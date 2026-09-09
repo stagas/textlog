@@ -565,6 +565,10 @@ header>nav>a:not(.button),
   white-space: nowrap;
 }
 
+.account-menu-popover button.account-menu-new {
+  color: var(--muted);
+}
+
 .account-menu-popover a:hover,
 .account-menu-popover button:hover {
   color: var(--accent-dark);

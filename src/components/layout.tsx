@@ -122,7 +122,7 @@ export function Layout({
       ))}
       <form method="post" action="/account/accounts/new">
         <input type="hidden" name="next" value={currentPath} />
-        <button className="account-menu-account" type="submit">+new</button>
+        <button className="account-menu-account account-menu-new" type="submit" title="Create new account">+new</button>
       </form>
       <hr className="account-menu-separator" />
       <LogoutForm>
@@ -222,7 +222,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1538" />
+        <link rel="stylesheet" href="/styles.css?v=1539" />
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onFeedPage && <script src="/infinite-scroll.js?v=5" defer />}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
