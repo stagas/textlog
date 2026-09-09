@@ -81,9 +81,10 @@ export function PublicFeed(
             draftId={writeDraftId} />
         )
         : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
-      <div data-feed-view data-live-counts={user
-        ? `${feed.toMeCount || 0}:${feed.forYouCount || 0}:${feed.latestCount || 0}`
-        : undefined}>
+      <div data-feed-view>
+        {user && (
+          <span hidden data-live-counts={`${feed.toMeCount || 0}:${feed.forYouCount || 0}:${feed.latestCount || 0}`} />
+        )}
         <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
         <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
         forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}

@@ -42,7 +42,8 @@
     .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
 
   const syncLiveCountsFromDocument = () => {
-    const values = document.querySelector('[data-feed-view]')?.dataset.liveCounts?.split(':').map(Number)
+    const values = document.querySelector('[data-feed-view] [data-live-counts]')?.dataset.liveCounts?.split(':')
+      .map(Number)
     if (!values || values.length !== 3) return
     ;[liveCounts['to-me'], liveCounts['for-you'], liveCounts.latest] = values
   }
