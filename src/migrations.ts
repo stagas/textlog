@@ -5059,6 +5059,7 @@ export const migrations: Migration[] = [
     version: 223,
     name: 'new_message_sound_preference',
     up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
       addColumn(database, 'users', 'new_message_sound', 'INTEGER NOT NULL DEFAULT 1 CHECK(new_message_sound IN (0,1))')
     },
   },
