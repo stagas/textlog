@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { chunkFeedPosts, feedChunk, feedChunkReturnPath, feedPostsWithFetchedThread,
   restoredFeedChunks } from './components/infinite-feed'
-import type { PostView } from './types'
+import type { ParentPost, PostView } from './types'
 
 describe('progressive feed chunks', () => {
   test('validates internal fragment indexes', () => {
@@ -50,9 +50,9 @@ describe('progressive feed chunks', () => {
       id, user_id: 1, parent_id: parentId, body: String(id), handle: 'writer',
       created_at: '2026-09-09 12:00:00', deleted_at: null,
     })
-    const root = post(123, null)
-    const projected = { ...post(125, 123), parent: root }
-    const fetched = [root, { ...post(124, 123), parent: root }, projected]
+    const root = { ...post(123, null), reply_count: 2 } satisfies PostView & ParentPost
+    const projected: PostView = { ...post(125, 123), parent: root }
+    const fetched: PostView[] = [root, { ...post(124, 123), parent: root }, projected]
 
     expect(feedPostsWithFetchedThread([post(10, null), projected, post(20, null)], fetched).map(item => item.id))
       .toEqual([10, 123, 124, 125, 20])
