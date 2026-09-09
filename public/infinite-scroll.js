@@ -301,10 +301,10 @@
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
     event.preventDefault()
-    void navigateFeed(url.href, true, link)
+    void navigateFeed(url.href, true, link, link.classList.contains('active'))
   })
 
-  addEventListener('popstate', () => void navigateFeed(location.href, false))
+  addEventListener('popstate', () => void navigateFeed(location.href, false, null, false))
 
   syncLiveCountsFromDocument()
   if (document.querySelector('.feed-tabs a[href="/my-feed"]')) {
