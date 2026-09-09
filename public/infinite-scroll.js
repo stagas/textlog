@@ -3,6 +3,36 @@
   let loading = false
   let chunkController = null
   let navigationController = null
+  let navigationSpinnerTimer = null
+  let navigationSpinner = null
+  const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+  const startNavigationSpinner = tab => {
+    clearInterval(navigationSpinnerTimer)
+    navigationSpinner?.remove()
+    const owner = tab || document.querySelector('.feed-tabs a.active')
+    if (!owner) return
+    const spinner = document.createElement('span')
+    spinner.className = 'feed-tab-loading'
+    spinner.setAttribute('role', 'status')
+    spinner.setAttribute('aria-label', 'Loading feed')
+    owner.append(spinner)
+    navigationSpinner = spinner
+    let frame = 0
+    const render = () => {
+      spinner.textContent = spinnerFrames[frame]
+      frame = (frame + 1) % spinnerFrames.length
+    }
+    render()
+    navigationSpinnerTimer = setInterval(render, 80)
+  }
+
+  const stopNavigationSpinner = () => {
+    clearInterval(navigationSpinnerTimer)
+    navigationSpinnerTimer = null
+    navigationSpinner?.remove()
+    navigationSpinner = null
+  }
 
   const loadedThrough = () => Math.max(0, ...[...document.querySelectorAll('[data-feed-chunk]')]
     .map(element => Number(element.dataset.feedChunk) || 0))
@@ -82,25 +112,31 @@
     })
   }
 
-  const navigateFeed = async (href, push) => {
+  const navigateFeed = async (href, push, tab = null) => {
     const currentView = document.querySelector('[data-feed-view]')
     if (!currentView) {
       location.href = href
       return
     }
     navigationController?.abort()
-    navigationController = new AbortController()
+    const controller = new AbortController()
+    navigationController = controller
     currentView.setAttribute('aria-busy', 'true')
+    startNavigationSpinner(tab)
+    const spinnerStartedAt = performance.now()
     try {
       const response = await fetch(href, {
         headers: { Accept: 'text/html', 'X-Textlog-Feed-Navigation': '1' },
         credentials: 'same-origin',
-        signal: navigationController.signal,
+        signal: controller.signal,
       })
       if (!response.ok) throw new Error(`Feed navigation failed: ${response.status}`)
       const parsed = new DOMParser().parseFromString(await response.text(), 'text/html')
       const incomingView = parsed.querySelector('[data-feed-view]')
       if (!incomingView) throw new Error('Feed navigation response did not contain a feed')
+      const spinnerRemaining = 240 - (performance.now() - spinnerStartedAt)
+      if (spinnerRemaining > 0) await new Promise(resolve => setTimeout(resolve, spinnerRemaining))
+      if (controller.signal.aborted) return
       chunkController?.abort()
       observer.disconnect()
       loading = false
@@ -116,6 +152,9 @@
       if (error.name === 'AbortError') return
       location.href = href
     }
+    finally {
+      if (navigationController === controller) stopNavigationSpinner()
+    }
   }
 
   document.addEventListener('click', event => {
@@ -125,7 +164,7 @@
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
     event.preventDefault()
-    void navigateFeed(url.href, true)
+    void navigateFeed(url.href, true, link)
   })
 
   addEventListener('popstate', () => void navigateFeed(location.href, false))

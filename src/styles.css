@@ -1340,6 +1340,15 @@ nav form {
   border-bottom: 1px solid var(--soft);
 }
 
+.feed-tab-loading {
+  display: inline-block;
+  flex: 0 0 1em;
+  width: 1em;
+  color: var(--muted);
+  text-align: center;
+  pointer-events: none;
+}
+
 #feed-tabs {
   position: sticky;
   z-index: 40;
