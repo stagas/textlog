@@ -136,7 +136,7 @@
     button.className = 'activity-side-link'
     button.type = 'button'
     button.textContent = 'show new notes'
-    button.addEventListener('click', () => {
+    banner.addEventListener('click', () => {
       const target = new URL(location.href)
       target.hash = ''
       history.replaceState(history.state, '', target.pathname + target.search)

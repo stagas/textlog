@@ -1566,6 +1566,8 @@ body.corners-round a.button {
   font-size: var(--font-size-12);
 }
 
+.feed-read-action[data-new-posts-banner] { cursor: pointer; }
+
 .feed-read-action form { margin: 0; }
 
 .feed-read-action .activity-side-link {
