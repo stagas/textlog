@@ -8254,6 +8254,10 @@ a.hidden-replies-notice:focus-visible {
   cursor: cell;
 }
 
+.feed-thread-expansion-enabled .feed-thread[aria-busy="true"] a.thread-ancestor-gap.post-continuation-link {
+  cursor: wait;
+}
+
 .feed-thread-expanding {
   overflow: hidden;
 }
