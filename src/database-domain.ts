@@ -38,6 +38,7 @@ import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
 import { excludesMetaPosts } from './meta-thread'
 import { PAGE_SIZE } from './pagination'
 import { TAG_PAGE_SIZE } from './pagination'
+import { DEFAULT_TIMEZONE, timezoneDate, validTimezone } from './timezone'
 import { CONNECTION_PAGE_SIZE } from './pagination'
 import { EXPLORE_TAG_PAGE_SIZE } from './pagination'
 import { consumePasswordCaptcha, issuePasswordCaptcha, passwordCaptchaRequired,
@@ -1887,7 +1888,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? 'mood'
         : '\'\' mood'
       const profile = database.query(
-        `SELECT id,handle,email,bio,${moodColumn},created_at,suspended_at,deleted_at,show_note_streak
+        `SELECT id,handle,email,bio,${moodColumn},created_at,suspended_at,deleted_at,show_note_streak,timezone
           FROM users WHERE id=? AND deleted_at IS NULL`,
       ).get(profileId) as import('./types').ProfileRow | null
       if (!profile) return null as DatabaseDomainOutput<K>
@@ -1923,12 +1924,22 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           blockedTagCount: number
         }
         : { blockedPeopleCount: 0, blockedTagCount: 0 }
-      const noteStreakDates = viewerId === profileId && profile.show_note_streak === 1
-        ? (database.query(`SELECT DISTINCT date(created_at) day FROM posts
-            WHERE user_id=? AND deleted_at IS NULL
-              AND date(created_at) BETWEEN date('now','-364 days') AND date('now')
-            ORDER BY day`).all(profileId) as { day: string }[]).map(row => row.day)
-        : []
+      const noteStreakDates = (() => {
+        if (viewerId !== profileId || profile.show_note_streak !== 1) return []
+        const timezone = validTimezone(profile.timezone) ? profile.timezone : DEFAULT_TIMEZONE
+        const today = timezoneDate(new Date(), timezone)
+        const firstDay = new Date(`${today}T00:00:00Z`)
+        firstDay.setUTCDate(firstDay.getUTCDate() - 364)
+        const start = firstDay.toISOString().slice(0, 10)
+        const dates = (database.query(`SELECT created_at FROM posts
+          WHERE user_id=? AND deleted_at IS NULL AND created_at >= datetime('now','-366 days')`)
+          .all(profileId) as { created_at: string }[])
+          .map(row => timezoneDate(new Date(row.created_at.includes('T')
+            ? row.created_at
+            : row.created_at.replace(' ', 'T') + 'Z'), timezone))
+          .filter(day => day >= start && day <= today)
+        return [...new Set(dates)].sort()
+      })()
       const result = { profile, bioReference: loadBioReferenceData(database, profile.bio, profileId, viewerId),
         ...postCounts, following, followsViewer, blocked, blockedByProfile, ...counts, ...blockCounts, noteStreakDates }
       return result as DatabaseDomainOutput<K>

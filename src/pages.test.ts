@@ -45,6 +45,7 @@ import { approximatePostAge, conversationTopPath, FeedThreads, isProbablyNonEngl
   postedPostPath, postedReplyPath, PreviewPost, replyAnchorReturnPath, shortPostAge,
   ThreadReplies } from './components/post'
 import { searchPersonReturnPath, searchPostReturnPath, SearchResults } from './components/search'
+import { withTimezone } from './timezone'
 
 import React from 'preact/compat'
 import { maskEmail } from './components/auth'
@@ -3390,14 +3391,14 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).not.toContain('<h2>Formatting</h2>')
   expect(html).not.toContain('<h2>Emoji</h2>')
   expect(html).not.toContain('name="isBot"')
-  expect(html).not.toContain('name="timezone"')
+  expect(html).toContain('name="timezone"')
   expect(html).not.toContain('This account is a bot')
   expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
   expect(html).not.toContain('hidden while editing')
   expect(html).not.toContain('class="profile-user-details"')
 })
 
-test('Profile edit shows timezone choices only when timestamps are enabled', () => {
+test('Profile edit always shows timezone choices', () => {
   const profile = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', show_timestamps: 1,
     timezone: 'Europe/Athens' }
   const html = renderToStaticMarkup(React.createElement(Profile, {
@@ -4538,6 +4539,11 @@ test('Post page ages use aligned approximate wording buckets', () => {
   expect(postAgeTitle(ago(14 * 24 * 60 * 60_000), now)).toBe('Aug 2026, 2w ago')
   expect(postAgeTitle(ago(60 * 24 * 60 * 60_000), now)).toBe('Jun 2026, 2mo ago')
   expect(postAgeTitle(ago(2 * 365 * 24 * 60 * 60_000), now)).toBe('Aug 2024, 2y ago')
+})
+
+test('approximate age hover dates use the user timezone', () => {
+  expect(withTimezone('America/Los_Angeles', () => postAgeTitle('2026-09-01T00:30:00Z',
+    Date.parse('2026-09-01T01:00:00Z')))).toBe('Aug 2026, just now')
 })
 
 test('Public post pages end with join and browse actions', () => {

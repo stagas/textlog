@@ -46,6 +46,17 @@ export function activeTimezone() {
   return timezoneContext.getStore() || DEFAULT_TIMEZONE
 }
 
+export function timezoneDate(date: Date, timezone = activeTimezone()) {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: validTimezone(timezone) ? timezone : DEFAULT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find(part => part.type === type)?.value
+  return `${value('year')}-${value('month')}-${value('day')}`
+}
+
 export function timezoneLabel(timezone: string, date = new Date()) {
   const part = new Intl.DateTimeFormat('en', { timeZone: timezone, timeZoneName: 'longOffset' })
     .formatToParts(date).find(candidate => candidate.type === 'timeZoneName')?.value || 'GMT'

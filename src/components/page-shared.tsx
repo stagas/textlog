@@ -1,5 +1,6 @@
 import type { BioReferenceData, PersonView, PostView, ProfileRow, TagView } from '../types'
 import { displayBio, linkify } from '../utils'
+import { activeTimezone, timezoneDate } from '../timezone'
 import { BioReferenceForms, TagReference, UserReference } from './post'
 
 import { randomInt } from 'node:crypto'
@@ -862,14 +863,16 @@ export function ProfileHeader(
 
 export function NoteStreak({ activeDates }: { activeDates: string[] }) {
   const active = new Set(activeDates)
+  const timeZone = activeTimezone()
   const naturalDate = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    // The key already represents a calendar day in the user's timezone. Format it in UTC so
+    // western offsets do not shift the synthetic midnight into the previous day.
     timeZone: 'UTC',
   })
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
+  const today = new Date(`${timezoneDate(new Date(), timeZone)}T00:00:00Z`)
   const days = Array.from({ length: 365 }, (_, index) => {
     const date = new Date(today)
     date.setUTCDate(today.getUTCDate() - 364 + index)

@@ -10,6 +10,7 @@ import { parsePoll, pollDisplayBody } from '../polls'
 import { parseTodo, todoDisplayBody } from '../todos'
 import type { BioReferenceData, ParentPost, PostView, UserProfileStats } from '../types'
 import { displayBio, displayPostBody, fmtFull, linkify, referenceFormId } from '../utils'
+import { activeTimezone } from '../timezone'
 import { enterHref, pendingFollowHref } from './auth-links'
 
 import React from 'preact/compat'
@@ -573,7 +574,9 @@ export function postAgeTitle(createdAt: string, now = Date.now()) {
     : elapsedMinutes > 7 * 24 * 60
     ? `${Math.round(elapsedMinutes / (7 * 24 * 60))}w ago`
     : `${Math.round(elapsedMinutes / (24 * 60))}d ago`
-  const monthYear = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date)
+  const monthYear = new Intl.DateTimeFormat('en', {
+    month: 'short', year: 'numeric', timeZone: activeTimezone(),
+  }).format(date)
   return `${monthYear}, ${relative}`
 }
 

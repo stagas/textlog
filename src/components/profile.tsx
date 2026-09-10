@@ -184,18 +184,16 @@ export function Profile(
                     <PostingSuggestionResults search={suggestionSearch} />
                     <PostingHelp maxLength={BIO_MAX} maxLines={BIO_MAX_LINES} search={suggestionSearch} oneLine />
                   </div>
-                  {user.show_timestamps === 1 && (
-                    <label className="form-label profile-timezone-setting">
-                      timezone
-                      <select className="form-control form-select" name="timezone"
-                        defaultValue={profile.timezone || DEFAULT_TIMEZONE}
-                      >
-                        {TIMEZONE_CHOICES.map(timezone => (
-                          <option value={timezone.value} key={timezone.value}>{timezone.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
+                  <label className="form-label profile-timezone-setting">
+                    timezone
+                    <select className="form-control form-select" name="timezone"
+                      defaultValue={profile.timezone || DEFAULT_TIMEZONE}
+                    >
+                      {TIMEZONE_CHOICES.map(timezone => (
+                        <option value={timezone.value} key={timezone.value}>{timezone.label}</option>
+                      ))}
+                    </select>
+                  </label>
                   <div className="composefoot">
                     <button className="button">save profile →</button>
                   </div>
