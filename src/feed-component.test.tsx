@@ -395,6 +395,59 @@ test('to-me renders sibling reply activities together in one conversation tree',
   expect(html.indexOf('note by bob')).toBeLessThan(html.indexOf('note by cara'))
 })
 
+test('to-me does not merge separately projected branches through their omitted conversation root', () => {
+  const conversationRoot: ParentPost = { id: 2980, user_id: 2, parent_id: null, body: 'old conversation root',
+    created_at: '2026-09-01 09:39:02', deleted_at: null, handle: 'root', reply_count: 2 }
+  const branch = (id: number, body: string, created_at: string): PersonalizedTimelineRow => {
+    const viewerPost: ParentPost = { id, user_id: 1, parent_id: conversationRoot.id, body,
+      created_at: '2026-09-06 09:00:00', deleted_at: null, handle: 'stagas', reply_count: 1,
+      parent: conversationRoot }
+    const reply = postActivity(id + 1, 3, 'replier')
+    return { ...reply, parent_id: id, created_at, activity_kind: 'reply', targeted_to_viewer: true,
+      renderedPost: { ...reply.renderedPost!, parent_id: id, created_at, parent: viewerPost,
+        feed_branch_root: true } }
+  }
+  const newest = branch(3271, 'second viewer post', '2026-09-10 15:06:48')
+  const unrelated = postActivity(3401, 4, 'unrelated')
+  unrelated.created_at = '2026-09-09 10:00:00'
+  unrelated.renderedPost = { ...unrelated.renderedPost!, created_at: unrelated.created_at }
+  const older = branch(3261, 'first viewer post', '2026-09-06 15:15:33')
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'stagas', email: 'stagas@example.com', bio: '',
+      handle_chosen_at: '2026-09-01 09:00:00' }}
+    data={{ timeline: [newest, unrelated, older], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+      forYouUnread: false, toMeUnread: false }}
+    toMe
+  />)
+
+  expect(html.match(/class="for-you-item/g)).toHaveLength(3)
+  expect(html.indexOf('second viewer post')).toBeLessThan(html.indexOf('note by unrelated'))
+  expect(html.indexOf('note by unrelated')).toBeLessThan(html.indexOf('first viewer post'))
+})
+
+test('to-me reconciles projected sibling replies beneath their shared omitted parent', () => {
+  const parent: ParentPost = { id: 3315, user_id: 1, parent_id: 3200, body: 'shared viewer post',
+    created_at: '2026-09-07 09:00:00', deleted_at: null, handle: 'stagas', reply_count: 2 }
+  const projectedReply = (id: number, created_at: string): PersonalizedTimelineRow => {
+    const row = postActivity(id, 2, 'replier')
+    return { ...row, parent_id: parent.id, created_at, activity_kind: 'reply', targeted_to_viewer: true,
+      renderedPost: { ...row.renderedPost!, parent_id: parent.id, created_at, parent, feed_branch_root: true } }
+  }
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'stagas', email: 'stagas@example.com', bio: '',
+      handle_chosen_at: '2026-09-01 09:00:00' }}
+    data={{ timeline: [projectedReply(3489, '2026-09-10 14:08:41'),
+      projectedReply(3387, '2026-09-09 03:27:40')], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+      forYouUnread: false, toMeUnread: false }}
+    toMe
+  />)
+
+  expect(html.match(/class="for-you-item/g)).toHaveLength(1)
+  expect(html.match(/shared viewer post/g)).toHaveLength(1)
+  expect(html).toContain('id="post-3489"')
+  expect(html).toContain('id="post-3387"')
+})
+
 test('threaded activity replies retain their unread dots', () => {
   const root = postActivity(28, 2, 'alice')
   const parent = { ...root.renderedPost!, reply_count: 0 }

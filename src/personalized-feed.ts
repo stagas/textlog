@@ -14,7 +14,7 @@ import { enrichPosts, loadBioReferenceData, loadWordNetNormalizations, visibleTa
 import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from './types'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
-export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 41
+export const PERSONALIZED_FEED_SNAPSHOT_VERSION = 43
 const unreadCountProjection = new Map<string, number>()
 const MAX_UNREAD_COUNT_PROJECTIONS = 2_048
 const snapshotUnreadCountProjections = new WeakMap<Database, Map<string, number>>()
@@ -291,11 +291,33 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         const visibleIds = new Set(threadRows.map(candidate => candidate.id))
         const projectedRows = threadRows.map(candidate =>
           candidate.parent_id && !visibleIds.has(candidate.parent_id)
-            ? { ...candidate, feed_ancestor_gap: true }
+            ? projection.keepsRoot
+              ? { ...candidate, feed_ancestor_gap: true }
+              : { ...candidate, feed_branch_root: true }
             : candidate
         )
-        result.push({ rows: projectedRows,
-          created_at: toMe ? row.created_at : threadActivity.get(root!) || row.created_at, order: row.event_key })
+        if (toMe && !projection.keepsRoot) {
+          const byId = new Map(projectedRows.map(candidate => [candidate.id, candidate]))
+          const branchKey = (candidate: PersonalizedTimelineRow) => {
+            let current = candidate
+            while (current.parent_id && byId.has(current.parent_id)) current = byId.get(current.parent_id)!
+            return current.parent_id || current.id
+          }
+          const branches = new Map<number, PersonalizedTimelineRow[]>()
+          for (const candidate of projectedRows) {
+            const key = branchKey(candidate)
+            branches.set(key, [...(branches.get(key) || []), candidate])
+          }
+          for (const branchRows of branches.values()) {
+            const newestBranchRow = [...branchRows]
+              .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.event_key.localeCompare(a.event_key))[0]!
+            result.push({ rows: branchRows, created_at: newestBranchRow.created_at, order: newestBranchRow.event_key })
+          }
+        }
+        else {
+          result.push({ rows: projectedRows,
+            created_at: toMe ? row.created_at : threadActivity.get(root!) || row.created_at, order: row.event_key })
+        }
       }
     }
     return result.sort((a, b) => b.created_at.localeCompare(a.created_at) || b.order.localeCompare(a.order))

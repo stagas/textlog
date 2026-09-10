@@ -8150,13 +8150,13 @@ a.post-context:hover {
 
 .feed-tabs + .feed-thread,
 .feed-tabs + .feed-read-action + .feed-thread,
-.feed-tabs + .for-you-item > .feed-thread,
-.feed-read-action + .for-you-item > .feed-thread {
+.feed-tabs + .for-you-item > .feed-thread:first-child,
+.feed-read-action + .for-you-item > .feed-thread:first-child {
   border-top: 0;
 }
 
 :is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .feed-thread:first-child,
-:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread {
+:is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread:first-child {
   border-top: 0;
 }
 

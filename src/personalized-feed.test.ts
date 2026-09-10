@@ -221,6 +221,36 @@ test('To Me joins directed activity from the same conversation at its newest pos
   expect(feed.timeline.filter(row => row.id).map(row => row.id)).toEqual([5, 2, 4])
 })
 
+test('To Me preserves omitted sibling branches as separate tree roots', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,bio) VALUES
+      (1,'stagas','stagas@example.com','!',''),
+      (2,'first','first@example.com','!',''),
+      (3,'second','second@example.com','!','');
+    INSERT INTO posts(id,user_id,parent_id,body,created_at) VALUES
+      (2980,2,NULL,'old conversation root','2026-09-01 09:39:02'),
+      (3251,2,2980,'first branch parent','2026-09-05 22:12:07'),
+      (3261,1,3251,'first viewer post','2026-09-06 09:23:58'),
+      (3270,2,2980,'second branch parent','2026-09-06 14:15:54'),
+      (3271,1,3270,'second viewer post','2026-09-06 14:18:25'),
+      (3274,3,3261,'older directed reply','2026-09-06 15:15:33'),
+      (3400,1,NULL,'unrelated viewer root','2026-09-09 09:00:00'),
+      (3401,2,3400,'unrelated directed reply','2026-09-09 10:00:00'),
+      (3493,3,3271,'newest directed reply','2026-09-10 15:06:48');`)
+  const viewer: User = { id: 1, handle: 'stagas', email: 'stagas@example.com', bio: '' }
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, true, '/@', false)
+  const directedIds = feed.timeline.filter(row => row.id === 3493 || row.id === 3401 || row.id === 3274)
+    .map(row => row.id)
+  const replies = feed.timeline.filter(row => row.id === 3493 || row.id === 3274)
+
+  expect(directedIds).toEqual([3493, 3401, 3274])
+  expect(replies.map(row => row.id)).toEqual([3493, 3274])
+  expect(replies.map(row => row.renderedPost?.feed_branch_root)).toEqual([true, true])
+  expect(replies.map(row => row.renderedPost?.feed_ancestor_gap)).toEqual([undefined, undefined])
+})
+
 test('For You includes unread replies beyond the recent reply preview', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)

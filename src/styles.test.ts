@@ -233,6 +233,19 @@ describe('in-memory stylesheet', () => {
     expect(css).not.toContain('\n.post {\n  scroll-margin-top:')
   })
 
+  test('retains separators between multiple projected roots in the first personalized conversation', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('.feed-tabs + .for-you-item > .feed-thread:first-child,')
+    expect(css).toContain('.feed-read-action + .for-you-item > .feed-thread:first-child {')
+    expect(css).toContain(
+      ':is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread:first-child {',
+    )
+    expect(css).not.toContain('.feed-tabs + .for-you-item > .feed-thread,')
+    expect(css).not.toContain(
+      '.infinite-feed-chunk > .for-you-item:first-child > .feed-thread {',
+    )
+  })
+
   test('sets the notes tab bottom spacing without changing quoted reply cards', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(

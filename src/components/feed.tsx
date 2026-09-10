@@ -1,5 +1,5 @@
 import { activityAnchor } from '../activity-anchor'
-import type { PersonalizedFeedData, PersonalizedTimelineRow, User } from '../types'
+import type { ParentPost, PersonalizedFeedData, PersonalizedTimelineRow, PostView, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { ComposePreview, WriteForm } from './compose'
 import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } from './infinite-feed'
@@ -84,15 +84,23 @@ export function Feed(
   const showTopPagination = data.page > 1 || (data.page === 1 && unreadPage !== null && unreadPage > 1)
   const displayTimeline = data.timeline
   const timelinePosts = displayTimeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind))
+  const timelinePostsById = new Map(timelinePosts.map(row => [row.id, row]))
   const unreadPostIds = new Set(timelinePosts.filter(row => row.unread).map(row => row.id))
   const directedUnreadPostIds = new Set(timelinePosts.filter(row => row.unread && row.targeted_to_viewer)
     .map(row => row.id))
   const conversationRootId = (row: PersonalizedTimelineRow) => {
     let rootId = row.id
-    let parent = row.renderedPost?.parent
-    while (parent) {
-      rootId = parent.id
-      parent = parent.parent
+    let post: PostView | ParentPost | null | undefined = row.renderedPost
+    while (post) {
+      rootId = post.id
+      if ('feed_branch_root' in post && post.feed_branch_root) {
+        rootId = post.parent_id || post.id
+        break
+      }
+      const selectedParent: PostView | undefined = post.parent_id
+        ? timelinePostsById.get(post.parent_id)?.renderedPost
+        : undefined
+      post = selectedParent || post.parent
     }
     return rootId
   }
