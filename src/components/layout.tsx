@@ -74,6 +74,7 @@ export function Layout({
   const onWritePage = requestUrl.pathname === '/write'
   const onDraftsPage = requestUrl.pathname === '/drafts'
   const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
+  const onThreadPage = requestUrl.pathname.startsWith('/post/')
   const onProgressivePaginationPage = requestUrl.pathname === '/explore'
     || (requestUrl.pathname.startsWith('/u/')
       && ['following', 'followers', 'blocked'].includes(requestUrl.searchParams.get('tab') || ''))
@@ -242,7 +243,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        <script src="/thread-hover-scroll.js?v=6" defer />
+        {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=6" defer />}
         {onFeedPage && <script src="/infinite-scroll.js?v=43" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
