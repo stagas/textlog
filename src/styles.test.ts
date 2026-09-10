@@ -290,7 +290,9 @@ describe('in-memory stylesheet', () => {
     )
     expect(css).toContain('.thread-fold-input {\n  position: fixed;\n  top: 0;\n  left: 0;')
     expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n'
-      + '  grid-template-rows: 1fr;\n  min-width: 0;')
+      + '  grid-template-rows: 1fr;\n  width: 100%;\n  min-width: 100%;')
+    expect(css).toContain('@media (max-width: 600px) {\n  .post-page-thread {\n    max-width: 100%;\n'
+      + '    overflow-x: auto;\n    overscroll-behavior-inline: contain;')
     expect(css).toContain(
       '.thread-branch-content {\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n'
         + '  animation: disclosure-overflow 0s 200ms forwards;',

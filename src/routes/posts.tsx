@@ -9,7 +9,7 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { conversationTopPath, FeedThreads, MAX_VISIBLE_REPLY_DEPTH, postAnchorId, postedPostPath,
+import { conversationTopPath, FeedThreads, postAnchorId, postedPostPath,
   postedReplyPath } from '../components/post'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
@@ -47,24 +47,10 @@ function notifyPost() {
   wakePostPushWorker()
 }
 
-async function replyDestination(replyPageId: number, replyId: number, viewerId: number) {
-  const [replies, detail] = await Promise.all([
-    databaseService().call('posts.threadReplies', { parentId: replyPageId, viewerId }),
-    databaseService().call('posts.detail', { id: replyPageId, viewerId }),
-  ])
+async function replyDestination(replyPageId: number, _replyId: number, viewerId: number) {
+  const detail = await databaseService().call('posts.detail', { id: replyPageId, viewerId })
   const expandedRootId = detail.status === 'ready' ? detail.conversationRootId || replyPageId : replyPageId
-  const reply = replies.find(item => item.id === replyId) as (typeof replies[number] & { depth?: number }) | undefined
-  if (!reply || (reply.depth || 0) <= MAX_VISIBLE_REPLY_DEPTH) return { pageId: replyPageId, expandedRootId }
-  const levelsToPage = ((reply.depth || 0) - 1) % MAX_VISIBLE_REPLY_DEPTH + 1
-  const byId = new Map(replies.map(item => [item.id, item]))
-  let pagePost = reply
-  for (let depth = 0; depth < levelsToPage; depth++) {
-    if (!pagePost.parent_id || pagePost.parent_id === replyPageId) return { pageId: replyPageId, expandedRootId }
-    const parent = byId.get(pagePost.parent_id)
-    if (!parent) return { pageId: pagePost.parent_id, expandedRootId }
-    pagePost = parent as typeof reply
-  }
-  return { pageId: pagePost.id, expandedRootId }
+  return { pageId: replyPageId, expandedRootId }
 }
 
 const saveFailureMessage = 'Something went wrong while saving. Your text is still here; please try again.'

@@ -456,8 +456,6 @@ function renderFlags(post: PostView | NonNullable<PostView['parent']>) {
     : { has_latex: post.has_latex, has_links: post.has_links, has_code: post.has_code }
 }
 
-export const MAX_VISIBLE_REPLY_DEPTH = 5
-
 export function postAnchorId(path?: string) {
   if (!path) return null
   try {
@@ -1427,24 +1425,8 @@ export function ThreadReplies(
     descendantCounts.set(id, count)
     return count
   }
-  const visibleReplyPageId = (reply: PostView) => {
-    const replyDepth = canonicalDepth(reply.id)
-    if (replyDepth <= MAX_VISIBLE_REPLY_DEPTH) return parentId
-    const levelsToPage = (replyDepth - 1) % MAX_VISIBLE_REPLY_DEPTH + 1
-    let pagePost: PostView | ParentPost = reply
-    for (let depth = 0; depth < levelsToPage; depth++) {
-      const parent: PostView | ParentPost | null | undefined = pagePost.parent_id
-        ? pagePost.parent?.id !== pagePost.parent_id
-          ? pagePost.parent
-          : byId.get(pagePost.parent_id) || pagePost.parent
-        : undefined
-      if (!parent || parent.id === parentId) return parentId
-      pagePost = parent
-    }
-    return pagePost.id
-  }
   const renderReply = (reply: PostView, childBranch?: React.ReactNode, continuesElsewhere = false) => {
-    const replyPageId = visibleReplyPageId(reply)
+    const replyPageId = parentId
     const anchoredReturnPath = replyAnchorReturnPath(parentId, reply.id, returnPath)
     const postReturnPath = reply.id === suppressReplyActionId && activeReplyReturnPath
       ? withPostAnchor(activeReplyReturnPath, reply.id)
@@ -1562,12 +1544,10 @@ export function ThreadReplies(
           )}
           {branch.map(reply => {
             const descendantCount = visibleDescendantCount(reply.id)
-            const truncatedByDepth = !reply.deleted_at && depth >= MAX_VISIBLE_REPLY_DEPTH && descendantCount > 0
-              && !collapsedPreviewPath.has(reply.id)
             const hasMissingDescendants = !reply.deleted_at && showMissingContinuations
               && (reply.reply_count || 0) > descendantCount
-            const continuesElsewhere = truncatedByDepth || hasMissingDescendants
-            const childBranch = truncatedByDepth ? null : renderBranch(reply.id, depth + 1)
+            const continuesElsewhere = hasMissingDescendants
+            const childBranch = renderBranch(reply.id, depth + 1)
             if (reply.id === excludePostId) return <React.Fragment key={reply.id}>{childBranch}</React.Fragment>
             return renderReply(reply, childBranch, continuesElsewhere)
           })}

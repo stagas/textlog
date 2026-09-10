@@ -1756,7 +1756,7 @@ test('hot post 1174 keeps omitted branches on one baseline when no direct reply 
   expect(html).not.toContain('projected-reply-deeper')
 })
 
-test('deep projected feed replies open at fixed visible-depth chunk boundaries', () => {
+test('deep projected feed replies keep the conversation root as their page', () => {
   const user = { id: 9, handle: 'reader', email: 'reader@example.com', bio: '',
     email_verified_at: '2026-08-20 08:00:00' }
   const root = { id: 1, user_id: 1, parent_id: null, body: 'Root', created_at: '2026-08-20 09:00:00', deleted_at: null,
@@ -1776,7 +1776,7 @@ test('deep projected feed replies open at fixed visible-depth chunk boundaries',
     posts: [root, deep],
   }))
 
-  expect(html).toContain('class="post-hit-area" href="/post/6?from=%2Fhot%23post-10#post-10"')
+  expect(html).toContain('class="post-hit-area" href="/post/1?from=%2Fhot%23post-10#post-10"')
 })
 
 test('expanded hot post 2737 does not double-indent parallel omitted branches', () => {

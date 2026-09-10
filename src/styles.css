@@ -8166,6 +8166,14 @@ a.post-context:hover {
   margin-bottom: var(--space-5);
 }
 
+@media (max-width: 600px) {
+  .post-page-thread {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+}
+
 .post-navigation-actions {
   display: flex;
   align-items: baseline;
@@ -8191,7 +8199,8 @@ a.post-context:hover {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: 1fr;
-  min-width: 0;
+  width: 100%;
+  min-width: 100%;
   margin-left: clamp(18px, 3vw, 28px);
   border-left: 1px solid var(--soft);
   visibility: visible;
