@@ -8,6 +8,7 @@ import React from 'preact/compat'
 import { isAdmin } from '../admin'
 import { markdownPlainText } from '../markdown'
 import { moderatedContentDescription } from '../moderation'
+import { POST_MAX, POST_MAX_LINES } from '../post-body'
 import { searchTerms } from '../search'
 import { activeRequest } from '../theme'
 import type { User } from '../types'
@@ -428,7 +429,7 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
   )
 }
 
-export function PostingHelp({ maxLength = 500, maxLines = 15, search, oneLine = false, controlledBy, actions }: {
+export function PostingHelp({ maxLength = POST_MAX, maxLines = POST_MAX_LINES, search, oneLine = false, controlledBy, actions }: {
   maxLength?: number
   maxLines?: number
   search?: PostingSuggestionSearch | null

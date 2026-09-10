@@ -20,19 +20,19 @@ describe('post bodies', () => {
     expect(postBodyValidationMessage('   \n')).toBe('The note cannot be empty')
   })
 
-  test('allows up to fifteen lines and rejects sixteen', () => {
-    expect(validPostBody(Array(15).fill('x').join('\n'))).toBe(true)
-    expect(validPostBody(Array(16).fill('x').join('\n'))).toBe(false)
+  test('allows up to twenty lines and rejects twenty-one', () => {
+    expect(validPostBody(Array(20).fill('x').join('\n'))).toBe(true)
+    expect(validPostBody(Array(21).fill('x').join('\n'))).toBe(false)
   })
 
   test('reports exact counts for each exceeded limit', () => {
-    const body = Array(16).fill('x').join('\n')
-    expect(postBodyValidationMessage(body)).toBe('The note exceeds the limit: 16/15 lines.')
+    const body = Array(21).fill('x').join('\n')
+    expect(postBodyValidationMessage(body)).toBe('The note exceeds the limit: 21/20 lines.')
     expect(postBodyValidationMessage('x'.repeat(501))).toBe('The note cannot exceed 500 characters')
 
-    const overBothLimits = `${'x'.repeat(484)}\n${Array(16).fill('x').join('\n')}`
+    const overBothLimits = `${'x'.repeat(484)}\n${Array(20).fill('x').join('\n')}`
     expect(postBodyValidationMessage(overBothLimits)).toBe(
-      'The note exceeds the limit: 516/500 characters and 17/15 lines.',
+      'The note exceeds the limit: 524/500 characters and 21/20 lines.',
     )
   })
 })

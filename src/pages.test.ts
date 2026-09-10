@@ -706,7 +706,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   )
   expect(html).toContain('class="posting-help-actions"')
   expect(html.indexOf('value="search-hashtags"')).toBeLessThan(html.indexOf('class="posting-help-actions"'))
-  expect(html).toContain('<span class="posting-help-limits">500 chars / 15 lines max</span>')
+  expect(html).toContain('<span class="posting-help-limits">500 chars / 20 lines max</span>')
   expect(html).toContain(' · use #hashtags, @mentions and more</div>')
   expect(html).not.toContain('<h2>Find hashtags and people</h2>')
   expect(html).not.toContain('<h2>Formatting</h2>')
@@ -789,7 +789,7 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('name="action" value="search-hashtags" formnovalidate=""')
   expect(html).toContain('name="action" value="search-mentions" formnovalidate=""')
   expect(html).toMatch(
-    /data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
+    /data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="20" style="[^"]*--compose-max-lines:[^"]*" accesskey="w" placeholder="[^"]+, @writer\?" aria-label="What’s on your mind, @writer\?" autocomplete="off" inputmode="text" enterkeyhint="enter">A draft worth keeping<\/textarea>/,
   )
   expect(html).toContain('#<mark>type</mark>script')
   expect(html).toContain('class="posting-suggestion-result" title="Select and copy"')
@@ -2380,7 +2380,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
     expect(html).toContain('name="from"')
     expect(html).toMatch(/placeholder="[^"]+, @reader\?"/)
     expect(html).toMatch(
-      /name="body" data-character-limit="500" data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="15" style="[^"]*--compose-max-lines:[^"]*" accesskey="w"/,
+      /name="body" data-character-limit="500" data-auto-focus data-compose-storage-key="textlog:compose:1:write" data-line-limit="20" style="[^"]*--compose-max-lines:[^"]*" accesskey="w"/,
     )
     expect(html).not.toContain('class="skip-link" href="/write')
     expect(html).toContain('<a class="skip-link" href="#feed-tabs">skip to content</a>')
@@ -2392,7 +2392,7 @@ test('signed-in feed pages put the write form before the feed tabs', () => {
       '<label class="secondary-action posting-help-action" for="embedded-posting-help" title="Toggle writing actions and help"><input class="posting-help-toggle" id="embedded-posting-help" type="checkbox" aria-controls="embedded-posting-help-content"/><span class="posting-help-more">more</span><span class="posting-help-less">less</span></label>',
     )
     expect(html).toContain(
-      '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 15 lines max</span> · use #hashtags, @mentions and more</div>',
+      '<div class="posting-help-controlled-summary"><span class="posting-help-limits">500 chars / 20 lines max</span> · use #hashtags, @mentions and more</div>',
     )
     expect(html).not.toContain('>cancel</a>')
     expect(html).toMatch(/class="compose-editor-row"[\s\S]*class="composefoot"[\s\S]*<\/div><\/form>/)
