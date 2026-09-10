@@ -164,6 +164,7 @@ const publicScriptPaths = [
   '/compose.js',
   '/contextual-back.js',
   '/reference-follow.js',
+  '/thread-hover-scroll.js',
   '/sw.js',
 ] as const
 const publicScripts = devReloadEnabled ? undefined : new Map(await Promise.all(publicScriptPaths.map(async path => {
@@ -719,7 +720,7 @@ for (const path of publicScriptPaths) {
         'content-type': 'text/javascript; charset=utf-8',
         'cache-control':
           ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
-              '/reference-follow.js'].includes(path)
+              '/reference-follow.js', '/thread-hover-scroll.js'].includes(path)
             ? 'public, max-age=31536000, immutable'
             : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),

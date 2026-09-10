@@ -8169,20 +8169,19 @@ a.post-context:hover {
 }
 
 .post-page-thread {
+  max-width: 100%;
   margin-bottom: var(--space-5);
 }
 
-@media (max-width: 600px) {
-  .post-page-thread {
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
-  }
+.post-page-thread > .reply-branch {
+  width: calc(100% - clamp(18px, 3vw, 28px));
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
 
-  .post-page-thread::-webkit-scrollbar {
-    display: none;
-  }
+.post-page-thread > .reply-branch::-webkit-scrollbar {
+  display: none;
 }
 
 .post-navigation-actions {

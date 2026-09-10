@@ -144,6 +144,17 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
   expect(await response.text()).toContain('data-progressive-pagination-root')
 })
 
+test('thread hover scrolling is served as immutable JavaScript', async () => {
+  const response = await request('/thread-hover-scroll.js?v=6')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  const script = await response.text()
+  expect(script).toContain('.post-page-thread .post')
+  expect(script).toContain('pointerdown')
+  expect(script).toContain('WeakMap')
+})
+
 test('notification sound is served as immutable MPEG audio', async () => {
   const response = await request('/ding.mp3')
   expect(response.status).toBe(200)

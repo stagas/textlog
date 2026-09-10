@@ -292,9 +292,10 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.reply-branch {\n  display: grid;\n  grid-template-columns: minmax(0, 1fr);\n'
       + '  grid-template-rows: 1fr;\n  min-width: 0;')
     expect(css).toContain('.reply-branch-overflow {\n  width: 100%;\n  min-width: 100%;')
-    expect(css).toContain('@media (max-width: 600px) {\n  .post-page-thread {\n    max-width: 100%;\n'
-      + '    overflow-x: auto;\n    overscroll-behavior-inline: contain;\n    scrollbar-width: none;')
-    expect(css).toContain('.post-page-thread::-webkit-scrollbar {\n    display: none;')
+    expect(css).toContain('.post-page-thread > .reply-branch {\n'
+      + '  width: calc(100% - clamp(18px, 3vw, 28px));\n  overflow-x: auto;\n'
+      + '  overscroll-behavior-inline: contain;\n  scrollbar-width: none;')
+    expect(css).toContain('.post-page-thread > .reply-branch::-webkit-scrollbar {\n  display: none;')
     expect(css).toContain('@media (max-width: 600px) {\n  body.iphone-agent '
       + ':is(.write-compose, .reply-compose) textarea.form-control {\n'
       + '    font-size: var(--font-size-16);')
