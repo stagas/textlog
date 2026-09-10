@@ -8,6 +8,11 @@ function usesCompactReads(database: Database) {
   return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'latest_read_state\'').get()
 }
 
+function usesNewReads(database: Database) {
+  return !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'new_read_state\'').get()
+    && !!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'new_read_exceptions\'').get()
+}
+
 function excludesExistingWhispers(database: Database) {
   return database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()
     ? excludesWhisperPosts()
@@ -148,7 +153,7 @@ export function unreadNewPostIds(userId: number, database: Database) {
 }
 
 export function markNewPostsRead(userId: number, postIds: number[], database: Database) {
-  if (!postIds.length) return 0
+  if (!postIds.length || !usesNewReads(database)) return 0
   const insert = database.query(`INSERT OR IGNORE INTO new_read_exceptions(user_id,post_id)
     SELECT ?,p.id FROM posts p WHERE p.id=? AND p.parent_id IS NULL AND p.id>coalesce(
       (SELECT through_post_id FROM new_read_state WHERE user_id=?),0)`)
