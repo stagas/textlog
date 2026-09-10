@@ -3816,6 +3816,12 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   outline: 0;
 }
 
+@media (max-width: 600px) {
+  body.iphone-agent :is(.write-compose, .reply-compose) textarea.form-control {
+    font-size: var(--font-size-16);
+  }
+}
+
 :is(.write-compose, .reply-compose) textarea.form-control::placeholder {
   color: var(--muted);
   opacity: 1;

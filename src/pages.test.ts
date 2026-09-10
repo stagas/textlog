@@ -97,6 +97,7 @@ test('mobile account navigation uses an in-flow details menu', () => {
 
   expect(html).toContain('<details class="account-menu"><summary class="account-menu-handle">@reader'
     + '<span class="nav-mood">🤸</span></summary>')
+  expect(html).toContain('<body class="density-regular mobile-agent iphone-agent">')
   expect(html).not.toContain('popoverTarget="account-menu-popover"')
   expect(html).not.toContain('popover="auto"')
 })

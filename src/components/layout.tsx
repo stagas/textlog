@@ -57,6 +57,7 @@ export function Layout({
   const request = activeRequest()
   const density = resolvedDensity(request)
   const mobile = isMobileRequest(request)
+  const iphone = /iPhone/i.test(request.headers.get('user-agent') || '')
   const standalone = pwaStandalone(request)
   const showPwaInstallBanner = Boolean(user) && mobile && !standalone && !pwaInstallBannerDismissed(request)
   const corners = cornerChoice(request)
@@ -237,7 +238,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1552" />
+        <link rel="stylesheet" href="/styles.css?v=1554" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
@@ -252,6 +253,8 @@ export function Layout({
       </head>
       <body
         className={`density-${density}${corners === 'round' ? ' corners-round' : ''}${mobile ? ' mobile-agent' : ''}${
+          iphone ? ' iphone-agent' : ''
+        }${
           user?.show_link_previews === 0 ? ' link-previews-disabled' : ''
         }${onWritePage ? ' write-page' : ''}${mobileWriteAction ? ' has-mobile-write-action' : ''}${
           fullScreen ? ' full-screen-page' : ''
