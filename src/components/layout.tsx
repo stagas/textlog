@@ -244,7 +244,7 @@ export function Layout({
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=6" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=43" defer />}
+        {onFeedPage && <script src="/infinite-scroll.js?v=44" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript>

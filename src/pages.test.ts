@@ -1858,7 +1858,10 @@ test('promoted deep feed activity anchors at its recent branch instead of resurr
   expect(html).toContain('Recent answer')
   expect(html).not.toContain('class="parent-quote')
   expect(html).not.toContain('Old root')
-  expect(html.match(/class="quiet post-top-link"/g)).toHaveLength(1)
+  expect(html).toContain('<a class="quiet thread-ancestor-gap post-continuation-link" '
+    + 'href="/post/1?from=%2Ffor-you%23post-2&amp;reply_to=post#post-1" '
+    + 'aria-label="Earlier posts omitted">…</a>')
+  expect(html).not.toContain('class="quiet post-top-link"')
   expect(html).not.toContain('aria-label="Earlier replies omitted">…</div>')
 })
 

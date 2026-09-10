@@ -1745,6 +1745,12 @@ export function FeedThreads(
     <>
       {roots.map(post => {
         const anchoredReturnPath = `${returnPath}#post-${post.id}`
+        const topHref = post.parent
+          ? replyAtPagePost(
+            replyAnchorReturnPath(post.parent.top_id || post.parent.id, post.parent.top_id || post.parent.id,
+              anchoredReturnPath),
+          )
+          : undefined
         const visibleReplies = visibleReplyCount(post)
         const collapsedPreview = visibleReplies > 0 && !collapseWithoutPreviews ? collapsedPreviewPosts(post) : []
         const continuesElsewhere = (post.reply_count || 0) > visibleReplies
@@ -1768,13 +1774,12 @@ export function FeedThreads(
               <input className="thread-fold-input" type="checkbox" id={foldControlId} defaultChecked={collapsed} />
             )}
             <div className={`thread-root${post.profile_pinned ? ' profile-pinned-surround' : ''}`}>
+              {topHref && (
+                <a className="quiet thread-ancestor-gap post-continuation-link" href={topHref}
+                  aria-label="Earlier posts omitted">…</a>
+              )}
               <FeedPost p={post} user={user} showParent={false} tappable returnPath={anchoredReturnPath}
-                highlightTerms={highlightTerms} topHref={post.parent
-                ? replyAtPagePost(
-                  replyAnchorReturnPath(post.parent.top_id || post.parent.id, post.parent.top_id || post.parent.id,
-                    anchoredReturnPath),
-                )
-                : undefined} hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
+                highlightTerms={highlightTerms} hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
                 foldControlId={foldControlId} collapsedExpansionControlId={collapsed ? foldControlId : undefined}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere

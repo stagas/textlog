@@ -193,6 +193,13 @@
       const template = document.createElement('template')
       template.innerHTML = await response.text()
       const fragment = template.content
+      const existingPostIds = new Set([...document.querySelectorAll('[data-feed-view] .post[id]')]
+        .map(post => post.id))
+      fragment.querySelectorAll('.feed-thread').forEach(thread => {
+        const duplicatesLoadedConversation = [...thread.querySelectorAll('.post[id]')]
+          .some(post => existingPostIds.has(post.id))
+        if (duplicatesLoadedConversation) (thread.closest('.for-you-item') || thread).remove()
+      })
       const next = fragment.querySelector(sentinelSelector)
       sentinel.replaceWith(fragment)
       rememberLoadedChunks()
