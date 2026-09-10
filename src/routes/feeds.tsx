@@ -304,7 +304,7 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor, kind: 'latest' | 'n
             <Feed user={visitor.user} data={data} title={toMe ? '@' : 'my feed'} path={toMe ? '/@' : undefined}
               toMe={toMe} notificationBanner={notificationBanner} />,
           )
-        }, false, viewerCacheVersion(kind === 'for-you' ? 12 : 1, visitor.user, notificationBanner), true)
+        }, false, viewerCacheVersion(kind === 'for-you' ? 13 : 1, visitor.user, notificationBanner), true)
       }
     }))
 }
@@ -567,7 +567,7 @@ export function registerFeedsRoutes(app: Hono) {
         && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'for-you', user.id, render, false,
-        viewerCacheVersion(12, user, notificationBanner), false, renderForCache, async () => {
+        viewerCacheVersion(13, user, notificationBanner), false, renderForCache, async () => {
         return await databaseService().call('feeds.markPersonalizedSnapshotPageRead', { userId: user.id, pageSize,
           toMe: false }) > 0
       })

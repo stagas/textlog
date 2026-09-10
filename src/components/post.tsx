@@ -1592,13 +1592,7 @@ export function FeedThreads(
     },
 ) {
   if (!posts.length) return null
-  const belongsToDeletedTopLevel = (post: PostView) => {
-    let ancestor: PostView | ParentPost = post
-    while (ancestor.parent) ancestor = ancestor.parent
-    return ancestor.parent_id === null && !!ancestor.deleted_at
-  }
-  const feedPosts = posts
-    .filter(post => !belongsToDeletedTopLevel(post) && !post.hidden_by_reply_gate)
+  const feedPosts = renderableFeedPosts(posts)
     .map(post =>
       post.feed_branch_root && post.parent && post.parent_id !== post.parent.id
         ? { ...post, parent_id: post.parent.id }
@@ -1818,4 +1812,13 @@ export function FeedThreads(
       })}
     </>
   )
+}
+
+export function renderableFeedPosts(posts: PostView[]) {
+  return posts.filter(post => {
+    let ancestor: PostView | ParentPost = post
+    while (ancestor.parent) ancestor = ancestor.parent
+    const belongsToDeletedTopLevel = ancestor.parent_id === null && !!ancestor.deleted_at
+    return !belongsToDeletedTopLevel && !post.hidden_by_reply_gate
+  })
 }

@@ -6,7 +6,7 @@ import { chunkItems, FEED_CHUNK_SIZE, feedChunkReturnPath, InfiniteFeedChunk } f
 import { Layout } from './layout'
 import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
-import { BioReferenceForms, FeedThreads, TagReference, UserReference } from './post'
+import { BioReferenceForms, FeedThreads, renderableFeedPosts, TagReference, UserReference } from './post'
 import { writeHref } from './write-link'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
@@ -114,7 +114,7 @@ export function Feed(
   const timelinePostPositions = new Map(displayTimeline.map((row, index) => [row.id, index]))
   const allVisibleTimeline = displayTimeline.filter((row, index) => {
     if (!['post', 'reply', 'mention'].includes(row.activity_kind)) return true
-    return displayTimeline.findIndex(candidate =>
+    return renderableFeedPosts(threadPosts(row)).length > 0 && displayTimeline.findIndex(candidate =>
       ['post', 'reply', 'mention'].includes(candidate.activity_kind)
       && conversationRootId(candidate) === conversationRootId(row)
     ) === index

@@ -536,6 +536,30 @@ test('feed trees suppress deleted top-level post 2878 and all of its children', 
   expect(html).not.toContain('class="post-page-thread feed-thread"')
 })
 
+test('my feed omits an empty deleted conversation before its first visible item', () => {
+  const deletedRoot = { id: 2878, user_id: 2, parent_id: null, body: 'deleted root',
+    created_at: '2026-08-30 02:48:06', deleted_at: '2026-08-31 15:23:18', handle: 'deleted', reply_count: 1 }
+  const hiddenBase = postActivity(2886, 2, 'hidden-reply')
+  const hidden: PersonalizedTimelineRow = {
+    ...hiddenBase,
+    activity_kind: 'reply',
+    parent_id: deletedRoot.id,
+    renderedPost: { ...hiddenBase.renderedPost!, parent_id: deletedRoot.id, parent: deletedRoot,
+      feed_branch_root: true },
+  }
+  const visible = postActivity(3000, 3, 'visible-author')
+  const html = renderToStaticMarkup(<Feed
+    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }}
+    data={{ timeline: [hidden, visible], page: 1, totalPages: 1, toMeCount: 0, forYouCount: 0,
+      forYouUnread: false, toMeUnread: false }}
+  />)
+
+  expect(html).not.toContain('for-you-author-2')
+  expect(html).toContain(
+    'data-feed-chunk="1"><div class="for-you-item for-you-author-3"><div class="post-page-thread feed-thread">',
+  )
+})
+
 test('latest joins promoted branches beneath their shared grandparent', () => {
   const root = { id: 494, user_id: 2, parent_id: null, body: 'shared conversation root',
     created_at: '2026-08-08 14:20:43', deleted_at: null, handle: 'alice', reply_count: 2 }
