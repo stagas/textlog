@@ -8180,6 +8180,10 @@ a.post-context:hover {
   scrollbar-width: none;
 }
 
+.thread-scroll-enhanced .post-page-thread > .reply-branch {
+  overflow-x: hidden;
+}
+
 .post-page-thread > .reply-branch::-webkit-scrollbar {
   display: none;
 }

@@ -145,14 +145,16 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
 })
 
 test('thread hover scrolling is served as immutable JavaScript', async () => {
-  const response = await request('/thread-hover-scroll.js?v=6')
+  const response = await request('/thread-hover-scroll.js?v=12')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   const script = await response.text()
-  expect(script).toContain('.post-page-thread .post')
-  expect(script).toContain('pointerdown')
-  expect(script).toContain('WeakMap')
+  expect(script).toContain('.post-page-thread > .reply-branch')
+  expect(script).toContain('thread-scroll-enhanced')
+  expect(script).toContain('requestAnimationFrame')
+  expect(script).toContain('smooth')
+  expect(script).toContain('max-width: 600px')
 })
 
 test('notification sound is served as immutable MPEG audio', async () => {
