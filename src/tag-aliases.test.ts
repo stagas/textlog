@@ -214,6 +214,28 @@ test('adding an invariant restores existing tags from their authored spelling', 
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'atlas' })).toBe('atlas')
 })
 
+test('adding an invariant only reindexes posts that authored that tag', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  const affected = createPost(database, 1, '#atlas', null, false)
+  const unrelated = createPost(database, 1, '#books', null, false)
+  expect('id' in affected && 'id' in unrelated).toBeTrue()
+  if (!('id' in affected) || !('id' in unrelated)) throw new Error('Expected test posts to be created')
+  database.run('CREATE TABLE hashtag_delete_audit(post_id INTEGER NOT NULL)')
+  database.run(`CREATE TRIGGER audit_hashtag_delete AFTER DELETE ON post_hashtags
+    BEGIN INSERT INTO hashtag_delete_audit(post_id) VALUES(OLD.post_id); END`)
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'atlas' })
+
+  expect(database.query('SELECT DISTINCT post_id FROM hashtag_delete_audit').all()).toEqual([
+    { post_id: affected.id },
+  ])
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(unrelated.id)).toEqual({ tag: 'book' })
+})
+
 test('admin invariants bypass WordNet normalization', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
@@ -232,6 +254,25 @@ test('admin invariants bypass WordNet normalization', async () => {
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'running' })).toBe('running')
   expect(database.query(`SELECT normalized_word normalizedWord FROM wordnet_normalizations
     WHERE word='running'`).get()).toEqual({ normalizedWord: 'running' })
+})
+
+test('an invariant can be assigned as an explicit alias', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'js' })
+  expect(await executeDatabaseDomain(database, 'admin.addTagAliases', {
+    primaryTag: 'javascript',
+    aliases: ['js'],
+  })).toEqual({ status: 'ready' })
+
+  expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'js' })).toBe('javascript')
+  expect(database.query('SELECT alias,primary_tag FROM tag_aliases WHERE alias=\'js\'').get()).toEqual({
+    alias: 'js',
+    primary_tag: 'javascript',
+  })
 })
 
 test('TreatWarningsAsErrors keeps the complete compound phrase', async () => {

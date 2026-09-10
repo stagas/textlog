@@ -140,9 +140,14 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const fields = await form(c.req.raw)
-    const primaryTag = normalizeHashtag((fields.primary || '').replace(/^#/, '').trim())
+    const invariants = new Set(await databaseService().call('admin.tagInvariants', {}))
+    const normalizeAlias = (value: string) => {
+      const spelling = normalizeHashtagSpelling(value.replace(/^#/, '').trim())
+      return invariants.has(spelling) ? spelling : normalizeHashtag(spelling)
+    }
+    const primaryTag = normalizeAlias(fields.primary || '')
     const aliases = [...new Set((fields.aliases || '').split(/[\s,]+/)
-      .map(value => normalizeHashtag(value.replace(/^#/, '').trim())).filter(value => value && value !== primaryTag))]
+      .map(normalizeAlias).filter(value => value && value !== primaryTag))]
     if (!isValidHashtag(primaryTag) || !aliases.length || aliases.some(alias => !isValidHashtag(alias))) {
       return c.text('Invalid primary tag or aliases', 400)
     }
@@ -155,7 +160,7 @@ export function registerAdminRoutes(app: Hono) {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
-    const alias = normalizeHashtag(c.req.param('alias'))
+    const alias = normalizeHashtagSpelling(c.req.param('alias'))
     if (!isValidHashtag(alias)) return c.text('Invalid alias', 400)
     await databaseService().call('admin.removeTagAlias', { alias })
     return redirect('/admin/tags')

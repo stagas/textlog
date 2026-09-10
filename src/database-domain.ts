@@ -221,15 +221,19 @@ function displayNameForTag(database: Database, tag: string) {
   } | null)?.display_name || null
 }
 
-function reindexPostHashtags(database: Database) {
+function reindexPostHashtags(database: Database, authoredSpellings?: Set<string>) {
   const posts = database.query('SELECT id,body FROM posts WHERE deleted_at IS NULL').all() as {
     id: number
     body: string
   }[]
   const insert = database.query('INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,?)')
-  database.run('DELETE FROM post_hashtags')
+  if (!authoredSpellings) database.run('DELETE FROM post_hashtags')
   for (const post of posts) {
-    for (const { authored } of extractAuthoredHashtags(post.body)) {
+    const hashtags = extractAuthoredHashtags(post.body)
+    if (authoredSpellings && !hashtags.some(({ authored }) =>
+      authoredSpellings.has(normalizeHashtagSpelling(authored)))) continue
+    if (authoredSpellings) database.query('DELETE FROM post_hashtags WHERE post_id=?').run(post.id)
+    for (const { authored } of hashtags) {
       insert.run(post.id, canonicalTag(database, authored))
     }
   }
@@ -1541,7 +1545,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         database.query('DELETE FROM tag_aliases WHERE alias=?').run(tag)
         database.query('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(?)').run(tag)
-        reindexPostHashtags(database)
+        reindexPostHashtags(database, new Set([tag]))
         for (const table of previouslyNormalized === tag ? [] : ['hashtag_follows', 'blocked_hashtags']) {
           database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
             SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(tag, previouslyNormalized)
@@ -1557,7 +1561,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const result = database.transaction(() => {
         const removed = database.query('DELETE FROM tag_invariants WHERE tag=?').run(tag)
         if (!removed.changes) return removed
-        reindexPostHashtags(database)
+        reindexPostHashtags(database, new Set([tag]))
         for (const table of normalized === tag ? [] : ['hashtag_follows', 'blocked_hashtags']) {
           database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
             SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(normalized, tag)
