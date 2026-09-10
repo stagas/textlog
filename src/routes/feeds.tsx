@@ -528,6 +528,7 @@ export function registerFeedsRoutes(app: Hono) {
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
     const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const feedNavigation = c.req.header('X-Textlog-Feed-Navigation') === '1'
     const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () => {
@@ -545,23 +546,10 @@ export function registerFeedsRoutes(app: Hono) {
     }
     const render = async () => {
       let feed = await data()
-      if (liveRefresh) {
-        const consumedRoots = new Set(feed.timeline.filter(row => row.unread && row.activity_kind === 'post')
-          .map(row => row.id)).size
-        const postIds = [
-          ...new Set(
-            feed.timeline.filter(row => ['post', 'reply', 'mention'].includes(row.activity_kind)).map(row => row.id),
-          ),
-        ]
-        const consumed = postIds.length
-          ? await databaseService().call('api.markLatestRead', { userId: user.id, postIds })
-          : 0
-        if (consumed) feed = { ...feed,
-          latestCount: Math.max(0, (feed.latestCount || 0) - consumed),
-          newCount: Math.max(0, (feed.newCount || 0) - consumedRoots) }
-      }
       const view = (
-        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, false) : feed} title="my feed"
+        <Feed user={user} data={explicitRead && !feedNavigation
+          ? personalizedFeedAfterVisibleReads(feed, false)
+          : feed} title="my feed"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
           chunk={chunk} initialChunks={initialChunks} {...write} />
       )
@@ -574,7 +562,7 @@ export function registerFeedsRoutes(app: Hono) {
           expandedRootId={expandedRootId} />,
       )
     }
-    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !feedNavigation && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
         && !fetchedThread
@@ -604,6 +592,7 @@ export function registerFeedsRoutes(app: Hono) {
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const feedNavigation = c.req.header('X-Textlog-Feed-Navigation') === '1'
     const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PostFeedPage> | undefined
     const data = () =>
@@ -612,7 +601,8 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await data()
       const view = (
-        <PublicFeed user={user} feed={explicitRead ? latestFeedAfterVisibleReads(feed) : feed} path="/all"
+        <PublicFeed user={user} feed={explicitRead && !feedNavigation ? latestFeedAfterVisibleReads(feed) : feed}
+          path="/all"
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
           chunk={chunk} initialChunks={initialChunks} {...write} />
       )
@@ -627,7 +617,7 @@ export function registerFeedsRoutes(app: Hono) {
         )
       }
       : undefined
-    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !feedNavigation && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
         && !fetchedThread
@@ -686,6 +676,7 @@ export function registerFeedsRoutes(app: Hono) {
     const fetchedThread = await requestedFetchedThread(c, user?.id ?? -1)
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const feedNavigation = c.req.header('X-Textlog-Feed-Navigation') === '1'
     const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PostFeedPage> | undefined
     const data = () => dataPromise ||= databaseService().call('feeds.newPage', {
@@ -697,7 +688,8 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await data()
       const view = (
-        <PublicFeed user={user} feed={explicitRead ? newFeedAfterVisibleReads(feed) : feed} path="/new"
+        <PublicFeed user={user} feed={explicitRead && !feedNavigation ? newFeedAfterVisibleReads(feed) : feed}
+          path="/new"
           notificationBanner={notificationBanner}
           expandedRootId={expandedRootId} fetchedThread={fetchedThread} chunk={chunk} initialChunks={initialChunks}
           {...write} />
@@ -708,7 +700,7 @@ export function registerFeedsRoutes(app: Hono) {
       ? async () => page(<PublicFeed user={user} feed={newFeedAfterVisibleReads(await data())} path="/new"
         notificationBanner={notificationBanner} expandedRootId={expandedRootId} />)
       : undefined
-    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !feedNavigation && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !expandedRootId
         && !fetchedThread
       ? await rpcMaterializedFeedPage(c.req.raw, 'new', user?.id ?? -1, render, false,
@@ -750,6 +742,7 @@ export function registerFeedsRoutes(app: Hono) {
     const notificationBanner = await showNotificationBanner(c.req.raw, user)
     const pageSize = resolvedPageSize(c.req.raw)
     const liveRefresh = c.req.header('X-Textlog-Live-Refresh') === '1'
+    const feedNavigation = c.req.header('X-Textlog-Feed-Navigation') === '1'
     const explicitRead = c.req.header('X-Textlog-Explicit-Read') === '1'
     let dataPromise: Promise<PersonalizedFeedData> | undefined
     const data = () =>
@@ -764,7 +757,9 @@ export function registerFeedsRoutes(app: Hono) {
     const render = async () => {
       const feed = await data()
       const view = (
-        <Feed user={user} data={explicitRead ? personalizedFeedAfterVisibleReads(feed, true) : feed} title="@" path="/@"
+        <Feed user={user} data={explicitRead && !feedNavigation
+          ? personalizedFeedAfterVisibleReads(feed, true)
+          : feed} title="@" path="/@"
           toMe notificationBanner={notificationBanner} expandedRootId={expandedRootId} fetchedThread={fetchedThread}
           chunk={chunk} initialChunks={initialChunks} {...write} />
       )
@@ -777,7 +772,7 @@ export function registerFeedsRoutes(app: Hono) {
           notificationBanner={notificationBanner} expandedRootId={expandedRootId} />,
       )
     }
-    const response = !liveRefresh && !write.writeHandled && !write.writeError && !write.writePreview
+    const response = !liveRefresh && !feedNavigation && !write.writeHandled && !write.writeError && !write.writePreview
         && chunk === 0 && initialChunks === 1 && currentPage(c.req.query('page')) === 1 && !cursorValue
         && !expandedRootId
         && !fetchedThread

@@ -34,6 +34,7 @@ const feedMutations = new Set<DatabaseDomainOperation>([
   'api.markActivitiesRead',
   'api.markAllActivitiesRead',
   'api.markLatestRead',
+  'api.markNewRead',
   'api.markAllLatestRead',
   'api.unpublishPost',
   'api.relationshipMutation',

@@ -5114,6 +5114,41 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 225,
+    name: 'independent_new_read_state',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      ).get(name)
+      if (!hasTable('users') || !hasTable('posts')) return
+      database.run(`CREATE TABLE IF NOT EXISTS new_read_state (
+        user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        through_post_id INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS new_read_exceptions (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        read_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(user_id,post_id));
+      CREATE TRIGGER IF NOT EXISTS new_read_state_initialize_user AFTER INSERT ON users BEGIN
+        INSERT INTO new_read_state(user_id,through_post_id)
+          VALUES(NEW.id,coalesce((SELECT max(id) FROM posts),0));
+      END;`)
+      if (hasTable('latest_read_state')) {
+        database.run(`INSERT OR IGNORE INTO new_read_state(user_id,through_post_id)
+          SELECT user_id,through_post_id FROM latest_read_state`)
+      }
+      else {
+        database.run(`INSERT OR IGNORE INTO new_read_state(user_id,through_post_id)
+          SELECT id,coalesce((SELECT max(id) FROM posts),0) FROM users`)
+      }
+      if (hasTable('latest_read_exceptions') && columns(database, 'posts').includes('parent_id')) {
+        database.run(`INSERT OR IGNORE INTO new_read_exceptions(user_id,post_id,read_at)
+          SELECT user_id,post_id,read_at FROM latest_read_exceptions
+          WHERE post_id IN (SELECT id FROM posts WHERE parent_id IS NULL)`)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

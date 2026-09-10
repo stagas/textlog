@@ -140,7 +140,7 @@ test('New counts and consumes only top-level posts, including roots read in My F
   expect(newFeed.unreadPostIds).toEqual([])
 })
 
-test('opening New consumes its visible roots but leaves unread replies in All', async () => {
+test('opening New consumes its visible roots without consuming All', async () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
   database.run(`INSERT INTO users(id,handle,email,password) VALUES
@@ -156,7 +156,38 @@ test('opening New consumes its visible roots but leaves unread replies in All', 
   expect(first.unreadPostIds).toEqual([1])
 
   const counts = await executeDatabaseDomain(database, 'feeds.unreadCounts', { userId: 1 })
-  expect(counts).toMatchObject({ latestCount: 1, newCount: 0 })
+  expect(counts).toMatchObject({ latestCount: 2, newCount: 0 })
+})
+
+test('reading All does not consume New', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(1,2,'root','2026-08-27 09:00:00');`)
+
+  await executeDatabaseDomain(database, 'feeds.latestPage', {
+    viewerId: 1, page: 1, pageSize: 20,
+  })
+
+  const counts = await executeDatabaseDomain(database, 'feeds.unreadCounts', { userId: 1 })
+  expect(counts).toMatchObject({ latestCount: 0, newCount: 1 })
+})
+
+test('New treats the viewer own posts as already read', async () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+    (1,'reader','reader@example.test','x'),(2,'writer','writer@example.test','x');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES
+    (1,1,'mine','2026-08-27 09:00:00'),(2,2,'theirs','2026-08-27 10:00:00');`)
+
+  const feed = await executeDatabaseDomain(database, 'feeds.newPage', {
+    viewerId: 1, page: 1, pageSize: 20, markRead: false,
+  })
+
+  expect(feed.newCount).toBe(1)
+  expect(feed.unreadPostIds).toEqual([2])
 })
 
 test('reading All does not consume matching unread My Feed activity', async () => {

@@ -29,8 +29,8 @@ import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion, refreshH
 import { getImageUrl, isImageKey } from './image-storage'
 import { interactedEmail } from './interacted-email'
 import { projectRecentConversation } from './latest-conversation'
-import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead,
-  unreadLatestCount, unreadNewCount } from './latest-state'
+import { initializeLatestReads, latestUnreadPostState, markAllLatestRead, markLatestPostsRead, markNewPostsRead,
+  unreadLatestCount, unreadNewCount, unreadNewPostIds } from './latest-state'
 import { userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { runBoundedCleanup } from './maintenance'
@@ -2283,6 +2283,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       markLatestPostsRead(userId, visibleUnread, database)
       return visibleUnread.length as DatabaseDomainOutput<K>
     }
+    case 'api.markNewRead': {
+      const { userId, postIds } = input as DatabaseDomainInput<'api.markNewRead'>
+      return markNewPostsRead(userId, postIds, database) as DatabaseDomainOutput<K>
+    }
     case 'api.markAllLatestRead': {
       const { userId } = input as DatabaseDomainInput<'api.markAllLatestRead'>
       const unread =
@@ -3629,10 +3633,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const posts = rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
       const newCount = viewerId >= 0 ? unreadNewCount(viewerId, database) : 0
       const unreadRoots = viewerId >= 0
-        ? new Set(latestUnreadPostState(viewerId, database).map(row => row.id))
+        ? new Set(unreadNewPostIds(viewerId, database))
         : new Set<number>()
       const unreadPostIds = snapshot.items.filter(id => unreadRoots.has(id))
-      if (viewerId >= 0 && markRead && unreadPostIds.length) markLatestPostsRead(viewerId, unreadPostIds, database)
+      if (viewerId >= 0 && markRead && unreadPostIds.length) markNewPostsRead(viewerId, unreadPostIds, database)
       return { posts, page: snapshot.page, totalItems: snapshot.totalItems, totalPages: snapshot.totalPages,
         forYouCount, toMeCount, latestCount: viewerId >= 0 ? unreadLatestCount(viewerId, database) : 0,
         newCount, unreadPostIds, latestUnread: newCount > 0,

@@ -352,6 +352,7 @@ export type DatabaseDomainOperations = {
     output: { forYouCount: number; toMeCount: number; latestCount: number; newCount: number }
   }
   'api.markLatestRead': { input: { userId: number; postIds: number[] }; output: number }
+  'api.markNewRead': { input: { userId: number; postIds: number[] }; output: number }
   'api.markAllLatestRead': { input: { userId: number }; output: number }
   'api.profile': { input: { handle: string; viewerId: number | null; origin: string };
     output: { status: 'not_found' } | { status: 'redirect'; handle: string } | { status: 'ready'; value: unknown;

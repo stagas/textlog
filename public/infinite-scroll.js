@@ -6,7 +6,10 @@
   let navigationController = null
   let navigationSpinnerTimer = null
   let navigationSpinner = null
+  let heldLiveTab = null
+  let heldLiveCount = 0
   const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0, new: 0 }
+  const serverCounts = { 'to-me': 0, 'for-you': 0, latest: 0, new: 0 }
   const pendingLiveTabs = new Set()
   const dingEnabled = document.querySelector('meta[name="textlog-new-message-sound"]')?.content !== 'off'
   const ding = dingEnabled ? new Audio('/ding.mp3') : null
@@ -75,46 +78,48 @@
   const activeLiveTab = () =>
     Object.entries(liveTabSelectors)
       .find(([, selector]) => document.querySelector(`.feed-tabs ${selector}.active`))?.[0]
+  const liveTabKind = tab =>
+    Object.entries(liveTabSelectors).find(([, selector]) => tab?.matches(selector))?.[0]
 
   const syncLiveCountsFromDocument = () => {
     const values = document.querySelector('[data-feed-view] [data-live-counts]')?.dataset.liveCounts?.split(':')
       .map(Number)
     if (!values || values.length !== 4) return
     ;[liveCounts['to-me'], liveCounts['for-you'], liveCounts.latest, liveCounts.new] = values
+    ;[serverCounts['to-me'], serverCounts['for-you'], serverCounts.latest, serverCounts.new] = values
   }
 
-  const updateLiveBadge = (kind, count) => {
+  const renderLiveCount = (kind, count) => {
     const tab = document.querySelector(`.feed-tabs ${liveTabSelectors[kind]}`)
     if (!tab) return
-    let badge = tab.querySelector('.to-me-count')
+    const current = tab.querySelector('.to-me-count')
     if (count <= 0) {
-      badge?.remove()
+      current?.remove()
       return
     }
-    if (!badge) {
-      badge = document.createElement('span')
-      badge.className = 'to-me-count'
-      tab.append(badge)
-    }
+    const badge = current || document.createElement('span')
+    badge.className = 'to-me-count'
     badge.textContent = count >= 99 ? '99+' : String(count)
+    if (!current) tab.append(badge)
   }
 
-  const applyLiveCounts = (counts, preserveActiveCount = false) => {
+  const applyLiveCounts = counts => {
     const incoming = {
       'to-me': Number(counts.toMeCount) || 0,
       'for-you': Number(counts.forYouCount) || 0,
       latest: Number(counts.latestCount) || 0,
       new: Number(counts.newCount) || 0,
     }
-    // Opening a feed consumes the visible unread snapshot on the server, so the SSE baseline can already be zero
-    // while this page intentionally still shows the arrivals it just rendered. Keep that active-tab count for this
-    // visit; subsequent feed events still reconcile every badge normally.
-    const active = preserveActiveCount ? activeLiveTab() : null
-    if (active) incoming[active] = Math.max(incoming[active], liveCounts[active])
+    const authoritative = { ...incoming }
+    if (heldLiveTab) {
+      heldLiveCount += Math.max(0, incoming[heldLiveTab] - serverCounts[heldLiveTab])
+      incoming[heldLiveTab] = heldLiveCount
+    }
     Object.entries(incoming).forEach(([kind, count]) => {
+      serverCounts[kind] = authoritative[kind]
       liveCounts[kind] = count
       if (count === 0) pendingLiveTabs.delete(kind)
-      updateLiveBadge(kind, count)
+      renderLiveCount(kind, count)
     })
     const baseTitle = document.title.replace(/^•\s*/, '')
     document.title = liveCounts['to-me'] > 0 || liveCounts['for-you'] > 0 ? `• ${baseTitle}` : baseTitle
@@ -144,10 +149,15 @@
     button.type = 'button'
     button.textContent = 'show new notes'
     banner.addEventListener('click', () => {
+      const active = activeLiveTab()
+      if (active) {
+        heldLiveTab = active
+        heldLiveCount = liveCounts[active]
+      }
       const target = new URL(location.href)
       target.hash = ''
       history.replaceState(history.state, '', target.pathname + target.search)
-      void navigateFeed(target.href, false, tabs.querySelector('a.active'), false)
+      void navigateFeed(target.href, false, tabs.querySelector('a.active'), true)
     })
     banner.append(button)
     tabs.after(banner)
@@ -239,6 +249,10 @@
       return
     }
     navigationController?.abort()
+    if (push) {
+      heldLiveTab = tab?.classList.contains('active') ? null : liveTabKind(tab) || null
+      heldLiveCount = heldLiveTab ? liveCounts[heldLiveTab] : 0
+    }
     const controller = new AbortController()
     navigationController = controller
     currentView.setAttribute('aria-busy', 'true')
@@ -267,6 +281,10 @@
       currentView.replaceWith(incomingView)
       pendingLiveTabs.delete(activeLiveTab())
       syncLiveCountsFromDocument()
+      if (heldLiveTab && heldLiveTab === activeLiveTab()) {
+        liveCounts[heldLiveTab] = heldLiveCount
+        renderLiveCount(heldLiveTab, heldLiveCount)
+      }
       if (markRead) await reconcileLiveCounts()
       syncComposerNavigation(parsed)
       document.title = parsed.title
@@ -349,9 +367,13 @@
     void navigateFeed(url.href, true, link, true)
   })
 
-  addEventListener('popstate', () => void navigateFeed(location.href, false, null, false))
-
+  addEventListener('popstate', () => {
+    heldLiveTab = null
+    heldLiveCount = 0
+    void navigateFeed(location.href, false, null, false)
+  })
   syncLiveCountsFromDocument()
+  if (performance.getEntriesByType('navigation')[0]?.type === 'reload') void reconcileLiveCounts()
   if (document.querySelector('.feed-tabs a[href="/my-feed"]')) {
     const events = new EventSource('/feed/events')
     events.addEventListener('baseline', event => {
@@ -362,7 +384,7 @@
       catch {
         return
       }
-      applyLiveCounts(counts, true)
+      applyLiveCounts(counts)
     })
     events.addEventListener('feed', event => {
       let counts
@@ -378,9 +400,9 @@
         latest: Number(counts.latestCount) || 0,
         new: Number(counts.newCount) || 0,
       }
-      const directedIncrease = incoming['to-me'] > liveCounts['to-me']
+      const directedIncrease = incoming['to-me'] > serverCounts['to-me']
       Object.entries(incoming).forEach(([kind, count]) => {
-        if (count > liveCounts[kind]) pendingLiveTabs.add(kind)
+        if (count > serverCounts[kind]) pendingLiveTabs.add(kind)
         if (count === 0) pendingLiveTabs.delete(kind)
       })
       applyLiveCounts(counts)

@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { refreshPersonalizedFeedState } from './feed-state'
-import { markLatestPostsRead } from './latest-state'
+import { markLatestPostsRead, markNewPostsRead } from './latest-state'
 import { isWhisperThread, whisperThreadRelevantToViewer, whisperThreadTargetsViewer } from './whisper'
 
 // Feed badges render 99 and above as "99+"; avoid scanning the rest of a large unread projection.
@@ -254,7 +254,10 @@ export function markForYouEntriesRead(userId: number, eventKeys: string[], toMe:
     const postId = eventKey.match(/^post:(\d+)$/)?.[1]
     return postId ? [Number(postId)] : []
   })
-  if (!toMe) markLatestPostsRead(userId, postIds, database)
+  if (!toMe) {
+    markLatestPostsRead(userId, postIds, database)
+    markNewPostsRead(userId, postIds, database)
+  }
   if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_state\'').get()) {
     refreshPersonalizedFeedState(database, userId, toMe ? 'to-me' : 'for-you')
   }
@@ -328,6 +331,7 @@ export function markAllForYouRead(userId: number, toMe: boolean, database: Datab
       FROM for_you_reads WHERE user_id=? AND event_key GLOB 'post:[0-9]*'`).run(userId)
   })()
   markLatestPostsRead(userId, latestPostIds, database)
+  if (!toMe) markNewPostsRead(userId, latestPostIds, database)
   if (database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'feed_state\'').get()) {
     refreshPersonalizedFeedState(database, userId, 'for-you')
     if (toMe) refreshPersonalizedFeedState(database, userId, 'to-me')

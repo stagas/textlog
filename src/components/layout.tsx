@@ -242,7 +242,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=27" defer />}
+        {onFeedPage && <script src="/infinite-scroll.js?v=41" defer />}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript>
