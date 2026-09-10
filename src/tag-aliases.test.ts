@@ -256,16 +256,19 @@ test('admin invariants bypass WordNet normalization', async () => {
     WHERE word='running'`).get()).toEqual({ normalizedWord: 'running' })
 })
 
-test('an invariant can be assigned as an explicit alias', async () => {
+test('an explicit alias takes precedence over automatic singularization', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
   runMigrations(database)
   database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
 
-  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'js' })
+  const existing = createPost(database, 1, '#JS', null, false)
+  expect('id' in existing).toBeTrue()
+  if (!('id' in existing)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(existing.id)).toEqual({ tag: 'j' })
   expect(await executeDatabaseDomain(database, 'admin.addTagAliases', {
     primaryTag: 'javascript',
-    aliases: ['js'],
+    aliases: ['JS'],
   })).toEqual({ status: 'ready' })
 
   expect(await executeDatabaseDomain(database, 'tags.resolve', { tag: 'js' })).toBe('javascript')
@@ -273,6 +276,36 @@ test('an invariant can be assigned as an explicit alias', async () => {
     alias: 'js',
     primary_tag: 'javascript',
   })
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(existing.id))
+    .toEqual({ tag: 'javascript' })
+  const createdAfterAlias = createPost(database, 1, '#JS', null, false)
+  expect('id' in createdAfterAlias).toBeTrue()
+  if (!('id' in createdAfterAlias)) throw new Error('Expected the test post to be created')
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(createdAfterAlias.id))
+    .toEqual({ tag: 'javascript' })
+})
+
+test('removing an alias only reindexes posts that authored that alias', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+  await executeDatabaseDomain(database, 'admin.addTagAliases', { primaryTag: 'javascript', aliases: ['JS'] })
+  const affected = createPost(database, 1, '#JS', null, false)
+  const unrelated = createPost(database, 1, '#books', null, false)
+  expect('id' in affected && 'id' in unrelated).toBeTrue()
+  if (!('id' in affected) || !('id' in unrelated)) throw new Error('Expected test posts to be created')
+  database.run('CREATE TABLE hashtag_delete_audit(post_id INTEGER NOT NULL)')
+  database.run(`CREATE TRIGGER audit_hashtag_delete AFTER DELETE ON post_hashtags
+    BEGIN INSERT INTO hashtag_delete_audit(post_id) VALUES(OLD.post_id); END`)
+
+  expect(await executeDatabaseDomain(database, 'admin.removeTagAlias', { alias: 'js' })).toBeTrue()
+
+  expect(database.query('SELECT DISTINCT post_id FROM hashtag_delete_audit').all()).toEqual([
+    { post_id: affected.id },
+  ])
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(affected.id)).toEqual({ tag: 'j' })
+  expect(database.query('SELECT tag FROM post_hashtags WHERE post_id=?').get(unrelated.id)).toEqual({ tag: 'book' })
 })
 
 test('TreatWarningsAsErrors keeps the complete compound phrase', async () => {

@@ -179,7 +179,7 @@ export async function normalizeExistingWordNetTags(database: Database) {
   await learnWordNetTagAliases(database, [...rows.map(row => row.tag), ...authored])
 }
 
-function canonicalTag(database: Database, tag: string) {
+function normalizedTagSpelling(database: Database, tag: string) {
   const spelling = normalizeHashtagSpelling(tag)
   const invariant = database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_invariants\'').get()
     && database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling)
@@ -190,8 +190,22 @@ function canonicalTag(database: Database, tag: string) {
       normalized_word: string
     } | null)?.normalized_word
     : null
-  tag = invariant ? spelling : wordnet || normalizeHashtag(spelling)
-  if (!database.query('SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'').get()) return tag
+  return invariant ? spelling : wordnet || normalizeHashtag(spelling)
+}
+
+function canonicalTag(database: Database, tag: string) {
+  const spelling = normalizeHashtagSpelling(tag)
+  const hasAliases = database.query(
+    'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
+  ).get()
+  const explicit = hasAliases
+    ? (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(spelling) as {
+      primary_tag: string
+    } | null)?.primary_tag
+    : null
+  if (explicit) return explicit
+  tag = normalizedTagSpelling(database, tag)
+  if (!hasAliases) return tag
   return (database.query('SELECT primary_tag FROM tag_aliases WHERE alias=?').get(tag) as {
     primary_tag: string
   } | null)?.primary_tag || tag
@@ -1573,7 +1587,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return Boolean(result.changes) as DatabaseDomainOutput<K>
     }
     case 'admin.addTagAliases': {
-      const { primaryTag, aliases } = input as DatabaseDomainInput<'admin.addTagAliases'>
+      const requested = input as DatabaseDomainInput<'admin.addTagAliases'>
+      const primaryTag = normalizedTagSpelling(database, requested.primaryTag)
+      const aliases = [...new Set(requested.aliases.map(alias => normalizeHashtagSpelling(alias)))]
+        .filter(alias => alias !== primaryTag)
+      if (!aliases.length) return { status: 'ready' } as DatabaseDomainOutput<K>
+      const previousTags = new Map(aliases.map(alias => [alias, normalizedTagSpelling(database, alias)]))
       const placeholders = aliases.map(() => '?').join(',')
       const conflict = database.query(`SELECT alias tag FROM tag_aliases WHERE alias=?
         UNION SELECT alias tag FROM tag_aliases WHERE alias IN (${placeholders})
@@ -1583,16 +1602,14 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         const insert = database.query('INSERT INTO tag_aliases(alias,primary_tag) VALUES(?,?)')
         for (const alias of aliases) if (alias !== primaryTag) insert.run(alias, primaryTag)
-        for (const alias of aliases) {
-          database.query(`INSERT OR IGNORE INTO post_hashtags(post_id,tag)
-            SELECT post_id,? FROM post_hashtags WHERE tag=?`).run(primaryTag, alias)
-          database.query('DELETE FROM post_hashtags WHERE tag=?').run(alias)
-        }
+        reindexPostHashtags(database, new Set(aliases))
         for (const table of ['hashtag_follows', 'blocked_hashtags']) {
           for (const alias of aliases) {
-            database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
-              SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(primaryTag, alias)
-            database.query(`DELETE FROM ${table} WHERE tag=?`).run(alias)
+            for (const source of new Set([alias, previousTags.get(alias)!])) {
+              database.query(`INSERT OR IGNORE INTO ${table}(user_id,tag,created_at)
+                SELECT user_id,?,created_at FROM ${table} WHERE tag=?`).run(primaryTag, source)
+              database.query(`DELETE FROM ${table} WHERE tag=?`).run(source)
+            }
           }
         }
       })()
@@ -1600,10 +1617,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { status: 'ready' } as DatabaseDomainOutput<K>
     }
     case 'admin.removeTagAlias': {
+      const alias = (input as DatabaseDomainInput<'admin.removeTagAlias'>).alias
       const result = database.transaction(() => {
-        const removed = database.query('DELETE FROM tag_aliases WHERE alias=?')
-          .run((input as DatabaseDomainInput<'admin.removeTagAlias'>).alias)
-        if (removed.changes) reindexPostHashtags(database)
+        const removed = database.query('DELETE FROM tag_aliases WHERE alias=?').run(alias)
+        if (removed.changes) reindexPostHashtags(database, new Set([alias]))
         return removed
       })()
       if (result.changes) invalidateTagCaches(database)

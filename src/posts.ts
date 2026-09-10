@@ -117,14 +117,18 @@ function canonicalTags(database: Database, tags: string[], wordNet?: WordNetNorm
       : null
     return (typeof cached === 'string' ? cached : cached?.normalized_word) || normalizeHashtag(tag)
   })
-  const aliases = !unique.length || !database.query(
+  const aliasCandidates = [...new Set([...unique, ...normalized])]
+  const aliases = !aliasCandidates.length || !database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'tag_aliases\'',
     ).get()
     ? []
     : database.query(`SELECT alias,primary_tag FROM tag_aliases WHERE alias IN
-      (${normalized.map(() => '?').join(',')})`).all(...normalized) as { alias: string; primary_tag: string }[]
+      (${aliasCandidates.map(() => '?').join(',')})`).all(...aliasCandidates) as { alias: string; primary_tag: string }[]
   const primaryByAlias = new Map(aliases.map(row => [row.alias, row.primary_tag]))
-  return new Map(unique.map((tag, index) => [tag, primaryByAlias.get(normalized[index]) || normalized[index]]))
+  return new Map(unique.map((tag, index) => [
+    tag,
+    primaryByAlias.get(tag) || primaryByAlias.get(normalized[index]) || normalized[index],
+  ]))
 }
 
 export function loadBioReferenceData(database: Database, bio: string, profileId: number, viewerId = -1,

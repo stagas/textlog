@@ -140,14 +140,10 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin/tags'))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const fields = await form(c.req.raw)
-    const invariants = new Set(await databaseService().call('admin.tagInvariants', {}))
-    const normalizeAlias = (value: string) => {
-      const spelling = normalizeHashtagSpelling(value.replace(/^#/, '').trim())
-      return invariants.has(spelling) ? spelling : normalizeHashtag(spelling)
-    }
-    const primaryTag = normalizeAlias(fields.primary || '')
+    const primaryTag = normalizeHashtagSpelling((fields.primary || '').replace(/^#/, '').trim())
     const aliases = [...new Set((fields.aliases || '').split(/[\s,]+/)
-      .map(normalizeAlias).filter(value => value && value !== primaryTag))]
+      .map(value => normalizeHashtagSpelling(value.replace(/^#/, '').trim()))
+      .filter(value => value && value !== primaryTag))]
     if (!isValidHashtag(primaryTag) || !aliases.length || aliases.some(alias => !isValidHashtag(alias))) {
       return c.text('Invalid primary tag or aliases', 400)
     }
