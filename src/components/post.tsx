@@ -1525,7 +1525,7 @@ export function ThreadReplies(
     const branch = (children.get(id) || []).filter(reply => !reply.deleted_at || visibleDescendantCount(reply.id) > 0)
     if (!branch.length) return null
     return (
-      <div className={`reply-branch${
+      <div className={`reply-branch${depth > 3 ? ' reply-branch-overflow' : ''}${
         (collapsedPreviewPostIds.length || collapseWithoutPreviews) && depth === 1
           ? ' feed-thread-collapsed-branch'
           : ''
