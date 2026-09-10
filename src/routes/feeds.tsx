@@ -19,7 +19,7 @@ import { instance } from '../../instance.config'
 import { subscribeToPosts } from '../api-broker'
 import { executePostCode } from '../code-execution'
 import { feedChunk, restoredFeedChunks } from '../components/infinite-feed'
-import { backgroundDatabaseCall, databaseService } from '../database-service'
+import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from '../database-service'
 import { decodeHotCursor, hotRankingVersion } from '../hot'
 import {
   campaignAttributionCookie,
@@ -396,13 +396,15 @@ export function registerFeedsRoutes(app: Hono) {
         let initializing = true
         let queuedDuringInitialization = false
         let lastCounts = ''
-        let unsubscribe = () => {}
+        let unsubscribePosts = () => {}
+        let unsubscribeMutations = () => {}
         let heartbeat: ReturnType<typeof setInterval> | undefined
         const close = () => {
           if (closed) return
           closed = true
           if (heartbeat) clearInterval(heartbeat)
-          unsubscribe()
+          unsubscribePosts()
+          unsubscribeMutations()
           try {
             controller.close()
           }
@@ -442,10 +444,12 @@ export function registerFeedsRoutes(app: Hono) {
             pending = false
           }
         }
-        unsubscribe = subscribeToPosts(() => {
+        const queueCounts = () => {
           if (initializing) queuedDuringInitialization = true
           else void publishCounts()
-        })
+        }
+        unsubscribePosts = subscribeToPosts(queueCounts)
+        unsubscribeMutations = subscribeToFeedMutations(queueCounts)
         void databaseService().call('feeds.unreadCounts', { userId: user.id }).then(counts => {
           lastCounts = JSON.stringify(counts)
           send(`event: baseline\ndata: ${lastCounts}\n\n`)

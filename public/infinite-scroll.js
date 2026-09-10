@@ -346,7 +346,7 @@
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
     event.preventDefault()
-    void navigateFeed(url.href, true, link, link.classList.contains('active'))
+    void navigateFeed(url.href, true, link, true)
   })
 
   addEventListener('popstate', () => void navigateFeed(location.href, false, null, false))
