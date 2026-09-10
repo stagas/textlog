@@ -15,7 +15,7 @@ import { enterHref, pendingFollowHref } from './auth-links'
 
 import React from 'preact/compat'
 import { isAdmin } from '../admin'
-import { displayedExecutionOutput } from '../code-execution'
+import { displayedExecutionOutputParts } from '../code-execution'
 import { collapsedConversationPreview } from '../latest-conversation'
 import { renderToStaticMarkup } from '../render'
 import type { User } from '../types'
@@ -648,9 +648,22 @@ export function PreviewPost({ p, user }: { p: PostView; user?: User }) {
 }
 
 function ExecutionOutput({ output }: { output: string }) {
-  const visibleOutput = displayedExecutionOutput(output)
+  const { visible: visibleOutput, omitted } = displayedExecutionOutputParts(output)
   if (!visibleOutput.trim()) return null
-  return <code className="code-fence execution-output ascii-art">{visibleOutput}</code>
+  if (!omitted) return <code className="code-fence execution-output ascii-art">{visibleOutput}</code>
+
+  const visibleLines = visibleOutput.split('\n')
+  const ellipsisIndex = visibleLines.length - 2
+  return (
+    <div className="code-fence execution-output ascii-art">
+      <code>{visibleLines.slice(0, ellipsisIndex).join('\n')}{'\n'}</code>
+      <details className="execution-output-omission">
+        <summary aria-label="Expand omitted output">…</summary>
+        <code>{omitted}{'\n'}</code>
+      </details>
+      <code>{visibleLines.at(-1)}</code>
+    </div>
+  )
 }
 
 function endsWithCodeFence(body: string) {

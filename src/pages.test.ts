@@ -755,11 +755,8 @@ test('posting helpers use the compact action and show copyable highlighted resul
     '<span class="posting-help-modifier-heading">Executable code</span><small>Runs the next language-tagged code fence',
   )
   expect(html).toContain('Run this <b>#exec</b><br/><b>```js</b><br/>console.log(6 * 7)<br/><b>```</b>')
-  expect(html).toContain(
-    '<span class="posting-help-modifier-heading">Mermaid diagrams</span><small>Renders the next Mermaid code fence '
-      + 'as an ASCII diagram beneath the note.</small>',
-  )
-  expect(html).toContain('Draw this <b>#mermaid</b><br/><b>```mermaid</b><br/>graph LR<br/>A --> B<br/><b>```</b>')
+  expect(html).not.toContain('Mermaid')
+  expect(html).not.toContain('#mermaid')
   expect(html).toContain(
     '<span class="posting-help-modifier-heading">Pinned notes</span><small>Your latest #pin is shown first on your profile',
   )
@@ -4383,6 +4380,27 @@ test('execution output uses ASCII-art styling in posts, previews, and quoted par
 
   expect(html.match(/class="code-fence execution-output ascii-art"/g)).toHaveLength(2)
   expect(preview).toContain('class="code-fence execution-output ascii-art"')
+})
+
+test('long execution output renders clickable omission dots with the hidden lines', () => {
+  const executionOutput = Array.from({ length: 103 }, (_, index) => `line ${index + 1}`).join('\n')
+  const html = renderToStaticMarkup(React.createElement(Post, {
+    user: null,
+    p: {
+      id: 1,
+      user_id: 1,
+      parent_id: null,
+      body: 'output',
+      execution_output: executionOutput,
+      handle: 'writer',
+      created_at: '2026-08-03 12:00:00',
+      deleted_at: null,
+    },
+  }))
+
+  expect(html).toContain('<summary aria-label="Expand omitted output">…</summary>')
+  expect(html).toContain('line 99\nline 100\nline 101\nline 102')
+  expect(html).toContain('</details><code>line 103</code>')
 })
 
 test('Post only renders owner actions when requested by the detail view', () => {

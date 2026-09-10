@@ -317,7 +317,7 @@ describe('post persistence', () => {
       .toBe('<code class="code-fence">&gt; quoted-looking code</code>')
   })
 
-  test('syntax highlights JavaScript, Python, and Mermaid fences', () => {
+  test('syntax highlights JavaScript and Python fences', () => {
     const javascript = linkify('```js\nconst answer = 42\n```')
     expect(javascript).toContain('<code class="code-fence hljs language-javascript">')
     expect(javascript).toContain('<span class="hljs-keyword">const</span>')
@@ -328,14 +328,6 @@ describe('post persistence', () => {
     expect(python).toContain('<span class="hljs-keyword">def</span>')
     expect(python).toContain('<span class="hljs-keyword">return</span>')
 
-    const mermaid = linkify('```mermaid\ngraph LR\nsubgraph Frontend\n  UI --> API\nend\n'
-      + 'subgraph Backend\n  API --> Database\n  API --> Cache\nend\n```')
-    expect(mermaid).toContain('<code class="code-fence hljs language-mermaid">')
-    expect(mermaid).toContain('<span class="hljs-keyword">graph LR</span>')
-    expect(mermaid).toContain('<span class="hljs-keyword">subgraph</span>')
-    expect(mermaid).toContain('<span class="hljs-keyword">end</span>')
-    expect(mermaid).toContain('<span class="hljs-operator">--&gt;</span>')
-
     expect(linkify('```ts\nconst answer = 42\n```'))
       .toBe('<code class="code-fence">const answer = 42</code>')
   })
@@ -345,11 +337,6 @@ describe('post persistence', () => {
     expect(exec).toContain('<span class="post-spoiler execution-source-spoiler">')
     expect(exec).toContain('<span>show code</span>')
     expect(exec).toContain('<code class="code-fence hljs language-javascript">')
-
-    const mermaid = linkify('#mermaid\n```mermaid\ngraph LR\nA --> B\n```')
-    expect(mermaid).toContain('<span class="post-spoiler execution-source-spoiler">')
-    expect(mermaid).toContain('<span>show code</span>')
-    expect(mermaid).toContain('<code class="code-fence hljs language-mermaid">')
 
     expect(linkify('```js\nconsole.log(42)\n```')).not.toContain('execution-source-spoiler')
     expect(linkify('```text\n#exec\n```\n```js\nconsole.log(42)\n```')).not.toContain('execution-source-spoiler')

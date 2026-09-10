@@ -2,7 +2,6 @@ import type { Database } from 'bun:sqlite'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 import python from 'highlight.js/lib/languages/python'
-import { mermaidGrammar } from 'hljs-mermaid'
 import { LinkifyIt } from 'linkify-it'
 import { createHash, randomBytes } from 'node:crypto'
 import tlds from 'tlds'
@@ -22,25 +21,11 @@ import type { LinkPreview, LocationView, UserProfileStats } from './types'
 
 hljs.registerLanguage('javascript', javascript)
 hljs.registerLanguage('python', python)
-hljs.registerLanguage('mermaid', api => {
-  const grammar = mermaidGrammar(api)
-  grammar.contains = [
-    {
-      className: 'keyword',
-      begin:
-        /\b(?:graph|flowchart|subgraph|end|direction|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|pie|gantt|requirementDiagram|sankey-beta|timeline|quadrantChart)(?:\s+(?:LR|TB|TD|RL|BT))?\b/,
-    },
-    ...(grammar.contains || []),
-  ]
-  return grammar
-})
-
-const highlightedCodeLanguages: Record<string, 'javascript' | 'python' | 'mermaid'> = {
+const highlightedCodeLanguages: Record<string, 'javascript' | 'python'> = {
   js: 'javascript',
   javascript: 'javascript',
   py: 'python',
   python: 'python',
-  mermaid: 'mermaid',
 }
 
 export function userHoverTitle(noteCount: number, bio?: string) {
@@ -530,11 +515,11 @@ function executableFenceIndexes(body: string, tokens: LinkToken[]) {
   const fences = tokens.filter(token => token.kind === 'code-fence')
   const fencedRanges = tokens.filter(token => token.kind === 'code-fence' || token.kind === 'latex-fence')
   const indexes = new Set<number>()
-  for (const marker of body.matchAll(/(?:^|\s)#(exec|mermaid)\s*$/gm)) {
+  for (const marker of body.matchAll(/(?:^|\s)#exec\s*$/gm)) {
     if (fencedRanges.some(token => marker.index! >= token.index && marker.index! < token.lastIndex)) continue
     const fence = fences.find(token =>
       token.index >= marker.index! + marker[0].length
-      && (marker[1] === 'exec' ? !!token.language : token.language === 'mermaid')
+      && !!token.language
     )
     if (fence) indexes.add(fence.index)
   }
