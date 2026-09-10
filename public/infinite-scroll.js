@@ -364,6 +364,13 @@
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
     event.preventDefault()
+    const kind = liveTabKind(link)
+    if (link.classList.contains('active') && kind && pendingLiveTabs.has(kind)) {
+      heldLiveTab = kind
+      heldLiveCount = liveCounts[kind]
+      void navigateFeed(url.href, false, link, true)
+      return
+    }
     void navigateFeed(url.href, true, link, true)
   })
 
@@ -374,6 +381,10 @@
   })
   syncLiveCountsFromDocument()
   if (performance.getEntriesByType('navigation')[0]?.type === 'reload') void reconcileLiveCounts()
+  else {
+    heldLiveTab = activeLiveTab() || null
+    heldLiveCount = heldLiveTab ? liveCounts[heldLiveTab] : 0
+  }
   if (document.querySelector('.feed-tabs a[href="/my-feed"]')) {
     const events = new EventSource('/feed/events')
     events.addEventListener('baseline', event => {
