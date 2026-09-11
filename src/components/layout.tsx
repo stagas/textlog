@@ -77,11 +77,15 @@ export function Layout({
   const onDraftsPage = requestUrl.pathname === '/drafts'
   const onFeedPage = ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(requestUrl.pathname)
   const onThreadPage = requestUrl.pathname.startsWith('/post/')
+  const onTagPage = requestUrl.pathname.startsWith('/tag/')
+  const onTagFeedPage = onTagPage && requestUrl.searchParams.get('tab') !== 'followers'
+  const onThreadedPage = onFeedPage || onThreadPage || onTagPage
+  const onInfiniteFeedPage = onFeedPage || onTagFeedPage
   const onProgressivePaginationPage = requestUrl.pathname === '/explore'
     || (requestUrl.pathname.startsWith('/u/')
       && ['following', 'followers', 'blocked'].includes(requestUrl.searchParams.get('tab') || ''))
   const noScriptFeedUrl = (() => {
-    if (!onFeedPage || request.method !== 'GET' || requestUrl.searchParams.get('chunk') === '5') return null
+    if (!onInfiniteFeedPage || request.method !== 'GET' || requestUrl.searchParams.get('chunk') === '5') return null
     const destination = new URL(requestUrl)
     destination.searchParams.delete('_feed_chunk')
     destination.searchParams.set('chunk', '5')
@@ -245,11 +249,12 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=21" defer />}
-        {(onFeedPage || onThreadPage) && (
+        {onThreadedPage && <script src="/thread-hover-scroll.js?v=31" defer />}
+        {(onFeedPage || onTagPage) && <script src="/thread-expansion.js?v=4" defer />}
+        {onThreadedPage && (
           <>
             <script src="/feed-reply.js?v=20" defer />
-            {onFeedPage && <script src="/infinite-scroll.js?v=46" defer />}
+            {onInfiniteFeedPage && <script src="/infinite-scroll.js?v=48" defer />}
           </>
         )}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
@@ -362,7 +367,7 @@ export function Layout({
           ? <MobileJoinAction />
           : null)}
         <main id="main-content">{children}</main>
-        {(onFeedPage || onThreadPage) && (!user || canPublishPosts(user)) && (
+        {onThreadedPage && (!user || canPublishPosts(user)) && (
           <template id="inline-reply-template" data-viewer-id={user?.id ?? 'guest'}>
             <ReplyComposer user={user || null} replyParent={{ id: 0, user_id: -1, handle: '' }} replyPageId={0}
               inline autoFocus={false} />

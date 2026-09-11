@@ -115,6 +115,7 @@ const databaseIndependentPaths = new Set([
   '/contextual-back.js',
   '/reference-follow.js',
   '/thread-hover-scroll.js',
+  '/thread-expansion.js',
   '/sw.js',
   '/theme.css',
   '/textlog.svg',

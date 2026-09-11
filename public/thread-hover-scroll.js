@@ -41,6 +41,10 @@
       }
       const contentLeft = scroller.scrollLeft + postRect.left - scrollerRect.left
       const postTarget = Math.max(0, contentLeft - (Math.min(level, levelCap) - 1) * indent)
+      const contentRight = scroller.scrollLeft + postRect.right - scrollerRect.left
+      const postRightTarget = activeComposer
+        ? 0
+        : Math.max(0, contentRight - scroller.clientWidth)
       const composer = activeComposer
       const composerRect = activeComposerRect
       const composerVisible = composerRect && composerRect.height > 0
@@ -49,7 +53,8 @@
       const composerTarget = composerVisible && !matchMedia('(max-width: 600px)').matches
         ? scroller.scrollLeft + Math.max(0, composerEdge.right - scrollerRect.right + 16)
         : 0
-      const target = Math.min(scroller.scrollWidth - scroller.clientWidth, Math.max(postTarget, composerTarget))
+      const target = Math.min(scroller.scrollWidth - scroller.clientWidth,
+        Math.max(postTarget, postRightTarget, composerTarget))
       if (Math.abs(target - scroller.scrollLeft) <= 1) continue
 
       scroller.scrollTo({ left: target, behavior: 'smooth' })

@@ -2,11 +2,10 @@ import type { HotCursor } from '../hot'
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
-import { chunkFeedPosts, FEED_CHUNK_SIZE, feedChunkReturnPath, feedConversationGroups, feedPostsWithFetchedThread,
-  InfiniteFeedChunk } from './infinite-feed'
+import { feedChunkReturnPath, feedPostsWithFetchedThread } from './infinite-feed'
 import { Layout } from './layout'
 import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
-import { FeedThreads } from './post'
+import { ThreadedFeedChunks } from './threaded-feed'
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
@@ -33,8 +32,6 @@ export function HotFeed(
 ) {
   feed = { ...feed, posts: feedPostsWithFetchedThread(feed.posts, fetchedThread) }
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
-  const conversationCount = feedConversationGroups(feed.posts).length
-  const chunkPosts = chunkFeedPosts(feed.posts, chunk, initialChunks)
   const feedPath = path
   let returnPath = feedChunkReturnPath(feedPath + (feed.page > 1 ? `?page=${feed.page}` : ''), renderedChunk)
   if (fetchedThread?.length) {
@@ -42,12 +39,9 @@ export function HotFeed(
     target.searchParams.set('fetch', String(fetchedThread[0]!.id))
     returnPath = target.pathname + target.search
   }
-  const chunkMarkup = (
-    <InfiniteFeedChunk chunk={renderedChunk} hasMore={conversationCount > (renderedChunk + 1) * FEED_CHUNK_SIZE}>
-      <FeedThreads posts={chunkPosts} user={user} returnPath={returnPath} expandedRootId={expandedRootId}
-        expandedByDefault={!user && path === '/hot'} promoteAncestors />
-    </InfiniteFeedChunk>
-  )
+  const chunkMarkup = <ThreadedFeedChunks posts={feed.posts} user={user} returnPath={returnPath} chunk={chunk}
+    initialChunks={initialChunks} expandedRootId={expandedRootId} expandedByDefault={!user && path === '/hot'}
+    promoteAncestors />
   if (chunk > 0) return chunkMarkup
   return (
     <Layout user={user} title={title} pageUrl={pageUrl} notificationBanner={notificationBanner} mobileWriteAction

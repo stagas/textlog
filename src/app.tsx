@@ -166,6 +166,7 @@ const publicScriptPaths = [
   '/contextual-back.js',
   '/reference-follow.js',
   '/thread-hover-scroll.js',
+  '/thread-expansion.js',
   '/sw.js',
 ] as const
 const publicScripts = devReloadEnabled ? undefined : new Map(await Promise.all(publicScriptPaths.map(async path => {

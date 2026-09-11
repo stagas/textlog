@@ -2454,6 +2454,31 @@ test('public collection pages advertise their RSS and Atom feeds', () => {
   expect(tag).toContain('href="/tag/ascii_art.atom"')
 })
 
+test('tag notes use the shared progressively loaded threaded feed shell', () => {
+  const posts = Array.from({ length: 21 }, (_, index) => ({
+    id: index + 1,
+    user_id: 1,
+    parent_id: null,
+    body: `Tagged conversation ${index + 1}`,
+    handle: 'writer',
+    created_at: `2026-08-${String(index + 1).padStart(2, '0')} 12:00:00`,
+    deleted_at: null,
+  }))
+  const first = renderToStaticMarkup(React.createElement(TagFeed, {
+    user: null, tag: 'topic', following: false, posts, page: 1, total: posts.length,
+  }))
+  const next = renderToStaticMarkup(React.createElement(TagFeed, {
+    user: null, tag: 'topic', following: false, posts, page: 1, total: posts.length, chunk: 1,
+  }))
+
+  expect(first).toContain('data-feed-view="true"')
+  expect(first).toContain('data-feed-next="1"')
+  expect(first.match(/class="post-page-thread feed-thread"/g)).toHaveLength(20)
+  expect(next).toContain('data-feed-chunk="2"')
+  expect(next.match(/class="post-page-thread feed-thread"/g)).toHaveLength(1)
+  expect(next).not.toContain('<html')
+})
+
 test('feed tabs include the chronological top-level new feed', () => {
   const html = renderToStaticMarkup(React.createElement(PublicFeed, {
     user: null,

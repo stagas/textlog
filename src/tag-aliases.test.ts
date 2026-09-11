@@ -72,6 +72,41 @@ test('tag aliases resolve, aggregate posts, and can be managed by admins', async
   expect(await executeDatabaseDomain(database, 'admin.removeTagDisplayName', { tag: 'meta' })).toBe(true)
 })
 
+test('tag pages load matching notes as collapsible conversation threads', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  const root = createPost(database, 1, 'Conversation root', null, false)
+  if (!('id' in root)) throw new Error('Expected root post')
+  let parentId = root.id
+  const replyIds: number[] = []
+  for (let index = 0; index < 7; index++) {
+    database.query('INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(1,?,?,?)')
+      .run(parentId, index === 0 ? 'Tagged reply #topic' : `Reply ${index}`, `2026-09-01 0${index + 1}:00:00`)
+    const replyId = (database.query('SELECT last_insert_rowid() id').get() as { id: number }).id
+    if (index === 0) database.query('INSERT INTO post_hashtags(post_id,tag) VALUES(?,\'topic\')').run(replyId)
+    replyIds.push(replyId)
+    parentId = replyId
+  }
+
+  const tagPage = await executeDatabaseDomain(database, 'tags.page', {
+    tag: 'topic',
+    viewerId: -1,
+    page: 1,
+    pageSize: 20,
+    tab: 'notes',
+  })
+
+  expect(tagPage.total).toBe(1)
+  expect(tagPage.posts.some(post => post.id === root.id)).toBeTrue()
+  expect(tagPage.posts.some(post => post.id === replyIds[0])).toBeTrue()
+  expect(tagPage.posts.some(post => post.feed_collapsed_preview)).toBeTrue()
+  expect(tagPage.posts.map(post => post.id).sort((left, right) => left - right))
+    .toEqual([root.id, ...replyIds])
+})
+
 test('first use of a PascalCase tag creates its display name without an underscore alias', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')

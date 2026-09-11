@@ -3,15 +3,20 @@ import type { User } from '../types'
 import type { PersonView, PostView } from '../types'
 import { enterHref } from './auth-links'
 import { Layout } from './layout'
+import { feedChunkReturnPath } from './infinite-feed'
 import { ConnectionPeople, GuestCommunityActions, Pagination, TabHighlight } from './page-shared'
-import { FeedThreads } from './post'
+import { ThreadedFeedChunks } from './threaded-feed'
 
 export function TagFeed(
   { user, tag, displayName, aliases = [], following, blocked = false, posts, page, total, followerTotal = 0,
-    people = [], tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath }: { user: User | null; tag: string;
+    people = [], tab = 'notes', social, notePageSize = PAGE_SIZE, returnPath, expandedRootId, chunk = 0,
+    initialChunks = 1 }: { user: User | null;
+      tag: string;
       displayName?: string | null; aliases?: Array<{ tag: string; displayName: string | null }>; following: boolean;
       blocked?: boolean; posts: PostView[]; page: number; total: number; followerTotal?: number; people?: PersonView[];
       tab?: 'notes' | 'followers'; notePageSize?: number; returnPath?: string;
+      expandedRootId?: number;
+      chunk?: number; initialChunks?: number;
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile' | 'website';
         imageAlt?: string } },
 ) {
@@ -21,6 +26,11 @@ export function TagFeed(
     ? `${tabPath}${tabPath.includes('?') ? '&' : '?'}from=${encodeURIComponent(returnPath)}`
     : tabPath
   const feedPath = `${paginationPath}${page > 1 ? `${returnPath ? '&' : '?'}page=${page}` : ''}`
+  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
+  const chunkReturnPath = feedChunkReturnPath(feedPath, renderedChunk)
+  const threadMarkup = <ThreadedFeedChunks posts={posts} user={user} returnPath={chunkReturnPath} chunk={chunk}
+    initialChunks={initialChunks} expandedRootId={expandedRootId} />
+  if (chunk > 0) return threadMarkup
   return (
     <Layout user={user} title={`#${tag}`} social={social} feeds={{
       title: `#${tag} notes`,
@@ -77,12 +87,13 @@ export function TagFeed(
           </a>
         </div>
       </nav>
-      {page > 1
-        && (
-          <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-            / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} top />
-        )}
-      {tab === 'followers'
+      <div data-feed-view>
+        {page > 1
+          && (
+            <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+              / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} top />
+          )}
+        {tab === 'followers'
         ? people.length
           ? (
             <ConnectionPeople user={user} people={people} className="connections-list" showNoteCount={false}
@@ -100,10 +111,11 @@ export function TagFeed(
           </div>
         )
         : posts.length
-        ? <FeedThreads posts={posts} user={user} returnPath={feedPath} />
+        ? threadMarkup
         : <div className="empty">No notes use this hashtag yet.</div>}
-      <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
-        / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
+        <Pagination page={page} totalPages={Math.ceil((tab === 'followers' ? followerTotal : total)
+          / (tab === 'followers' ? CONNECTION_PAGE_SIZE : notePageSize))} path={paginationPath} />
+      </div>
       {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )

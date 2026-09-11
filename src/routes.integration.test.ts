@@ -173,7 +173,7 @@ test('inline feed and post-page replies are served as immutable JavaScript', asy
 })
 
 test('thread hover scrolling is served as immutable JavaScript', async () => {
-  const response = await request('/thread-hover-scroll.js?v=21')
+  const response = await request('/thread-hover-scroll.js?v=31')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -184,6 +184,28 @@ test('thread hover scrolling is served as immutable JavaScript', async () => {
   expect(script).toContain('smooth')
   expect(script).toContain('.feed-inline-reply-compose')
   expect(script).toContain('max-width: 600px')
+  expect(script).toContain('.right')
+})
+
+test('thread expansion progressively fetches complete conversations', async () => {
+  const response = await request('/thread-expansion.js?v=4')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  const script = await response.text()
+  expect(script).toContain('X-Textlog-Feed-Expansion')
+  expect(script).toContain('feed-thread-expanding')
+})
+
+test('tag feeds include the complete shared thread enhancement contract', async () => {
+  const response = await request('/tag/asd')
+  expect(response.status).toBe(200)
+  const html = await response.text()
+  expect(html).toContain('/thread-hover-scroll.js?v=31')
+  expect(html).toContain('/thread-expansion.js?v=4')
+  expect(html).toContain('/feed-reply.js?v=20')
+  expect(html).toContain('/infinite-scroll.js?v=48')
+  expect(html).toContain('id="inline-reply-template"')
+  expect(html).toContain('data-feed-view="true"')
 })
 
 test('notification sound is served as immutable MPEG audio', async () => {
