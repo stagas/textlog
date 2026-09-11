@@ -1618,21 +1618,10 @@ body.corners-round a.button {
 
   .feed-tabs-scroll {
     align-items: flex-end;
-    scrollbar-width: thin;
-    scrollbar-color: var(--soft) transparent;
   }
 
   .feed-tabs-scroll > a {
     padding-top: calc(var(--space-2) + var(--space-4));
-  }
-
-  .feed-tabs-scroll::-webkit-scrollbar {
-    display: block;
-    height: 4px;
-  }
-
-  .feed-tabs-scroll::-webkit-scrollbar-thumb {
-    background: var(--soft);
   }
 
   .feed-tabs-read-status {

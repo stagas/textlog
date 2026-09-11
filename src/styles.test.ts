@@ -257,6 +257,14 @@ describe('in-memory stylesheet', () => {
     )
   })
 
+  test('keeps overflowing feed and profile tabs scrollable without a visible scrollbar', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain('  overflow-x: auto;\n  overflow-y: hidden;\n  scrollbar-width: none;')
+    expect(css).toContain('.feed-tabs-scroll::-webkit-scrollbar {\n  display: none;\n}')
+    expect(css).not.toContain('.feed-tabs-scroll::-webkit-scrollbar {\n    display: block;')
+    expect(css).not.toContain('scrollbar-width: thin')
+  })
+
   test('removes the top border from a grouped first activity', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
