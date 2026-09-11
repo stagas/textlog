@@ -188,6 +188,7 @@ const server = Bun.serve({
   hostname: configuration.host,
   async fetch(request: Request, server: Bun.Server<unknown>) {
     const path = requestPath(request)
+    if (path === '/admin/logs/events' || path === '/feed/events') server.timeout(request, 0)
     const address = server.requestIP(request)?.address || null
     feedWarmIdle.record(address, path === '/styles.css')
     const asset = mainThreadAsset(request)
@@ -229,7 +230,6 @@ const server = Bun.serve({
     headers.delete(clientIpHeaderName())
     if (address) headers.set(clientIpHeaderName(), address)
     const applicationRequest = new Request(request, { headers })
-    if (path === '/admin/logs/events' || path === '/feed/events') server.timeout(request, 0)
     return withRequestContext({ sessionUser: identity.sessionUser, apiUser: identity.apiUser,
       pageSize: identity.preferences.pageSize, density: identity.preferences.density },
       () => readyApplication.fetch(applicationRequest, server)).then(async response => {
