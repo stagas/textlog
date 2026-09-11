@@ -1,6 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import { lookup } from 'node:dns/promises'
-import { isIP } from 'node:net'
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
+import { BlockList, isIP } from 'node:net'
+import { Readable } from 'node:stream'
 import { appName, appOrigin } from './brand'
 import { databaseIdentity } from './database-identity'
 import { createImageKey, deleteImages, deleteImagesAfterCommit, getImageUrl, imageDimensions, isImageKey,
@@ -69,16 +72,61 @@ function ownPostPreview(rawUrl: string, database?: Database): ({ url: string } &
   }
 }
 
-function privateAddress(address: string) {
-  const normalized = address.toLowerCase().replace(/^::ffff:/, '')
-  if (normalized === '::1' || normalized === '::' || normalized.startsWith('fc') || normalized.startsWith('fd')
-    || normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea')
-    || normalized.startsWith('feb')) return true
-  const parts = normalized.split('.').map(Number)
-  if (parts.length !== 4 || parts.some(part => !Number.isInteger(part))) return false
-  return parts[0] === 0 || parts[0] === 10 || parts[0] === 127 || parts[0] >= 224
-    || (parts[0] === 169 && parts[1] === 254) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
-    || (parts[0] === 192 && parts[1] === 168) || (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127)
+const nonPublicAddresses = new BlockList()
+for (const [network, prefix] of [
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16],
+  ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.168.0.0', 16],
+  ['198.18.0.0', 15], ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
+] as Array<[string, number]>) nonPublicAddresses.addSubnet(network, prefix, 'ipv4')
+for (const [network, prefix] of [
+  ['::', 96], ['64:ff9b::', 96], ['64:ff9b:1::', 48], ['100::', 64], ['2001::', 32], ['2001:2::', 48],
+  ['2001:10::', 28], ['2001:20::', 28], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20], ['5f00::', 16],
+  ['fc00::', 7], ['fe80::', 10], ['fec0::', 10], ['ff00::', 8],
+] as Array<[string, number]>) nonPublicAddresses.addSubnet(network, prefix, 'ipv6')
+
+export function privateAddress(address: string) {
+  const family = isIP(address)
+  return family === 0 || nonPublicAddresses.check(address, family === 4 ? 'ipv4' : 'ipv6')
+}
+
+async function safeFetch(url: URL, init: { method?: string; headers?: HeadersInit } = {}) {
+  const host = url.hostname.replace(/^\[|\]$/g, '')
+  const addresses = isIP(host)
+    ? [{ address: host, family: isIP(host) as 4 | 6 }]
+    : await lookup(host, { all: true })
+  if (!addresses.length || addresses.some(result => privateAddress(result.address))) {
+    throw new Error('Link preview target is not public')
+  }
+  const address = addresses[0]
+  const headers = Object.fromEntries(new Headers(init.headers).entries())
+  // Keep the response stream byte limits meaningful and avoid buffering a decompressed response in the HTTP client.
+  headers['accept-encoding'] = 'identity'
+  return await new Promise<Response>((resolve, reject) => {
+    const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {
+      method: init.method,
+      headers,
+      lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
+    }, response => {
+      response.once('close', () => clearTimeout(deadline))
+      const responseHeaders = new Headers()
+      for (const [name, value] of Object.entries(response.headers)) {
+        if (Array.isArray(value)) for (const item of value) responseHeaders.append(name, item)
+        else if (value !== undefined) responseHeaders.set(name, value)
+      }
+      resolve(new Response(init.method === 'HEAD' ? null : Readable.toWeb(response) as unknown as ReadableStream, {
+        status: response.statusCode,
+        statusText: response.statusMessage,
+        headers: responseHeaders,
+      }))
+    })
+    const deadline = setTimeout(() => request.destroy(new Error('Link preview request timed out')), FETCH_TIMEOUT_MS)
+    request.setTimeout(FETCH_TIMEOUT_MS, () => request.destroy(new Error('Link preview request timed out')))
+    request.once('error', error => {
+      clearTimeout(deadline)
+      reject(error)
+    })
+    request.end()
+  })
 }
 
 async function publicHttpUrl(value: string) {
@@ -228,9 +276,7 @@ export async function readHtmlHead(response: Response) {
 async function fetchHtml(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
-    const response = await fetch(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    const response = await safeFetch(url, {
       headers: { accept: 'text/html,application/xhtml+xml', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status >= 300 && response.status < 400) {
@@ -251,16 +297,12 @@ async function fetchHtml(initialUrl: URL) {
 async function audioMimeType(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
-    let response = await fetch(url, {
+    let response = await safeFetch(url, {
       method: 'HEAD',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { accept: 'audio/*,text/html;q=0.8', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status === 405 || response.status === 501) {
-      response = await fetch(url, {
-        redirect: 'manual',
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      response = await safeFetch(url, {
         headers: { accept: 'audio/*,text/html;q=0.8', range: 'bytes=0-0', 'user-agent': 'textlog-link-preview/1.0' },
       })
       await response.body?.cancel()
@@ -283,9 +325,7 @@ async function audioMimeType(initialUrl: URL) {
 async function fetchYouTubeChannel(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
-    const response = await fetch(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    const response = await safeFetch(url, {
       headers: {
         accept: 'text/html,application/xhtml+xml',
         'user-agent': 'Mozilla/5.0 (compatible; textlog-link-preview/1.0)',
@@ -330,9 +370,7 @@ async function fetchYouTubeChannel(initialUrl: URL) {
 async function fetchImage(initialUrl: URL) {
   let url = initialUrl
   for (let redirects = 0; redirects <= 3; redirects++) {
-    const response = await fetch(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    const response = await safeFetch(url, {
       headers: { accept: 'image/*', 'user-agent': 'textlog-link-preview/1.0' },
     })
     if (response.status >= 300 && response.status < 400) {

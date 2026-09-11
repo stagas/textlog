@@ -1,9 +1,18 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { discoverLinkPreviews, isDirectImageUrl, openGraphImage, openGraphMetadata, readHtmlHead, replaceLinkPreviews,
-  youtubeChannelMetadata } from './link-preview'
+  privateAddress, youtubeChannelMetadata } from './link-preview'
 
 describe('link previews', () => {
+  test('blocks non-public addresses in alternate IPv4 and IPv6 forms', () => {
+    for (const address of [
+      '127.0.0.1', '10.0.0.1', '169.254.169.254', '::1', '::ffff:127.0.0.1', '::ffff:7f00:1', '::7f00:1',
+      '64:ff9b::7f00:1', '2002:7f00:1::', 'fc00::1', 'fe80::1', 'fec0::1',
+    ]) expect(privateAddress(address)).toBe(true)
+    expect(privateAddress('93.184.216.34')).toBe(false)
+    expect(privateAddress('2606:4700:4700::1111')).toBe(false)
+  })
+
   test('reads YouTube channel metadata from its embedded channel data', () => {
     const html = `<script>var data={"channelMetadataRenderer":{"title":"Example Channel",
       "description":"Videos about \\u0026 things","avatar":{"thumbnails":[{"url":"https://yt3.example/avatar.jpg",
