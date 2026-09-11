@@ -196,7 +196,7 @@ export function Layout({
     <html lang="en" className={instantScroll ? 'scroll-instant' : undefined}>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content" />
         <meta name="color-scheme" content="light dark" />
         {user && <meta name="textlog-new-message-sound" content={user.new_message_sound === 0 ? 'off' : 'on'} />}
         {'default' in themeBackgrounds
