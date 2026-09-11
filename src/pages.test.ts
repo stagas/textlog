@@ -7,6 +7,7 @@ import {
   AccountPassword,
   AccountSecurity,
   AdminDashboard,
+  AdminConfirm,
   AdminPostModeration,
   ApiDocs,
   Auth,
@@ -19,6 +20,7 @@ import {
   Compose,
   ConfirmAccountDelete,
   ConfirmDelete,
+  ConfirmDraftDelete,
   ConfirmEmail,
   Connections,
   Contact,
@@ -833,7 +835,7 @@ test('moderator post editing keeps save but hides owner-only actions', () => {
   expect(html).not.toContain('href="/post/2/delete"')
 })
 
-test('post deletion uses the standard centered confirmation panel', () => {
+test('post deletion uses the standard moderation confirmation panel', () => {
   const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
   const post = { id: 2, user_id: 1, parent_id: null, body: 'Original note', created_at: '2026-08-12 09:00:00',
     deleted_at: null }
@@ -843,16 +845,41 @@ test('post deletion uses the standard centered confirmation panel', () => {
     returnPath: '/latest#post-2',
   }))
 
-  expect(html).toContain('class="panel-shell auth-shell account-delete-shell post-delete-shell"')
-  expect(html).toContain(
-    'class="panel panel-surface panel-medium panel-danger auth-panel account-delete-panel confirm-delete post-delete-panel"',
-  )
+  expect(html).toContain('class="panel panel-surface panel-medium confirm-delete admin-confirm"')
   expect(html).toContain('<p class="eyebrow">note deletion</p>')
-  expect(html).toContain('<blockquote aria-label="Post to delete">Original note</blockquote>')
-  expect(html).toContain('class="post-delete-form" method="post" action="/post/2/delete"')
+  expect(html).toContain('<h1 class="panel-heading">Delete this post?</h1>')
+  expect(html).toContain('<p class="panel-copy">This can’t be undone.')
+  expect(html).toContain('<section class="confirm-delete-post" aria-label="Post to delete">')
+  expect(html).toContain('class="post-body">Original note</div>')
+  expect(html).toContain('<form method="post" action="/post/2/delete">')
   expect(html).toContain('name="from" value="/latest#post-2"')
   expect(html).toContain('href="/post/2?from=%2Flatest%23post-2">cancel</a>')
   expect(html).toContain('class="button button-danger" type="submit">delete post</button>')
+})
+
+test('draft and moderator deletion use the same post-rendering confirmation form', () => {
+  const user = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const draftHtml = renderToStaticMarkup(React.createElement(ConfirmDraftDelete, {
+    user,
+    draft: { id: 3, public_id: 'draft-id', body: '**Draft note**', parent_id: null,
+      created_at: '2026-08-12 09:00:00', updated_at: '2026-08-12 10:00:00' },
+  }))
+  const moderatorHtml = renderToStaticMarkup(React.createElement(AdminConfirm, {
+    user,
+    kind: 'delete_post',
+    post: { id: 2, user_id: 2, parent_id: null, body: '**Moderated note**',
+      created_at: '2026-08-12 09:00:00', deleted_at: null, handle: 'author' },
+  }))
+
+  for (const html of [draftHtml, moderatorHtml]) {
+    expect(html).toContain('class="panel panel-surface panel-medium confirm-delete admin-confirm"')
+    expect(html).toContain('class="panel-heading"')
+    expect(html).toContain('class="panel-copy"')
+    expect(html).toContain('class="confirm-delete-post" aria-label=')
+    expect(html).toContain('<strong>')
+  }
+  expect(draftHtml).toContain('<form method="post" action="/drafts/draft-id/delete">')
+  expect(moderatorHtml).toContain('<form method="post" action="/admin/posts/2/delete">')
 })
 
 test('editing a reply shows its parent context above the textarea', () => {

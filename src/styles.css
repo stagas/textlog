@@ -4199,32 +4199,16 @@ textarea.form-control {
   color: var(--danger-link-hover);
 }
 
-.confirm-delete h1 {
-  font-size: var(--font-size-20);
-}
-
-.confirm-delete blockquote {
-  margin: var(--space-5) 0;
-  padding: var(--space-4);
-  color: var(--quote-ink);
-  background: var(--quote-bg);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 .confirm-delete form {
   margin: 0;
 }
 
-.post-delete-panel blockquote {
+.confirm-delete-post {
   margin-block: var(--space-5);
-  font-size: var(--font-size-13);
-  line-height: 1.6;
-  border: 1px solid var(--soft);
 }
 
-.post-delete-panel .form-actions {
-  margin-top: var(--space-5);
+.confirm-delete-post > .post {
+  border: 1px solid var(--soft);
 }
 
 .account-delete-form {

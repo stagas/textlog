@@ -4,7 +4,7 @@ import type { PostRow, ProfileRow } from '../types'
 import { displayPostBody } from '../utils'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { Panel } from './panel'
+import { Panel, PanelCopy, PanelHeading } from './panel'
 import { Post } from './post'
 
 export function AdminTranslate({ user, post, returnTo }: {
@@ -128,9 +128,14 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
     <Layout user={user} title="admin moderation">
       <Panel className="confirm-delete admin-confirm">
         <p className="eyebrow">admin moderation</p>
-        <h1>{copy[0]}</h1>
-        <p>{copy[1]}</p>
-        {post && <blockquote>{displayPostBody(post.body)}</blockquote>}
+        <PanelHeading as="h1">{copy[0]}</PanelHeading>
+        <PanelCopy>{copy[1]}</PanelCopy>
+        {post && (
+          <section className="confirm-delete-post" aria-label="Post to delete">
+            <Post p={{ ...post, handle: post.handle || 'unknown' }} user={user} showReadAction={false}
+              suppressContentWarning />
+          </section>
+        )}
         <form method="post" action={action}>
           <input type="hidden" name="returnTo" value={returnTo} />
           <label>
