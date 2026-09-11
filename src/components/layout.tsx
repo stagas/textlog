@@ -12,11 +12,13 @@ import {
 import React from 'preact/compat'
 import { instance } from '../../instance.config'
 import { isAdmin } from '../admin'
+import { canPublishPosts } from '../posting-policy'
 import { resolvedDensity } from '../request-preferences'
 import type { User } from '../types'
 import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
 import { LogoutForm } from './logout-form'
+import { ReplyComposer } from './reply-composer'
 import { writeHref } from './write-link'
 
 let devReloadBootId: string | undefined
@@ -246,7 +248,7 @@ export function Layout({
         {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=21" defer />}
         {(onFeedPage || onThreadPage) && (
           <>
-            <script src="/feed-reply.js?v=16" defer />
+            <script src="/feed-reply.js?v=17" defer />
             {onFeedPage && <script src="/infinite-scroll.js?v=46" defer />}
           </>
         )}
@@ -360,6 +362,12 @@ export function Layout({
           ? <MobileJoinAction />
           : null)}
         <main id="main-content">{children}</main>
+        {(onFeedPage || onThreadPage) && (!user || canPublishPosts(user)) && (
+          <template id="inline-reply-template" data-viewer-id={user?.id ?? 'guest'}>
+            <ReplyComposer user={user || null} replyParent={{ id: 0, user_id: -1, handle: '' }} replyPageId={0}
+              inline autoFocus={false} />
+          </template>
+        )}
         {!fullScreen && showGuestJoin && (
           <div className="guest-join-row">
             <a className="button" href="/enter" rel="nofollow">join the community</a>

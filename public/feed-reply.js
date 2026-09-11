@@ -1,6 +1,4 @@
 ;(() => {
-  let requestController = null
-
   const removeComposer = wrapper => {
     wrapper?._layoutCleanup?.()
     const targetId = wrapper?.dataset.replyPostId
@@ -53,9 +51,37 @@
     return !fold || !fold.checked
   }
 
-  const replyBoxFrom = html => {
-    const document = new DOMParser().parseFromString(html, 'text/html')
-    return document.querySelector('.reply-compose')
+  const replyBoxFor = (post, href) => {
+    const template = document.getElementById('inline-reply-template')
+    if (!(template instanceof HTMLTemplateElement)) return null
+    const composer = template.content.querySelector('.reply-compose')?.cloneNode(true)
+    if (!(composer instanceof HTMLElement)) return null
+
+    const url = new URL(href, location.href)
+    const targetId = post.id.replace('post-', '')
+    const pageId = url.pathname.match(/^\/post\/(\d+)/)?.[1]
+    const form = composer.querySelector('form')
+    const textarea = composer.querySelector('textarea[name="body"]')
+    const replyPageInput = composer.querySelector('input[name="reply_page_id"]')
+    if (!pageId || !(form instanceof HTMLFormElement) || !(textarea instanceof HTMLTextAreaElement)
+      || !(replyPageInput instanceof HTMLInputElement)) return null
+
+    form.action = `/post/${targetId}/reply#post-${targetId}`
+    replyPageInput.value = pageId
+    composer.querySelector('input[name="from"]')?.remove()
+    const returnPath = url.searchParams.get('from')
+    if (returnPath) {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = 'from'
+      input.value = returnPath
+      form.prepend(input)
+    }
+    textarea.placeholder = post.hasAttribute('data-reply-own')
+      ? 'Continue writing…'
+      : `Reply to @${post.dataset.replyHandle}…`
+    textarea.dataset.composeStorageKey = `textlog:compose:${template.dataset.viewerId}:reply:${targetId}`
+    return composer
   }
 
   const initializeTextarea = composer => {
@@ -83,25 +109,17 @@
     }
   }
 
-  const showReplyBox = async (post, href) => {
+  const showReplyBox = (post, href) => {
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) {
       removeComposer(current)
       return
     }
 
-    requestController?.abort()
-    requestController = new AbortController()
     post.classList.add('feed-reply-loading')
     post.setAttribute('aria-busy', 'true')
     try {
-      const response = await fetch(href, {
-        credentials: 'same-origin',
-        headers: { Accept: 'text/html', 'X-Textlog-Inline-Reply': '1' },
-        signal: requestController.signal,
-      })
-      if (!response.ok) throw new Error(`Reply form request failed: ${response.status}`)
-      const composer = replyBoxFrom(await response.text())
+      const composer = replyBoxFor(post, href)
       if (!composer) {
         location.href = href
         return
@@ -129,7 +147,7 @@
       requestAnimationFrame(() => revealComposer(wrapper))
     }
     catch (error) {
-      if (error.name !== 'AbortError') location.href = href
+      location.href = href
     }
     finally {
       post.classList.remove('feed-reply-loading')
@@ -147,7 +165,7 @@
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) return
     event.preventDefault()
-    void showReplyBox(post, replyLink?.href || post.dataset.replyHref)
+    showReplyBox(post, replyLink?.href || post.dataset.replyHref)
   })
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return

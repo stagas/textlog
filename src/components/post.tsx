@@ -833,6 +833,8 @@ export function Post({
       }${contextDirectedUnread ? ' activity-item-directed-unread' : ''}`}
       id={`post-${p.id}`}
       data-reply-href={tappable && user ? resolvedReplyHref : undefined}
+      data-reply-handle={p.handle}
+      data-reply-own={user && user.id === p.user_id ? '' : undefined}
     >
       {shareAction && (
         <input className="post-share-toggle" id={shareControlId} type="checkbox" aria-label="show sharing options" />
