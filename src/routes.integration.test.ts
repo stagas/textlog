@@ -198,6 +198,7 @@ test('thread expansion progressively fetches complete conversations', async () =
   const response = await request('/thread-expansion.js?v=4')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   const script = await response.text()
   expect(script).toContain('X-Textlog-Feed-Expansion')
   expect(script).toContain('feed-thread-expanding')
