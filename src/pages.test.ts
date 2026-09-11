@@ -426,7 +426,8 @@ test('replying to a threaded reply keeps the root page and places the composer a
   expect(page).toContain('<input type="hidden" name="reply_page_id" value="9"/>')
   expect(page.indexOf('id="post-10"')).toBeLessThan(page.indexOf('action="/post/10/reply#post-10"'))
   expect(page).toContain('placeholder="Reply to @friend…"')
-  expect(page).toContain('class="inline-reply-compose" style="--reply-offset:calc(clamp(18px, 3vw, 28px));"')
+  expect(page).toContain('class="inline-reply-compose feed-inline-reply-compose" data-reply-post-id="10" '
+    + 'style="--reply-offset:calc(clamp(18px, 3vw, 28px));"')
   expect(page).toContain('class="quiet post-back-link" href="/all#post-10">back</a>')
   expect(page).toContain(
     '<form class="reference-follow-form" id="post-10-tag-topic" method="post" action="/tag-follow/topic">'

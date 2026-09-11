@@ -3743,6 +3743,11 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   margin-top: 0;
 }
 
+.post-page-thread:not(.feed-thread) .inline-reply-compose {
+  width: calc(100% + var(--reply-offset));
+  margin-left: calc(-1 * var(--reply-offset));
+}
+
 .feed-inline-reply-compose {
   position: relative;
   z-index: 2;
@@ -3771,21 +3776,23 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
 }
 
 @media (max-width: 600px) {
-  .feed-thread:has(> .feed-mobile-inline-reply-compose) {
-    position: relative;
-  }
+}
 
-  .inline-reply-compose.feed-mobile-inline-reply-compose {
-    position: absolute;
-    z-index: 40;
-    left: 0;
-    width: 100%;
-    margin-left: 0;
-  }
+.post-page-thread:has(> .thread-hoisted-inline-reply-compose) {
+  position: relative;
+}
 
-  .feed-inline-reply-placeholder {
-    width: 100%;
-  }
+.post-page-thread:not(.feed-thread) > .inline-reply-compose.thread-hoisted-inline-reply-compose,
+.feed-thread > .inline-reply-compose.thread-hoisted-inline-reply-compose {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  width: 100%;
+  margin-left: 0;
+}
+
+.feed-inline-reply-placeholder {
+  width: 100%;
 }
 
 .reply-compose .compose-editor-row {
@@ -8194,6 +8201,19 @@ a.post-context:hover {
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
+}
+
+.post-page-thread:not(.feed-thread) > .reply-branch:has(.inline-reply-compose) {
+  overflow-x: visible;
+}
+
+.post-page-thread:not(.feed-thread):has(> .root-reply-compose)
+  > .thread-root .post-reply-link {
+  display: none;
+}
+
+.post.reply-composer-target .post-reply-link {
+  display: none;
 }
 
 .thread-scroll-enhanced .post-page-thread > .reply-branch {

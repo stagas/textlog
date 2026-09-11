@@ -211,7 +211,7 @@ export function Reply(
     <Layout user={user} title={postTitle(post.body, post.moderation_category)} social={social}>
       <div className="post-page-thread">
         <div className="thread-root">
-          <Post p={post} user={user} showParent={false} showReplyAction={showForm && !!replyTo} showOwnerActions
+          <Post p={post} user={user} showParent={false} showReplyAction={showForm} showOwnerActions
             showModerateAction bookmarkAction shareAction suppressContentWarning={showForm} returnPath={returnPath}
             backHref={returnPath} canonicalTimestamp parentHref={parentHref} topHref={topHref} flatHref={flatHref}
             treeHref={treeHref} reportHref={user.id !== post.user_id
@@ -235,7 +235,8 @@ export function Reply(
                     <ReplyPreview parent={replyParent} user={user} body={body} executionOutput={previewExecutionOutput}
                       location={previewLocation} />
                   )}
-                  <div className="inline-reply-compose" style={{
+                  <div className="inline-reply-compose feed-inline-reply-compose"
+                    data-reply-post-id={reply.id} style={{
                     '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
                   } as React.CSSProperties}>
                     {replyComposer}

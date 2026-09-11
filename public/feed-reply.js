@@ -3,22 +3,26 @@
 
   const removeComposer = wrapper => {
     wrapper?._layoutCleanup?.()
+    const targetId = wrapper?.dataset.replyPostId
+    if (targetId) document.getElementById(`post-${targetId}`)?.classList.remove('reply-composer-target')
     document.querySelector('.feed-inline-reply-placeholder')?.remove()
     wrapper?.remove()
   }
 
   const mountComposer = (wrapper, post) => {
     wrapper.dataset.replyPostId = post.id.replace('post-', '')
-    if (!matchMedia('(max-width: 600px)').matches) {
+    post.classList.add('reply-composer-target')
+    const thread = post.closest('.post-page-thread')
+    const shouldHoist = !thread.classList.contains('feed-thread') || matchMedia('(max-width: 600px)').matches
+    if (!shouldHoist) {
       post.after(wrapper)
       return
     }
 
-    const thread = post.closest('.feed-thread')
     const placeholder = document.createElement('div')
     placeholder.className = 'feed-inline-reply-placeholder'
     post.after(placeholder)
-    wrapper.classList.add('feed-mobile-inline-reply-compose')
+    wrapper.classList.add('thread-hoisted-inline-reply-compose')
     thread.append(wrapper)
 
     let frame
@@ -44,8 +48,9 @@
 
   const expandedThread = post => {
     const thread = post.closest('.feed-thread')
-    const fold = thread?.querySelector(':scope > .thread-fold-input')
-    return thread && (!fold || !fold.checked)
+    if (!thread) return true
+    const fold = thread.querySelector(':scope > .thread-fold-input')
+    return !fold || !fold.checked
   }
 
   const replyBoxFrom = html => {
@@ -103,6 +108,7 @@
       }
 
       removeComposer(current)
+      document.querySelector('.post-page-thread:not(.feed-thread) > .root-reply-compose')?.remove()
       composer.classList.remove('root-reply-compose')
       composer.querySelectorAll('script').forEach(script => script.remove())
       const wrapper = document.createElement('div')
@@ -134,13 +140,14 @@
   document.addEventListener('click', event => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
       return
-    const hitArea = event.target.closest?.('.feed-thread .post-hit-area')
-    const post = hitArea?.closest('.post[data-reply-href]')
+    const replyLink = event.target.closest?.('.post-page-thread .post-reply-link')
+    const hitArea = event.target.closest?.('.post-page-thread .post-hit-area')
+    const post = replyLink?.closest('.post') || hitArea?.closest('.post[data-reply-href]')
     if (!post || !expandedThread(post)) return
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) return
     event.preventDefault()
-    void showReplyBox(post, post.dataset.replyHref)
+    void showReplyBox(post, replyLink?.href || post.dataset.replyHref)
   })
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return
@@ -152,4 +159,12 @@
     removeComposer(wrapper)
     post?.querySelector('.post-hit-area')?.focus({ preventScroll: true })
   })
+
+  const initialComposer = document.querySelector(
+    '.post-page-thread:not(.feed-thread) .feed-inline-reply-compose[data-reply-post-id]',
+  )
+  const initialPost = initialComposer
+    ? document.getElementById(`post-${initialComposer.dataset.replyPostId}`)
+    : null
+  if (initialComposer && initialPost) mountComposer(initialComposer, initialPost)
 })()

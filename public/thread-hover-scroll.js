@@ -7,13 +7,13 @@
     const viewportCenter = window.innerHeight / 2
 
     for (const scroller of document.querySelectorAll('.post-page-thread > .reply-branch')) {
-      const mobileComposer = scroller.closest('.feed-thread')
-        ?.querySelector(':scope > .feed-mobile-inline-reply-compose')
-      const mobileComposerRect = mobileComposer?.getBoundingClientRect()
-      const mobileComposerVisible = mobileComposerRect && mobileComposerRect.height > 0
-        && mobileComposerRect.bottom > 0 && mobileComposerRect.top < window.innerHeight
-      const replyTarget = mobileComposerVisible
-        ? document.getElementById(`post-${mobileComposer.dataset.replyPostId}`)
+      const activeComposer = scroller.closest('.post-page-thread')
+        ?.querySelector('.feed-inline-reply-compose')
+      const activeComposerRect = activeComposer?.getBoundingClientRect()
+      const activeComposerVisible = activeComposerRect && activeComposerRect.height > 0
+        && activeComposerRect.bottom > 0 && activeComposerRect.top < window.innerHeight
+      const replyTarget = activeComposerVisible
+        ? document.getElementById(`post-${activeComposer.dataset.replyPostId}`)
         : null
       const posts = [...scroller.querySelectorAll('.post')].filter(post => {
         const rect = post.getBoundingClientRect()
@@ -41,8 +41,8 @@
       }
       const contentLeft = scroller.scrollLeft + postRect.left - scrollerRect.left
       const postTarget = Math.max(0, contentLeft - (Math.min(level, levelCap) - 1) * indent)
-      const composer = scroller.querySelector('.feed-inline-reply-compose')
-      const composerRect = composer?.getBoundingClientRect()
+      const composer = activeComposer
+      const composerRect = activeComposerRect
       const composerVisible = composerRect && composerRect.height > 0
         && composerRect.bottom > 0 && composerRect.top < window.innerHeight
       const composerEdge = composer?.querySelector('.form-actions')?.getBoundingClientRect() || composerRect

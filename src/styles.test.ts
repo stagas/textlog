@@ -788,15 +788,24 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('only outdents an inline reply composer on mobile', async () => {
+  test('outdents a post-page inline reply composer to the full thread width', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
       '.inline-reply-compose {\n  width: calc(100% - clamp(18px, 3vw, 28px));\n'
         + '  margin-left: clamp(18px, 3vw, 28px);',
     )
     expect(css).toContain(
-      '@media (max-width: 520px) {\n  .inline-reply-compose {\n'
-        + '    width: calc(100% + var(--reply-offset));\n    margin-left: calc(-1 * var(--reply-offset));',
+      '.post-page-thread:not(.feed-thread) .inline-reply-compose {\n'
+        + '  width: calc(100% + var(--reply-offset));\n  margin-left: calc(-1 * var(--reply-offset));',
+    )
+    expect(css).toContain(
+      '.post-page-thread:not(.feed-thread) > .reply-branch:has(.inline-reply-compose) {\n'
+        + '  overflow-x: visible;',
+    )
+    expect(css).toContain(
+      '.post-page-thread:not(.feed-thread) > .inline-reply-compose.thread-hoisted-inline-reply-compose,\n'
+        + '.feed-thread > .inline-reply-compose.thread-hoisted-inline-reply-compose {\n'
+        + '  position: absolute;\n  z-index: 40;\n  left: 0;\n  width: 100%;\n  margin-left: 0;',
     )
   })
 
@@ -815,6 +824,15 @@ describe('in-memory stylesheet', () => {
   test('spaces a threaded reply preview from its inline composer', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.reply-preview + .inline-reply-compose {\n  margin-top: var(--space-4);')
+  })
+
+  test('reveals the root reply action after its composer moves elsewhere', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    expect(css).toContain(
+      '.post-page-thread:not(.feed-thread):has(> .root-reply-compose)\n'
+        + '  > .thread-root .post-reply-link {\n  display: none;',
+    )
+    expect(css).toContain('.post.reply-composer-target .post-reply-link {\n  display: none;')
   })
 
   test('masks warned content and removes the warning after reveal', async () => {
