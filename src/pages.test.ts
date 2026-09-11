@@ -4492,6 +4492,9 @@ test('Post carries its originating cursor into detail and edit links', () => {
   }))
 
   expect(html).toContain('href="/post/2?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
+  expect(html).toContain(
+    'data-reply-href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"',
+  )
   expect(html).not.toContain('post-reply-link')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('<input type="hidden" name="from" value="/latest?cursor=abc#post-2"/>')

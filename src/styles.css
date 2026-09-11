@@ -468,6 +468,10 @@ header>nav>a:not(.button),
   font-size: var(--font-size-14);
 }
 
+body:has(.feed-inline-reply-compose) > .mobile-write-action {
+  display: none;
+}
+
 .has-mobile-write-action .site-footer {
   position: relative;
   z-index: 31;
@@ -3739,6 +3743,16 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   margin-top: 0;
 }
 
+.feed-inline-reply-compose {
+  position: relative;
+  z-index: 2;
+  scroll-margin: var(--space-4);
+}
+
+.post.feed-reply-loading {
+  cursor: progress;
+}
+
 .thread-branch-content:has(.inline-reply-compose) {
   overflow: visible;
   animation: none;
@@ -3753,6 +3767,24 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   .replybox.root-reply-compose {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .feed-thread:has(> .feed-mobile-inline-reply-compose) {
+    position: relative;
+  }
+
+  .inline-reply-compose.feed-mobile-inline-reply-compose {
+    position: absolute;
+    z-index: 40;
+    left: 0;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .feed-inline-reply-placeholder {
+    width: 100%;
   }
 }
 

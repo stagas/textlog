@@ -160,6 +160,7 @@ const logsClient = await logsClientBuild.outputs[0].text()
 const publicScriptPaths = [
   '/notifications.js',
   '/infinite-scroll.js',
+  '/feed-reply.js',
   '/progressive-pagination.js',
   '/compose.js',
   '/contextual-back.js',
@@ -719,7 +720,7 @@ for (const path of publicScriptPaths) {
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
         'cache-control':
-          ['/infinite-scroll.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+          ['/infinite-scroll.js', '/feed-reply.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
               '/reference-follow.js', '/thread-hover-scroll.js'].includes(path)
             ? 'public, max-age=31536000, immutable'
             : 'no-cache',

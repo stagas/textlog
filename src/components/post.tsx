@@ -832,6 +832,7 @@ export function Post({
         tappable || hasTappableParent ? ' tappable-post' : ''
       }${contextDirectedUnread ? ' activity-item-directed-unread' : ''}`}
       id={`post-${p.id}`}
+      data-reply-href={tappable && user ? resolvedReplyHref : undefined}
     >
       {shareAction && (
         <input className="post-share-toggle" id={shareControlId} type="checkbox" aria-label="show sharing options" />

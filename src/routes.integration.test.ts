@@ -155,8 +155,16 @@ test('feed pagination uses the partial feed navigation enhancement', async () =>
   expect(script).toContain('X-Textlog-Feed-Navigation')
 })
 
+test('inline feed replies are served as immutable JavaScript', async () => {
+  const response = await request('/feed-reply.js?v=10')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  expect(await response.text()).toContain('X-Textlog-Inline-Reply')
+})
+
 test('thread hover scrolling is served as immutable JavaScript', async () => {
-  const response = await request('/thread-hover-scroll.js?v=12')
+  const response = await request('/thread-hover-scroll.js?v=20')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')

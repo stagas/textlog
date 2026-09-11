@@ -239,12 +239,17 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1562" />
+        <link rel="stylesheet" href="/styles.css?v=1569" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=12" defer />}
-        {onFeedPage && <script src="/infinite-scroll.js?v=46" defer />}
+        {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=20" defer />}
+        {onFeedPage && (
+          <>
+            <script src="/feed-reply.js?v=10" defer />
+            <script src="/infinite-scroll.js?v=46" defer />
+          </>
+        )}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
         {noScriptFeedUrl && (
           <noscript>
