@@ -1,7 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { instance } from '../instance.config'
-import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, pascalCaseHashtagDisplayName,
-  pluralHashtag, postContentFlags, singularHashtag } from './content'
+import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, normalizeHashtagSpelling,
+  pascalCaseHashtagDisplayName, pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
 import { migrateLegacySessionTokens } from './sessions'
@@ -5146,6 +5146,29 @@ export const migrations: Migration[] = [
         database.run(`INSERT OR IGNORE INTO new_read_exceptions(user_id,post_id,read_at)
           SELECT user_id,post_id,read_at FROM latest_read_exceptions
           WHERE post_id IN (SELECT id FROM posts WHERE parent_id IS NULL)`)
+      }
+    },
+  },
+  {
+    version: 226,
+    name: 'restore_react_wordnet_tag',
+    up(database) {
+      const hasTable = (name: string) => !!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+      ).get(name)
+      if (!hasTable('wordnet_normalizations')) return
+      database.query(`UPDATE wordnet_normalizations SET normalized_word='react'
+        WHERE word='react' AND normalized_word='antiphonary'`).run()
+      if (!hasTable('posts') || !hasTable('post_hashtags')) return
+      const posts = database.query(`SELECT id,body FROM posts WHERE deleted_at IS NULL
+        AND body LIKE '%#react%'`).all() as { id: number; body: string }[]
+      for (const post of posts) {
+        if (!extractAuthoredHashtags(post.body).some(tag => normalizeHashtagSpelling(tag.authored) === 'react')) continue
+        database.query("INSERT OR IGNORE INTO post_hashtags(post_id,tag) VALUES(?,'react')").run(post.id)
+        if (!extractAuthoredHashtags(post.body).some(tag =>
+          normalizeHashtagSpelling(tag.authored) === 'antiphonary')) {
+          database.query("DELETE FROM post_hashtags WHERE post_id=? AND tag='antiphonary'").run(post.id)
+        }
       }
     },
   },

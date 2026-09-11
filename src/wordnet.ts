@@ -61,6 +61,15 @@ async function normalizeUncached(word: string) {
   const original = hashtagWord(word)
   if (!/^[a-z]+$/.test(original)) return original
 
+  const originalEntries = await lookup(original)
+  const originalTypes = new Set(originalEntries.map(entry => entry.meta.synsetType))
+  // A verb-only spelling is already a useful topic in its own right. Following
+  // chained derivational pointers can cross unrelated senses: WordNet links
+  // react to responsive, whose noun derivation includes "antiphonary".
+  if (originalTypes.has('verb') && !originalTypes.has('noun')
+    && !originalTypes.has('adjective') && !originalTypes.has('adjective satellite')
+    && !originalTypes.has('adverb')) return original
+
   const candidates: string[] = []
   const seen = new Set<string>()
   const visit = async (candidate: string, depth: number): Promise<string | null> => {

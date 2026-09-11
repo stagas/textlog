@@ -13,6 +13,7 @@ test('leaves words and non-English hashtag text without a noun derivation intact
   expect(await normalizeWord('diagnosis')).toBe('diagnosis')
   expect(await normalizeWord('emacs')).toBe('emacs')
   expect(await normalizeWord('φιλοσοφία')).toBe('φιλοσοφία')
+  expect(await normalizeWord('react')).toBe('react')
 })
 
 test('uses WordNet-validated noun inflection instead of blindly stripping plural suffixes', async () => {

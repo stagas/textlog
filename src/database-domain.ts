@@ -1615,7 +1615,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'admin.addTagInvariant': {
       const tag = (input as DatabaseDomainInput<'admin.addTagInvariant'>).tag
-      const previouslyNormalized = normalizeHashtag(tag)
+      const previouslyNormalized = (database.query(
+        'SELECT normalized_word FROM wordnet_normalizations WHERE word=?',
+      ).get(tag) as { normalized_word: string } | null)?.normalized_word || normalizeHashtag(tag)
       database.transaction(() => {
         database.query('DELETE FROM tag_aliases WHERE alias=?').run(tag)
         database.query('INSERT OR IGNORE INTO tag_invariants(tag) VALUES(?)').run(tag)

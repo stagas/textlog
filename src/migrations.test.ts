@@ -7,6 +7,25 @@ import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalP
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
+  test('restores react tags corrupted by chained WordNet derivations', () => {
+    const database = new Database(':memory:')
+    runMigrations(database)
+    database.run(`INSERT INTO users(id,handle,email,password) VALUES(1,'writer','writer@example.com','x');
+      INSERT INTO posts(id,user_id,body) VALUES(1,1,'#react'),(2,1,'#antiphonary');
+      INSERT INTO post_hashtags(post_id,tag) VALUES(1,'antiphonary'),(2,'antiphonary');
+      INSERT INTO wordnet_normalizations(word,normalized_word) VALUES('react','antiphonary');
+      PRAGMA user_version=225;`)
+
+    runMigrations(database)
+
+    expect(database.query('SELECT post_id postId,tag FROM post_hashtags ORDER BY post_id').all()).toEqual([
+      { postId: 1, tag: 'react' },
+      { postId: 2, tag: 'antiphonary' },
+    ])
+    expect(database.query("SELECT normalized_word normalizedWord FROM wordnet_normalizations WHERE word='react'")
+      .get()).toEqual({ normalizedWord: 'react' })
+  })
+
   test('restores focus tags corrupted by trailing-s singularization', () => {
     const database = new Database(':memory:')
     runMigrations(database)

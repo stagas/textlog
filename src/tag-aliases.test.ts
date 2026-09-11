@@ -291,6 +291,19 @@ test('admin invariants bypass WordNet normalization', async () => {
     WHERE word='running'`).get()).toEqual({ normalizedWord: 'running' })
 })
 
+test('adding an invariant restores relationships from a cached WordNet normalization', async () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+  database.query("INSERT INTO wordnet_normalizations(word,normalized_word) VALUES('react','antiphonary')").run()
+  database.query("INSERT INTO hashtag_follows(user_id,tag) VALUES(1,'antiphonary')").run()
+
+  await executeDatabaseDomain(database, 'admin.addTagInvariant', { tag: 'react' })
+
+  expect(database.query('SELECT tag FROM hashtag_follows').all()).toEqual([{ tag: 'react' }])
+})
+
 test('an explicit alias takes precedence over automatic singularization', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')
