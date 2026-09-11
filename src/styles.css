@@ -5902,6 +5902,34 @@ form.report-panel {
   gap: var(--space-4);
 }
 
+@media (min-width: 601px) {
+  .tag-header {
+    display: grid;
+    grid-template-columns: minmax(0, max-content) 1fr auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    row-gap: var(--space-1);
+  }
+
+  .tag-title-actions {
+    grid-column: 1;
+    grid-row: 1;
+    max-width: 100%;
+  }
+
+  .tag-aliases {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .tag-back-link {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
 .tag-handle-actions:has(.quiet-accent) {
   min-height: calc(var(--space-3) + var(--space-3) + 1.21875rem);
 }
@@ -5931,7 +5959,7 @@ form.report-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    row-gap: var(--space-4);
+    row-gap: 0;
   }
 
   .tag-title-actions {
@@ -5943,10 +5971,20 @@ form.report-panel {
     grid-row: 1;
   }
 
+  .tag-aliases {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
   .tag-handle-actions,
   .tag-title-actions > .button {
     grid-column: 1 / -1;
     grid-row: 2;
+    margin-top: var(--space-4);
+  }
+
+  .tag-header:has(.tag-aliases) :is(.tag-handle-actions, .tag-title-actions > .button) {
+    grid-row: 3;
   }
 
   .tag-back-link {

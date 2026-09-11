@@ -46,9 +46,6 @@ export function TagFeed(
                 {displayName || tag}
               </a>
             </h1>
-            {!!aliases.length && (
-              <p className="tag-aliases">{aliases.map(alias => `#${alias.displayName || alias.tag}`).join(', ')}</p>
-            )}
           </div>
           {user
             ? (
@@ -69,6 +66,9 @@ export function TagFeed(
             )
             : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
         </div>
+        {!!aliases.length && (
+          <p className="tag-aliases">{aliases.map(alias => `#${alias.displayName || alias.tag}`).join(', ')}</p>
+        )}
         {returnPath && <a className="profile-edit-link tag-back-link" href={returnPath}>back</a>}
       </section>
       <nav className="feed-tabs profile-tabs" aria-label={`#${tag} tag`}>
