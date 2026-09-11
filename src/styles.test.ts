@@ -321,6 +321,10 @@ describe('in-memory stylesheet', () => {
       '.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;',
     )
     expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
+    expect(css).toContain(
+      '.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-branch-overflow {\n'
+        + '  width: auto;\n  min-width: 0;\n}',
+    )
     expect(css).toContain('.thread-locked-notice {\n  padding: var(--space-3) var(--gutter);\n'
       + '  color: var(--muted);\n  border-left: 3px solid var(--muted);')
     expect(css).toContain('.reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content {\n'

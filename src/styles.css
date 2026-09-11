@@ -8521,6 +8521,11 @@ a.post-continuation-link:hover {
   border-left: 1px solid var(--soft);
 }
 
+.feed-thread>.thread-fold-input:checked~.feed-thread-collapsed-branch .reply-branch-overflow {
+  width: auto;
+  min-width: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .feed-thread-fetched-post {
     animation: none;
