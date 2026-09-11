@@ -55,6 +55,10 @@ export function HiddenRepliesNotice() {
   )
 }
 
+export function ThreadLockedNotice() {
+  return <div className="thread-locked-notice" role="status">Thread is locked for new replies</div>
+}
+
 export function Reply(
   { user, post, replies = [], showForm, error, body = '', social, preview = false, returnPath, topHref, flatHref,
     treeHref, flat = false, suggestionSearch, draftId, previewExecutionOutput, previewLocation, autoFocus = true,
@@ -115,26 +119,40 @@ export function Reply(
             location={previewLocation} />
         )}
         {showForm && !post.thread_locked && !replyTo && replyComposer}
+        {showForm && post.thread_locked && !replyTo && (
+          <div className="inline-reply-compose thread-locked-reply-notice"
+            style={{ '--reply-offset': '0px' } as React.CSSProperties}>
+            <ThreadLockedNotice />
+          </div>
+        )}
         {post.replies_hidden && <HiddenRepliesNotice />}
         <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply || backTargetId ? returnPath : undefined} backTargetId={backTargetId} replyOnPage
           suppressReplyActionId={replyTo?.id} activeReplyReturnPath={activeReplyReturnPath}
           afterReply={(reply, depth) =>
-            showForm && !post.thread_locked && reply.id === replyTo?.id
-              ? (
-                <>
-                  {preview && (
-                    <ReplyPreview parent={replyParent} user={user} body={body} executionOutput={previewExecutionOutput}
-                      location={previewLocation} />
-                  )}
-                  <div className="inline-reply-compose feed-inline-reply-compose"
-                    data-reply-post-id={reply.id} style={{
+            showForm && reply.id === replyTo?.id
+              ? post.thread_locked
+                ? (
+                  <div className="inline-reply-compose thread-locked-reply-notice" style={{
                     '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
                   } as React.CSSProperties}>
-                    {replyComposer}
+                    <ThreadLockedNotice />
                   </div>
-                </>
-              )
+                )
+                : (
+                  <>
+                    {preview && (
+                      <ReplyPreview parent={replyParent} user={user} body={body}
+                        executionOutput={previewExecutionOutput} location={previewLocation} />
+                    )}
+                    <div className="inline-reply-compose feed-inline-reply-compose"
+                      data-reply-post-id={reply.id} style={{
+                      '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
+                    } as React.CSSProperties}>
+                      {replyComposer}
+                    </div>
+                  </>
+                )
               : undefined} />
       </div>
     </Layout>

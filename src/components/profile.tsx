@@ -5,10 +5,12 @@ import { DEFAULT_TIMEZONE, TIMEZONE_CHOICES } from '../timezone'
 import type { BioReferenceData, PostView, ProfileRow, User } from '../types'
 import { displayBio, linkify, referenceFormId } from '../utils'
 import { InviteShare } from './invite-share'
+import { feedChunkReturnPath } from './infinite-feed'
 import { Layout } from './layout'
 import { FormMessage, GuestCommunityActions, NoteStreak, Pagination, PostingHelp, PostingSuggestionResults,
   type PostingSuggestionSearch, ProfileControls, ProfileHeader, ProfileTabs } from './page-shared'
-import { FeedThreads, Post } from './post'
+import { Post } from './post'
+import { ThreadedFeedChunks } from './threaded-feed'
 import { writeHref } from './write-link'
 
 export function Profile(
@@ -16,7 +18,8 @@ export function Profile(
     editMood = profile.mood || '', editEmail = profile.email, error, editing = false, total = posts.length,
     noteCount = total, replyCount = 0, tab = 'notes', followerCount = 0, followingCount = 0, followingTagCount = 0,
     blockedPeopleCount = 0, blockedTagCount = 0, blocked = false, blockedByProfile = false, moderatorBypass = false,
-    social, page = 1, totalPages = 1, returnPath, suggestionSearch, bioReference, noteStreakDates = [] }: {
+    social, page = 1, totalPages = 1, returnPath, suggestionSearch, bioReference, noteStreakDates = [], chunk = 0,
+    initialChunks = 1, expandedRootId }: {
       user: User | null
       profile: ProfileRow
       posts: PostView[]
@@ -46,6 +49,9 @@ export function Profile(
       suggestionSearch?: PostingSuggestionSearch | null
       bioReference?: BioReferenceData
       noteStreakDates?: string[]
+      chunk?: number
+      initialChunks?: number
+      expandedRootId?: number
       social?: { description: string; image: string; url: string; type?: 'article' | 'profile'; imageAlt?: string }
     },
 ) {
@@ -54,6 +60,13 @@ export function Profile(
   if (tab === 'replies') feedQuery.set('tab', 'replies')
   if (page > 1) feedQuery.set('page', String(page))
   const feedPath = `/u/${profile.handle}${feedQuery.size ? `?${feedQuery}` : ''}`
+  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
+  const chunkReturnPath = feedChunkReturnPath(feedPath, renderedChunk)
+  const threadMarkup = <ThreadedFeedChunks posts={posts} user={user} returnPath={chunkReturnPath} chunk={chunk}
+    initialChunks={initialChunks} expandedRootId={expandedRootId}
+    collapseWithoutPreviews={tab === 'notes'} showHiddenRepliesNotices={false}
+    className={`profile-feed-thread profile-${tab}-feed-thread`} />
+  if (chunk > 0) return threadMarkup
   const paginationQuery = new URLSearchParams()
   if (tab === 'replies') paginationQuery.set('tab', 'replies')
   if (returnPath) paginationQuery.set('from', returnPath)
@@ -288,51 +301,56 @@ export function Profile(
         </div>
       </ProfileHeader>
       {!editing && (
-        <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount} followers={followerCount}
-          following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
-          blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
-      )}
-      {hiddenByBlock && (
-        <div className="empty relationship-notice">
-          {blocked
+        <div data-feed-view data-profile-tabs-view>
+          <ProfileTabs profile={profile} active={tab} notes={noteCount} replies={replyCount}
+            followers={followerCount} following={followingCount} followingTags={followingTagCount}
+            showBlocked={user?.id === profile.id} blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount}
+            returnPath={returnPath} />
+          {hiddenByBlock
             ? (
-              <>
-                You blocked this user.{' '}
-                <form method="post" action={'/block/' + profile.handle}>
-                  <button className="relationship-notice-action">Unblock them</button>
-                </form>{' '}
-                to see their notes.
-              </>
+              <div className="empty relationship-notice">
+                {blocked
+                  ? (
+                    <>
+                      You blocked this user.{' '}
+                      <form method="post" action={'/block/' + profile.handle}>
+                        <button className="relationship-notice-action">Unblock them</button>
+                      </form>{' '}
+                      to see their notes.
+                    </>
+                  )
+                  : 'This profile is unavailable.'}
+              </div>
             )
-            : 'This profile is unavailable.'}
+            : (
+              <>
+                {page > 1 && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
+                {threadMarkup}
+                {total === 0 && (
+                  <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
+                    {user?.id === profile.id
+                      ? (
+                        <>
+                          <p>
+                            {tab === 'replies'
+                              ? 'You haven’t posted any replies yet.'
+                              : 'You haven’t posted any notes yet.'}
+                          </p>
+                          {tab === 'replies'
+                            ? <a className="button" href="/">browse notes</a>
+                            : <a className="button" href={writeHref()}>write a note</a>}
+                        </>
+                      )
+                      : tab === 'replies'
+                      ? `@${profile.handle} hasn’t posted any replies yet.`
+                      : `@${profile.handle} hasn’t posted any notes yet.`}
+                  </div>
+                )}
+                <Pagination path={paginationPath} page={page} totalPages={totalPages} />
+              </>
+            )}
         </div>
       )}
-      {!editing && !hiddenByBlock && page > 1
-        && <Pagination path={paginationPath} page={page} totalPages={totalPages} top />}
-      {!editing && !hiddenByBlock
-        && (
-          <FeedThreads posts={posts} user={user} returnPath={feedPath} hideTopMeta={tab !== 'replies'}
-            showHiddenRepliesNotices={false}
-            className={`profile-feed-thread profile-${tab === 'replies' ? 'replies' : 'notes'}-feed-thread`} />
-        )}
-      {!editing && !hiddenByBlock && total === 0 && (
-        <div className={`empty${user?.id === profile.id ? ' empty-actions' : ''}`}>
-          {user?.id === profile.id
-            ? (
-              <>
-                <p>{tab === 'replies' ? 'You haven’t posted any replies yet.' : 'You haven’t posted any notes yet.'}</p>
-                {tab === 'replies'
-                  ? <a className="button" href="/">browse notes</a>
-                  : <a className="button" href={writeHref()}>write a note</a>}
-              </>
-            )
-            : tab === 'replies'
-            ? `@${profile.handle} hasn’t posted any replies yet.`
-            : `@${profile.handle} hasn’t posted any notes yet.`}
-        </div>
-      )}
-      {!editing && !hiddenByBlock
-        && <Pagination path={paginationPath} page={page} totalPages={totalPages} />}
       {!user && !editing && <GuestCommunityActions className="post-page-actions" />}
     </Layout>
   )

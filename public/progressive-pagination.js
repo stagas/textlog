@@ -4,37 +4,56 @@
   let controller = null
   let spinnerTimer = null
   let spinner = null
+  let restoreSpinner = null
 
   const stopSpinner = () => {
     clearInterval(spinnerTimer)
     spinnerTimer = null
-    spinner?.remove()
+    restoreSpinner?.()
+    restoreSpinner = null
     spinner = null
   }
 
-  const startSpinner = pagination => {
+  const startSpinner = (owner, href) => {
     stopSpinner()
+    const pagination = owner?.closest('.pagination')
     const label = pagination?.getAttribute('aria-label')?.replace(/ pagination$/i, '')
-    const headings = [...pagination.closest(rootSelector)?.querySelectorAll('h2') || []]
-    const heading =
-      headings.find(item => label && item.textContent.trim().toLowerCase().startsWith(label.toLowerCase()))
-      || pagination.closest('section')?.querySelector('h2')
-    if (!heading) return
-    spinner = document.createElement('span')
-    spinner.className = 'feed-tab-loading'
+    const current = pagination?.querySelector('.pagination-current-form .current')
+    const pageParam = current?.name || 'page'
+    const requestedPage = new URL(href, location.href).searchParams.get(pageParam)
+    const numberedPage = [...pagination?.querySelectorAll('.pagination-pages a[href]') || []]
+      .find(link => new URL(link.href).searchParams.get(pageParam) === requestedPage)
+    spinner = owner?.matches('.pagination-current-form')
+      ? owner.querySelector('.current')
+      : numberedPage || owner?.matches('.pagination a[href]') && owner || null
+    if (!spinner) return
+    const original = 'value' in spinner ? spinner.value : spinner.textContent
+    const disabled = 'disabled' in spinner ? spinner.disabled : null
+    const role = spinner.getAttribute('role')
+    const ariaLabel = spinner.getAttribute('aria-label')
+    restoreSpinner = () => {
+      if ('value' in spinner) spinner.value = original
+      else spinner.textContent = original
+      if (disabled !== null) spinner.disabled = disabled
+      if (role === null) spinner.removeAttribute('role')
+      else spinner.setAttribute('role', role)
+      if (ariaLabel === null) spinner.removeAttribute('aria-label')
+      else spinner.setAttribute('aria-label', ariaLabel)
+    }
+    if ('value' in spinner) spinner.disabled = true
     spinner.setAttribute('role', 'status')
     spinner.setAttribute('aria-label', `Loading ${label?.toLowerCase() || 'page'}`)
-    heading.append(spinner)
     let frame = 0
     const render = () => {
-      spinner.textContent = spinnerFrames[frame]
+      if ('value' in spinner) spinner.value = spinnerFrames[frame]
+      else spinner.textContent = spinnerFrames[frame]
       frame = (frame + 1) % spinnerFrames.length
     }
     render()
     spinnerTimer = setInterval(render, 80)
   }
 
-  const navigate = async (href, push, pagination = null) => {
+  const navigate = async (href, push, owner = null) => {
     const currentRoot = document.querySelector(rootSelector)
     if (!currentRoot) {
       location.href = href
@@ -44,7 +63,7 @@
     const requestController = new AbortController()
     controller = requestController
     currentRoot.setAttribute('aria-busy', 'true')
-    startSpinner(pagination)
+    startSpinner(owner, href)
     const spinnerStartedAt = performance.now()
     try {
       const response = await fetch(href, {
@@ -66,9 +85,8 @@
       currentRoot.replaceWith(incomingRoot)
       document.title = parsed.title
       const resolved = new URL(response.url)
+      resolved.hash = ''
       if (push) history.pushState({ pagination: true }, '', resolved.pathname + resolved.search + resolved.hash)
-      const anchor = resolved.hash && document.getElementById(decodeURIComponent(resolved.hash.slice(1)))
-      if (anchor) anchor.scrollIntoView({ behavior: 'instant', block: 'start' })
     }
     catch (error) {
       if (error.name !== 'AbortError') location.href = href
@@ -87,8 +105,10 @@
       || event.altKey || link.target || link.download) return
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
+    url.searchParams.delete('_scroll')
+    url.hash = ''
     event.preventDefault()
-    void navigate(url.href, true, link.closest('.pagination'))
+    void navigate(url.href, true, link)
   })
 
   document.addEventListener('submit', event => {
@@ -97,7 +117,9 @@
     event.preventDefault()
     const url = new URL(form.action, location.href)
     new FormData(form).forEach((value, name) => url.searchParams.set(name, String(value)))
-    void navigate(url.href, true, form.closest('.pagination'))
+    url.searchParams.delete('_scroll')
+    url.hash = ''
+    void navigate(url.href, true, form)
   })
 
   addEventListener('popstate', () => void navigate(location.href, false))

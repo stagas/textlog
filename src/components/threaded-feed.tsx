@@ -12,6 +12,7 @@ export function ThreadedFeedChunks({ posts, user, returnPath, chunk = 0, initial
   expandedByDefault?: boolean
   promoteAncestors?: boolean | 'all'
   collapseWithoutPreviews?: boolean
+  hideTopMeta?: boolean
   contextUnreadPostIds?: ReadonlySet<number>
   contextDirectedUnreadPostIds?: ReadonlySet<number>
   showHiddenRepliesNotices?: boolean

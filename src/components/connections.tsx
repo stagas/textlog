@@ -69,10 +69,11 @@ export function Connections(
     <Layout user={user} title={`${kind} @${profile.handle}`} social={social}>
       <ProfileHeader user={user} profile={profile} following={following} followsViewer={followsViewer} blocked={blocked}
         returnPath={returnPath} bioReference={bioReference} noteStreakDates={noteStreakDates} />
-      <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
-        following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
-        blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
-      <div data-progressive-pagination-root="profile-connections">
+      <div data-feed-view data-profile-tabs-view>
+        <ProfileTabs profile={profile} active={kind} notes={noteCount} replies={replyCount} followers={followerCount}
+          following={followingCount} followingTags={followingTagCount} showBlocked={user?.id === profile.id}
+          blockedPeople={blockedPeopleCount} blockedTags={blockedTagCount} returnPath={returnPath} />
+        <div data-progressive-pagination-root="profile-connections">
         {(kind === 'following' || kind === 'blocked') && (people.length || tags.length)
           ? (
             <div className={`columns connections-columns${kind === 'following' ? ' connections-columns-stacked' : ''}`}>
@@ -224,6 +225,7 @@ export function Connections(
             `/u/${profile.handle}?tab=following${sortQuery}${tagsPage > 1 ? `&tagsPage=${tagsPage}` : ''}`,
           )} label="People pagination" compact anchor="connections-people-heading" instantScroll />
         )}
+        </div>
       </div>
       {!user && <GuestCommunityActions className="post-page-actions" />}
     </Layout>

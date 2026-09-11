@@ -52,10 +52,14 @@
     restoreNavigationSpinner = null
     const pagination = owner?.closest('.pagination')
     if (pagination) {
-      const requestedPage = new URL(href, location.href).searchParams.get('page')
-      const page = [...pagination.querySelectorAll('.pagination-pages a[href]')]
-        .find(link => new URL(link.href).searchParams.get('page') === requestedPage)
-        || pagination.querySelector('.pagination-current-form .current')
+      const current = pagination.querySelector('.pagination-current-form .current')
+      const pageParam = current?.name || 'page'
+      const requestedPage = new URL(href, location.href).searchParams.get(pageParam)
+      const numberedPage = [...pagination.querySelectorAll('.pagination-pages a[href]')]
+        .find(link => new URL(link.href).searchParams.get(pageParam) === requestedPage)
+      const page = owner?.matches('.pagination-current-form')
+        ? current
+        : numberedPage || owner?.matches('.pagination a[href]') && owner || current
       if (!page) return
       const original = 'value' in page ? page.value : page.textContent
       const disabled = 'disabled' in page ? page.disabled : null
@@ -278,7 +282,7 @@
     })
   }
 
-  const navigateFeed = async (href, push, tab = null, markRead = true) => {
+  const navigateFeed = async (href, push, tab = null, markRead = true, preserveScroll = false) => {
     const currentView = document.querySelector('[data-feed-view]')
     if (!currentView) {
       location.href = href
@@ -314,6 +318,8 @@
       chunkController?.abort()
       observer.disconnect()
       loading = false
+      const preservedScrollTop = preserveScroll ? scrollY : 0
+      currentView.querySelector('.feed-inline-reply-compose')?._layoutCleanup?.()
       currentView.replaceWith(incomingView)
       pendingLiveTabs.delete(activeLiveTab())
       syncLiveCountsFromDocument()
@@ -325,8 +331,10 @@
       syncComposerNavigation(parsed)
       document.title = parsed.title
       const resolved = new URL(response.url)
-      if (push) history.pushState({ feed: true }, '', resolved.pathname + resolved.search + resolved.hash)
-      scrollTo({ top: 0, behavior: 'instant' })
+      resolved.hash = ''
+      if (push) history.pushState({ feed: true, preserveScroll }, '',
+        resolved.pathname + resolved.search + resolved.hash)
+      scrollTo({ top: preservedScrollTop, behavior: 'instant' })
       void restore()
     }
     catch (error) {
@@ -344,6 +352,10 @@
       || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.download) return
     const url = new URL(link.href)
     if (url.origin !== location.origin) return
+    if (link.closest('.pagination')) {
+      url.searchParams.delete('_scroll')
+      url.hash = ''
+    }
     event.preventDefault()
     const kind = liveTabKind(link)
     if (link.classList.contains('active') && kind && pendingLiveTabs.has(kind)) {
@@ -352,7 +364,8 @@
       void navigateFeed(url.href, false, link, true)
       return
     }
-    void navigateFeed(url.href, true, link, true)
+    const pagination = !!link.closest('.pagination')
+    void navigateFeed(url.href, true, link, !link.closest('[data-profile-tabs-view]'), pagination)
   })
 
   document.addEventListener('submit', event => {
@@ -361,14 +374,19 @@
     event.preventDefault()
     const url = new URL(form.action, location.href)
     new FormData(form).forEach((value, name) => url.searchParams.set(name, String(value)))
-    void navigateFeed(url.href, true, form.closest('.pagination'), true)
+    url.searchParams.delete('_scroll')
+    url.hash = ''
+    void navigateFeed(url.href, true, form, !form.closest('[data-profile-tabs-view]'), true)
   })
 
-  addEventListener('popstate', () => {
+  addEventListener('popstate', event => {
     heldLiveTab = null
     heldLiveCount = 0
-    void navigateFeed(location.href, false, null, false)
+    void navigateFeed(location.href, false, null, false, !!event.state?.preserveScroll)
   })
+  if (document.querySelector('[data-feed-view] .pagination')) {
+    history.replaceState({ ...history.state, feed: true, preserveScroll: true }, '', location.href)
+  }
   syncLiveCountsFromDocument()
   if (performance.getEntriesByType('navigation')[0]?.type === 'reload') void reconcileLiveCounts()
   else {

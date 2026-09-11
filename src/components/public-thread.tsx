@@ -4,7 +4,7 @@ import { Post, postAnchorId, ThreadReplies } from './post'
 import type { PostView } from '../types'
 import { Layout } from './layout'
 import { GuestCommunityActions, postTitle } from './page-shared'
-import { HiddenRepliesNotice, ReplyComposer } from './reply'
+import { HiddenRepliesNotice, ReplyComposer, ThreadLockedNotice } from './reply'
 
 export function PublicThread(
   { post, replies = [], social, returnPath, topHref, flatHref, treeHref, flat = false, showForm = true, replyTo }: {
@@ -35,19 +35,33 @@ export function PublicThread(
         {showForm && !post.thread_locked && !replyTo && (
           <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath} />
         )}
+        {showForm && post.thread_locked && !replyTo && (
+          <div className="inline-reply-compose thread-locked-reply-notice"
+            style={{ '--reply-offset': '0px' } as React.CSSProperties}>
+            <ThreadLockedNotice />
+          </div>
+        )}
         {post.replies_hidden && <HiddenRepliesNotice />}
         <ThreadReplies parentId={post.id} replies={replies} user={null} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply ? returnPath : undefined} replyOnPage suppressReplyActionId={replyTo?.id}
           afterReply={(reply, depth) =>
-            showForm && !post.thread_locked && reply.id === replyTo?.id
-              ? (
-                <div className="inline-reply-compose" style={{
-                  '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
-                } as React.CSSProperties}>
-                  <ReplyComposer user={null} replyParent={replyTo} replyPageId={post.id} returnPath={returnPath}
-                    inline />
-                </div>
-              )
+            showForm && reply.id === replyTo?.id
+              ? post.thread_locked
+                ? (
+                  <div className="inline-reply-compose thread-locked-reply-notice" style={{
+                    '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
+                  } as React.CSSProperties}>
+                    <ThreadLockedNotice />
+                  </div>
+                )
+                : (
+                  <div className="inline-reply-compose" style={{
+                    '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
+                  } as React.CSSProperties}>
+                    <ReplyComposer user={null} replyParent={replyTo} replyPageId={post.id} returnPath={returnPath}
+                      inline />
+                  </div>
+                )
               : undefined} />
       </div>
       <GuestCommunityActions className="post-page-actions" />

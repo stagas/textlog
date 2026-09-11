@@ -33,10 +33,21 @@ describe('profile pinning', () => {
     const notes = await executeDatabaseDomain(database, 'profiles.postsPage', { ...input, kind: 'notes' })
     const replies = await executeDatabaseDomain(database, 'profiles.postsPage', { ...input, kind: 'replies' })
 
-    expect(notes.posts.map(post => post.id)).toEqual([3, 4, 2, 1])
+    expect(notes.posts.map(post => post.id)).toEqual([3, 4, 2, 8, 7, 6, 5, 1])
     expect(notes.posts.filter(post => post.profile_pinned).map(post => post.id)).toEqual([3])
-    expect(replies.posts.map(post => post.id)).toEqual([7, 8, 6, 5])
+    expect(replies.posts.map(post => post.id)).toEqual([8, 7, 6, 5, 1])
     expect(replies.posts.filter(post => post.profile_pinned).map(post => post.id)).toEqual([7])
+  })
+
+  test('carries a pinned note lock through an existing profile snapshot', async () => {
+    const database = fixture()
+    const input = { profileId: 1, viewerId: 1, page: 1, pageSize: 20 as const, kind: 'notes' as const }
+    await executeDatabaseDomain(database, 'profiles.postsPage', input)
+    database.query("INSERT INTO post_hashtags(post_id,tag) VALUES(3,'lock')").run()
+
+    const notes = await executeDatabaseDomain(database, 'profiles.postsPage', input)
+
+    expect(notes.posts.find(post => post.id === 3)).toMatchObject({ profile_pinned: 1, thread_locked: true })
   })
 
   test('hides dropped-username profiles from others but keeps their posts for moderators', async () => {
@@ -52,7 +63,7 @@ describe('profile pinning', () => {
     const moderatorDetail = await executeDatabaseDomain(database, 'posts.detail', { id: 1, viewerId: 2 })
 
     expect(publicPosts.posts).toEqual([])
-    expect(moderatorPosts.posts.map(post => post.id)).toEqual([3, 4, 2, 1])
+    expect(moderatorPosts.posts.map(post => post.id)).toEqual([3, 4, 2, 8, 7, 6, 5, 1])
     expect(moderatorPosts.posts.every(post => post.hidden_post)).toBeTrue()
     expect(publicDetail.status).toBe('not_found')
     expect(moderatorDetail.status).toBe('ready')

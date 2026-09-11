@@ -79,11 +79,12 @@ export function Layout({
   const onThreadPage = requestUrl.pathname.startsWith('/post/')
   const onTagPage = requestUrl.pathname.startsWith('/tag/')
   const onTagFeedPage = onTagPage && requestUrl.searchParams.get('tab') !== 'followers'
-  const onThreadedPage = onFeedPage || onThreadPage || onTagPage
-  const onInfiniteFeedPage = onFeedPage || onTagFeedPage
+  const onProfilePage = requestUrl.pathname.startsWith('/u/')
+  const onProfileFeedPage = onProfilePage
+    && ['', 'replies'].includes(requestUrl.searchParams.get('tab') || '')
+  const onThreadedPage = onFeedPage || onThreadPage || onTagPage || onProfilePage
+  const onInfiniteFeedPage = onFeedPage || onTagFeedPage || onProfileFeedPage
   const onProgressivePaginationPage = requestUrl.pathname === '/explore'
-    || (requestUrl.pathname.startsWith('/u/')
-      && ['following', 'followers', 'blocked'].includes(requestUrl.searchParams.get('tab') || ''))
   const noScriptFeedUrl = (() => {
     if (!onInfiniteFeedPage || request.method !== 'GET' || requestUrl.searchParams.get('chunk') === '5') return null
     const destination = new URL(requestUrl)
@@ -245,19 +246,19 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1581" />
+        <link rel="stylesheet" href="/styles.css?v=1590" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onThreadedPage && <script src="/thread-hover-scroll.js?v=31" defer />}
-        {(onFeedPage || onTagPage) && <script src="/thread-expansion.js?v=4" defer />}
+        {(onFeedPage || onTagPage || onProfilePage) && <script src="/thread-expansion.js?v=4" defer />}
         {onThreadedPage && (
           <>
-            <script src="/feed-reply.js?v=20" defer />
-            {onInfiniteFeedPage && <script src="/infinite-scroll.js?v=48" defer />}
+            <script src="/feed-reply.js?v=22" defer />
+            {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=53" defer />}
           </>
         )}
-        {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=1" defer />}
+        {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=4" defer />}
         {noScriptFeedUrl && (
           <noscript>
             <meta httpEquiv="refresh" content={`0; url=${noScriptFeedUrl}`} />

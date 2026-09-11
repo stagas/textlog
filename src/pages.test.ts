@@ -369,12 +369,31 @@ test('building without JavaScript blog post renders its Markdown as an article',
 test('locked notes and descendants omit reply controls and reply forms', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
   const post = { id: 9, user_id: 2, parent_id: null, body: 'Closed #lock', created_at: '2026-08-23 10:00:00',
-    deleted_at: null, handle: 'writer', reply_count: 0, thread_locked: true }
-  const card = renderToStaticMarkup(React.createElement(Post, { p: post, user, showReplyAction: true }))
+    deleted_at: null, handle: 'writer', reply_count: 0, thread_locked: true, profile_pinned: true }
+  const card = renderToStaticMarkup(React.createElement(Post, { p: post, user, showReplyAction: true,
+    tappable: true }))
+  const pinnedFeed = renderToStaticMarkup(React.createElement(FeedThreads, {
+    posts: [post], user, returnPath: '/u/writer',
+  }))
   const page = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true }))
+  const publicPage = renderToStaticMarkup(React.createElement(PublicThread, { post, showForm: true }))
+  const reply = { ...post, id: 10, parent_id: post.id, body: 'Existing reply', parent: post }
+  const targetedPage = renderToStaticMarkup(React.createElement(Reply, {
+    user, post, replies: [reply], replyTo: reply, showForm: true,
+  }))
 
   expect(card).not.toContain('post-reply-link')
+  expect(card).toContain('data-thread-locked="true"')
+  expect(card).not.toContain('data-reply-href')
+  expect(card).not.toContain('data-reply-handle')
+  expect(card).toContain('aria-label="open locked post by @writer"')
+  expect(pinnedFeed).toContain('class="thread-root profile-pinned-surround"')
+  expect(pinnedFeed).toContain('data-thread-locked="true"')
+  expect(pinnedFeed).not.toContain('data-reply-href')
   expect(page).not.toContain('class="panel panel-surface panel-medium replybox"')
+  expect(page).toContain('role="status">Thread is locked for new replies</div>')
+  expect(publicPage).toContain('role="status">Thread is locked for new replies</div>')
+  expect(targetedPage).toContain('role="status">Thread is locked for new replies</div>')
 })
 
 test('post page reply forms only autofocus when reply was explicitly requested', () => {
@@ -386,6 +405,7 @@ test('post page reply forms only autofocus when reply was explicitly requested',
   const requested = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: true }))
 
   expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose root-reply-compose"')
+  expect(passive).not.toContain('Thread is locked for new replies')
   expect(passive).not.toContain('data-auto-focus')
   expect(requested).toContain('data-auto-focus')
   expect(requested).toContain('data-compose-storage-key="textlog:compose:1:reply:9"')
@@ -3666,6 +3686,9 @@ test('Following and followers paginate every 8 people', () => {
     expect(html).toContain(
       `href="/u/reader?tab=${kind}&amp;page=2&amp;_scroll=instant#connections-people-heading"`,
     )
+    expect(html).toContain(
+      '<div data-feed-view="true" data-profile-tabs-view="true"><nav class="feed-tabs profile-tabs profile-page-tabs"',
+    )
     expect(html.indexOf('aria-label="People pagination"')).toBeLessThan(html.indexOf('connection-people'))
     expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('connection-people'))
     if (kind === 'followers') {
@@ -4270,21 +4293,52 @@ test('Profile and hashtag feeds show no reply metadata beside post dates', () =>
   expect(tagHtml).not.toContain('3 replies')
   expect(profileHtml).not.toContain('class="postfoot')
   expect(profileHtml).toContain(
-    'class="post-page-thread feed-thread profile-feed-thread profile-notes-feed-thread"',
+    'class="post-page-thread feed-thread feed-thread-no-collapsed-previews profile-feed-thread profile-notes-feed-thread"',
   )
   expect(profileRepliesHtml).toContain(
     'class="post-page-thread feed-thread profile-feed-thread profile-replies-feed-thread"',
   )
   expect(profileRepliesHtml).not.toContain('class="postfoot')
   expect(tagHtml).not.toContain('class="postfoot')
-  expect(profileHtml).not.toContain('class="posttop')
-  expect(profileHtml).toContain('post-without-top-meta')
+  expect(profileHtml).toContain('class="posttop')
+  expect(profileHtml).not.toContain('post-without-top-meta')
   expect(profileRepliesHtml).toContain('class="posttop')
   expect(profileRepliesHtml).not.toContain('post-without-top-meta')
   expect(profileRepliesHtml).toContain(
     '<span class="reference-popover-actions"><a class="button" href="/pending-follow/user/writer',
   )
   expect(tagHtml).toContain('class="posttop')
+})
+
+test('profile notes fold every reply while all profile posts retain their meta rows', () => {
+  const root = { id: 1, user_id: 1, parent_id: null, body: 'Root note', handle: 'writer',
+    created_at: '2026-08-03 12:00:00', deleted_at: null, reply_count: 4 }
+  const replies = Array.from({ length: 4 }, (_, index) => ({
+    id: index + 2, user_id: index % 2 ? 1 : 2, parent_id: 1, body: `Reply ${index + 1}`,
+    handle: index % 2 ? 'writer' : 'reader', created_at: `2026-08-03 12:0${index + 1}:00`, deleted_at: null,
+  }))
+  const profile = { id: 1, handle: 'writer', email: 'writer@example.com', bio: '' }
+  const notes = renderToStaticMarkup(React.createElement(Profile, {
+    user: null, profile, following: false, posts: [root, ...replies], tab: 'notes',
+  }))
+  const replyFeed = renderToStaticMarkup(React.createElement(Profile, {
+    user: null, profile, following: false, posts: [root, ...replies], tab: 'replies',
+  }))
+
+  expect(notes).toContain('feed-thread-no-collapsed-previews')
+  expect(notes).toContain(
+    '<div data-feed-view="true" data-profile-tabs-view="true"><nav class="feed-tabs profile-tabs profile-page-tabs"',
+  )
+  expect(notes).toContain('id="feed-thread-fold-1" checked=""')
+  expect(notes).toContain(
+    'class="quiet thread-fold" for="feed-thread-fold-1" title="fold or unfold replies"',
+  )
+  expect(notes).not.toContain('collapsed-preview-post')
+  expect((notes.match(/class="posttop(?: |")/g) || []).length).toBe(5)
+  expect(notes).not.toContain('post-without-top-meta')
+  expect(notes).not.toContain('thread-fold-side')
+  expect(replyFeed).not.toContain('feed-thread-no-collapsed-previews')
+  expect(replyFeed).toContain('collapsed-preview-post')
 })
 
 test('Profile posts link back to their originating feed entries', () => {

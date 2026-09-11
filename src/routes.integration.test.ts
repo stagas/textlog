@@ -137,26 +137,31 @@ test('reference follow enhancement is served as immutable JavaScript', async () 
 })
 
 test('progressive pagination enhancement is served as immutable JavaScript', async () => {
-  const response = await request('/progressive-pagination.js?v=1')
+  const response = await request('/progressive-pagination.js?v=4')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
-  expect(await response.text()).toContain('data-progressive-pagination-root')
+  const script = await response.text()
+  expect(script).toContain('data-progressive-pagination-root')
+  expect(script).toContain('.pagination-pages a[href]')
+  expect(script).not.toContain('scrollIntoView')
 })
 
 test('feed pagination uses the partial feed navigation enhancement', async () => {
-  const response = await request('/infinite-scroll.js?v=46')
+  const response = await request('/infinite-scroll.js?v=53')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
   const script = await response.text()
   expect(script).toContain('[data-feed-view] .pagination a[href]')
   expect(script).toContain('[data-feed-view] .pagination-current-form')
+  expect(script).toContain('[data-profile-tabs-view]')
+  expect(script).toContain('preserveScroll')
   expect(script).toContain('X-Textlog-Feed-Navigation')
 })
 
 test('inline feed and post-page replies are served as immutable JavaScript', async () => {
-  const response = await request('/feed-reply.js?v=20')
+  const response = await request('/feed-reply.js?v=22')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -168,6 +173,8 @@ test('inline feed and post-page replies are served as immutable JavaScript', asy
   expect(script).not.toContain('expandedThread(post)')
   expect(script).toContain('.feed-thread > .thread-fold-input')
   expect(script).toContain('.closest(".feed-thread")')
+  expect(script).toContain('data-thread-locked')
+  expect(script).toContain('Thread is locked for new replies')
   expect(script).toContain("visualViewport")
   expect(script).toMatch(/visualViewport[\s\S]*addEventListener\("resize"/)
 })
@@ -202,10 +209,38 @@ test('tag feeds include the complete shared thread enhancement contract', async 
   const html = await response.text()
   expect(html).toContain('/thread-hover-scroll.js?v=31')
   expect(html).toContain('/thread-expansion.js?v=4')
-  expect(html).toContain('/feed-reply.js?v=20')
-  expect(html).toContain('/infinite-scroll.js?v=48')
+  expect(html).toContain('/feed-reply.js?v=22')
+  expect(html).toContain('/infinite-scroll.js?v=53')
   expect(html).toContain('id="inline-reply-template"')
   expect(html).toContain('data-feed-view="true"')
+})
+
+test('profile tabs include the shared progressive feed navigation contract', async () => {
+  database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
+    VALUES('profilecontract','profile-contract@example.com','x',CURRENT_TIMESTAMP)`).run()
+  try {
+    for (const path of [
+      '/u/profilecontract',
+      '/u/profilecontract?tab=replies',
+      '/u/profilecontract?tab=following',
+      '/u/profilecontract?tab=followers',
+    ]) {
+      const response = await request(path)
+      expect(response.status).toBe(200)
+      const html = await response.text()
+      expect(html).toContain('/thread-hover-scroll.js?v=31')
+      expect(html).toContain('/thread-expansion.js?v=4')
+      expect(html).toContain('/feed-reply.js?v=22')
+      expect(html).toContain('/infinite-scroll.js?v=53')
+      expect(html).toContain('id="inline-reply-template"')
+      expect(html).toContain('data-feed-view="true"')
+      expect(html).toContain('data-profile-tabs-view="true"')
+      expect(html.indexOf('data-feed-view="true"')).toBeLessThan(html.indexOf('class="feed-tabs profile-tabs'))
+    }
+  }
+  finally {
+    database.query("DELETE FROM users WHERE handle='profilecontract'").run()
+  }
 })
 
 test('notification sound is served as immutable MPEG audio', async () => {
@@ -2156,7 +2191,11 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const profileNotes = await (await request('/u/alice')).text()
   const profileReplies = await (await request('/u/alice?tab=replies')).text()
   expect(profileNotes).toContain('href="/u/alice?tab=replies"')
-  expect(profileNotes).not.toContain('A reply in my own thread')
+  expect(profileNotes).toContain('A reply in my own thread')
+  expect(profileNotes).toContain(`id="feed-thread-fold-${post.id}" checked=""`)
+  expect(profileNotes).toContain(
+    `class="quiet thread-fold" for="feed-thread-fold-${post.id}"`,
+  )
   expect(profileReplies).toContain('A reply in my own thread')
   expect(profileReplies).toContain('aria-current="page" href="/u/alice?tab=replies"')
   database.query('DELETE FROM posts WHERE id=?').run(ownThreadReply.id)

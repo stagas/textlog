@@ -2560,10 +2560,6 @@ body.corners-round a.button {
   scroll-margin-top: calc(var(--space-6) + var(--space-1));
 }
 
-.profile-notes-feed-thread .thread-root .post {
-  padding-bottom: var(--space-4);
-}
-
 @media (max-width: 600px) {
   .feed-thread .post,
   .activity-follow {
@@ -3730,6 +3726,13 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   position: relative;
   z-index: 2;
   scroll-margin: var(--space-4);
+}
+
+.thread-locked-notice {
+  padding: var(--space-3) var(--gutter);
+  color: var(--muted);
+  border-left: 3px solid var(--muted);
+  font-size: var(--font-size-12);
 }
 
 .post.feed-reply-loading {

@@ -2,12 +2,13 @@ import {
   Connections,
   Profile,
 } from '../components/pages'
-import { currentPage, notFoundPage, page, paginationRedirect, redirect, safeNext } from './shared'
+import { currentPage, htmlFragment, notFoundPage, page, paginationRedirect, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
 import { isAdmin } from '../admin'
 import { appName } from '../brand'
 import { databaseService } from '../database-service'
+import { feedChunk, restoredFeedChunks } from '../components/infinite-feed'
 import { markdownPlainText } from '../markdown'
 import { type FollowBadgeTheme, renderFollowBadge, renderProfileOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
@@ -172,17 +173,22 @@ export function registerProfilesRoutes(app: Hono) {
     const cursorValue = c.req.query('cursor')
     const cursor = decodePostCursor(cursorValue)
     if (cursorValue && !cursor) return c.text('Invalid cursor', 400)
+    const chunk = feedChunk(c.req.query('_feed_chunk'))
+    if (chunk === null) return c.text('Invalid feed chunk', 400)
+    const initialChunks = restoredFeedChunks(c.req.query('chunk'))
+    if (initialChunks === null) return c.text('Invalid restored feed chunk', 400)
+    const expandedRootId = Number(c.req.query('expand')) || undefined
     const snapshot = await databaseService().call('profiles.postsPage', { profileId: profile.id, viewerId,
       page: profilePage, pageSize: resolvedPageSize(c.req.raw), kind: tab === 'replies' ? 'replies' : 'notes' })
-    return page(
-      <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
+    const view = <Profile user={user} profile={profile} posts={(blocked || blockedByProfile) && !moderatorBypass
         ? []
         : snapshot.posts} following={following} followsViewer={followsViewer} blocked={blocked}
         total={moderatorBypass ? total : snapshot.totalItems} noteCount={noteCount} replyCount={replyCount}
         tab={tab === 'replies' ? 'replies' : 'notes'} followerCount={followerCount} followingCount={followingCount}
         followingTagCount={followingTagCount} blockedPeopleCount={blockedPeopleCount} blockedTagCount={blockedTagCount}
         social={social} page={snapshot.page} totalPages={snapshot.totalPages} returnPath={returnPath}
-        bioReference={bioReference} moderatorBypass={moderatorBypass} noteStreakDates={noteStreakDates} />,
-    )
+        bioReference={bioReference} moderatorBypass={moderatorBypass} noteStreakDates={noteStreakDates} chunk={chunk}
+        initialChunks={initialChunks} expandedRootId={expandedRootId} />
+    return chunk > 0 ? htmlFragment(view) : page(view)
   })
 }

@@ -511,6 +511,66 @@ function recapV2Posts(database: Database, viewerId: number) {
   return posts
 }
 
+function anchoredConversationPosts(database: Database, anchors: PostView[], viewerId: number,
+  showDroppedAuthors = false)
+{
+  if (!anchors.length) return []
+  const blockViewerId = showDroppedAuthors ? -1 : viewerId
+  const conversationIds = (database.query(`SELECT DISTINCT pc.conversation_id FROM post_conversations pc
+    WHERE pc.post_id IN (${anchors.map(() => '?').join(',')})`)
+    .all(...anchors.map(post => post.id)) as Array<{ conversation_id: number }>).map(row => row.conversation_id)
+  if (!conversationIds.length) return []
+  const rows = database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
+    JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
+    WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
+    AND p.deleted_at IS NULL AND ${showDroppedAuthors ? '1' : excludesDroppedUsernameUsers(database)}
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+      (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
+    AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh
+      ON bh.tag=ph.tag WHERE ph.post_id=p.id AND bh.user_id=?))
+    ORDER BY p.created_at DESC,p.id DESC`)
+    .all(...conversationIds, blockViewerId, blockViewerId, blockViewerId, viewerId, viewerId) as Array<
+      PostView & { conversation_id: number }
+    >
+  const anchorById = new Map(anchors.map(post => [post.id, post]))
+  const rowsByConversation = new Map<number, Array<PostView & { conversation_id: number }>>()
+  const conversationByPost = new Map<number, number>()
+  for (const row of rows) {
+    const anchor = anchorById.get(row.id)
+    const retained = anchor ? { ...row, ...anchor, conversation_id: row.conversation_id } : row
+    rowsByConversation.set(row.conversation_id, [...(rowsByConversation.get(row.conversation_id) || []), retained])
+    conversationByPost.set(row.id, row.conversation_id)
+  }
+  const orderedConversationIds = [...new Set(anchors.flatMap(post => {
+    const conversationId = conversationByPost.get(post.id)
+    return conversationId === undefined ? [] : [conversationId]
+  }))]
+  const anchorIds = new Set(anchors.map(post => post.id))
+  const projected = orderedConversationIds.flatMap(conversationId => {
+    const conversation = rowsByConversation.get(conversationId) || []
+    const projection = projectRecentConversation(conversation, { forceRoot: true })
+    const selectedIds = new Set([
+      ...(projection.root ? [projection.root.id] : []),
+      ...projection.replies.map(post => post.id),
+      ...conversation.filter(post => anchorIds.has(post.id)).map(post => post.id),
+    ])
+    const byId = new Map(conversation.map(post => [post.id, post]))
+    for (const selectedId of [...selectedIds]) {
+      let current = byId.get(selectedId)
+      while (current) {
+        selectedIds.add(current.id)
+        current = current.parent_id === null ? undefined : byId.get(current.parent_id)
+      }
+    }
+    return conversation.filter(post => selectedIds.has(post.id)).map(post => ({
+      ...post,
+      ...(projection.previewReplyIds.has(post.id) ? { feed_collapsed_preview: true } : {}),
+      ...(!selectedIds.has(post.parent_id || 0) && post.parent_id !== null ? { feed_branch_root: true } : {}),
+    }))
+  })
+  return rewireVisibleAncestorGaps(database, enrichPosts(database, projected, viewerId))
+}
+
 function invalidateBlockVisibility(userIds: number[]) {
   const ids = [...new Set(userIds)]
   if (!ids.length) return
@@ -2041,7 +2101,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
               WHERE ph.post_id=p.id AND bh.user_id=?)) ${postKindFilter}
           ORDER BY profile_pinned DESC,p.id DESC`).all(profileId, viewerId, viewerId) as PostView[], pageSize)
-      return { posts: enrichPosts(database, snapshot.items, viewerId), page: snapshot.page,
+      return { posts: anchoredConversationPosts(database, snapshot.items, viewerId,
+        viewerIsModerator(database, viewerId)), page: snapshot.page,
         totalItems: snapshot.totalItems, totalPages: snapshot.totalPages } as DatabaseDomainOutput<K>
     }
     case 'syndication.load': {
@@ -4108,61 +4169,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
       ).all(tag, viewerId, viewerId, viewerId, pageSize, (page - 1) * pageSize) as PostView[]
-      const conversationIds = taggedPosts.length
-        ? (database.query(`SELECT DISTINCT pc.conversation_id FROM post_conversations pc
-          WHERE pc.post_id IN (${taggedPosts.map(() => '?').join(',')})`)
-          .all(...taggedPosts.map(post => post.id)) as Array<{ conversation_id: number }>)
-          .map(row => row.conversation_id)
-        : []
-      const conversationRows = conversationIds.length
-        ? database.query(`SELECT p.*,u.handle,pc.conversation_id FROM post_conversations pc
-          JOIN posts p ON p.id=pc.post_id JOIN users u ON u.id=p.user_id
-          WHERE pc.conversation_id IN (${conversationIds.map(() => '?').join(',')})
-          AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
-          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
-            (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?)))
-          AND (? < 0 OR NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh
-            ON bh.tag=ph.tag WHERE ph.post_id=p.id AND bh.user_id=?))
-          ORDER BY p.created_at DESC,p.id DESC`)
-          .all(...conversationIds, viewerId, viewerId, viewerId, viewerId, viewerId) as Array<
-            PostView & { conversation_id: number }
-          >
-        : []
-      const rowsByConversation = new Map<number, Array<PostView & { conversation_id: number }>>()
-      for (const row of conversationRows) {
-        rowsByConversation.set(row.conversation_id, [...(rowsByConversation.get(row.conversation_id) || []), row])
-      }
-      const conversationByPost = new Map<number, number>()
-      for (const row of conversationRows) conversationByPost.set(row.id, row.conversation_id)
-      const orderedConversationIds = [...new Set(taggedPosts.flatMap(post => {
-        const conversationId = conversationByPost.get(post.id)
-        return conversationId === undefined ? [] : [conversationId]
-      }))]
-      const taggedIds = new Set(taggedPosts.map(post => post.id))
-      const rawPosts = orderedConversationIds.flatMap(conversationId => {
-        const conversation = rowsByConversation.get(conversationId) || []
-        const projection = projectRecentConversation(conversation, { forceRoot: true })
-        const selectedIds = new Set([
-          ...(projection.root ? [projection.root.id] : []),
-          ...projection.replies.map(post => post.id),
-        ])
-        const byId = new Map(conversation.map(post => [post.id, post]))
-        for (const taggedPost of conversation.filter(post => taggedIds.has(post.id))) selectedIds.add(taggedPost.id)
-        for (const selectedId of [...selectedIds]) {
-          let current = byId.get(selectedId)
-          while (current) {
-            selectedIds.add(current.id)
-            current = current.parent_id === null
-              ? undefined
-              : byId.get(current.parent_id)
-          }
-        }
-        return conversation.filter(post => selectedIds.has(post.id)).map(post => ({
-          ...post,
-          ...(projection.previewReplyIds.has(post.id) ? { feed_collapsed_preview: true } : {}),
-          ...(!selectedIds.has(post.parent_id || 0) && post.parent_id !== null ? { feed_branch_root: true } : {}),
-        }))
-      })
+      const rawPosts = anchoredConversationPosts(database, taggedPosts, viewerId)
       const total = blocked ? 0 : (database.query(
         `SELECT count(DISTINCT ph.post_id) AS count FROM post_hashtags ph JOIN posts p ON p.id=ph.post_id
         JOIN users u ON u.id=p.user_id
@@ -4191,7 +4198,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : []
       const displayName = displayNameForTag(database, tag)
       const result = { aliases: aliasesForTag(database, tag), displayName, following, blocked,
-        posts: rewireVisibleAncestorGaps(database, enrichPosts(database, rawPosts, viewerId)), total, followerTotal,
+        posts: rawPosts, total, followerTotal,
         people: attachPeopleStats(database, people, viewerId) }
       return result as DatabaseDomainOutput<K>
     }

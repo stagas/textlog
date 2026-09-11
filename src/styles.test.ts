@@ -239,11 +239,10 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('sets the notes tab bottom spacing without changing quoted reply cards', async () => {
+  test('keeps the normal symmetric root post padding on the notes tab', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain(
-      '.profile-notes-feed-thread .thread-root .post {\n  padding-bottom: var(--space-4);',
-    )
+    expect(css).toContain('  padding: var(--space-5) var(--gutter);\n  border: 0;')
+    expect(css).not.toContain('.profile-notes-feed-thread .thread-root .post')
     expect(css).not.toContain('.profile-replies-feed-thread .post')
   })
 
@@ -314,6 +313,8 @@ describe('in-memory stylesheet', () => {
       '.thread-fold-input:checked~.reply-branch .thread-branch-content {\n  overflow: hidden;\n  animation: none;',
     )
     expect(css).toContain('.thread-fold-input:checked~.reply-branch {\n  grid-template-rows: 0fr;')
+    expect(css).toContain('.thread-locked-notice {\n  padding: var(--space-3) var(--gutter);\n'
+      + '  color: var(--muted);\n  border-left: 3px solid var(--muted);')
     expect(css).toContain('.reply-branch:not(.feed-thread-collapsed-branch)>.thread-branch-content {\n'
       + '  opacity: 1;\n  transition: opacity 120ms ease;')
     expect(css).toContain('.thread-fold-input:checked~.reply-branch:not(.feed-thread-collapsed-branch)'

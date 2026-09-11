@@ -831,16 +831,21 @@ export function Post({
         tappable || hasTappableParent ? ' tappable-post' : ''
       }${contextDirectedUnread ? ' activity-item-directed-unread' : ''}`}
       id={`post-${p.id}`}
-      data-reply-href={tappable && user ? resolvedReplyHref : undefined}
-      data-reply-handle={showReplyAction || tappable && user ? p.handle : undefined}
-      data-reply-own={(showReplyAction || tappable && user) && user?.id === p.user_id ? '' : undefined}
+      data-reply-href={tappable && user && !p.thread_locked ? resolvedReplyHref : undefined}
+      data-reply-handle={(showReplyAction || tappable && user) && !p.thread_locked ? p.handle : undefined}
+      data-reply-own={(showReplyAction || tappable && user) && !p.thread_locked && user?.id === p.user_id
+        ? ''
+        : undefined}
+      data-thread-locked={p.thread_locked ? 'true' : undefined}
     >
       {shareAction && (
         <input className="post-share-toggle" id={shareControlId} type="checkbox" aria-label="show sharing options" />
       )}
       {tappable && (
         <a className="post-hit-area" href={tappableHref || detailPath} rel={navigationRel}
-          aria-label={user
+          aria-label={p.thread_locked
+            ? `open locked post by @${p.handle}`
+            : user
             ? user.id === p.user_id ? 'continue writing after your post' : `reply to post by @${p.handle}`
             : `open post by @${p.handle}`} />
       )}

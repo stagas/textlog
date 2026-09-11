@@ -135,18 +135,23 @@
     post.classList.add('feed-reply-loading')
     post.setAttribute('aria-busy', 'true')
     try {
-      const composer = replyBoxFor(post, href)
-      if (!composer) {
+      const locked = post.hasAttribute('data-thread-locked')
+      const composer = locked ? null : replyBoxFor(post, href)
+      if (!locked && !composer) {
         location.href = href
         return
       }
 
       removeComposer(current)
       document.querySelector('.post-page-thread:not(.feed-thread) > .root-reply-compose')?.remove()
-      composer.classList.remove('root-reply-compose')
-      composer.querySelectorAll('script').forEach(script => script.remove())
+      if (composer) {
+        composer.classList.remove('root-reply-compose')
+        composer.querySelectorAll('script').forEach(script => script.remove())
+      }
       const wrapper = document.createElement('div')
-      wrapper.className = 'inline-reply-compose feed-inline-reply-compose'
+      wrapper.className = `inline-reply-compose feed-inline-reply-compose${
+        locked ? ' thread-locked-reply-notice' : ''
+      }`
       let depth = 0
       for (let parent = post.parentElement; parent && !parent.classList.contains('feed-thread');
         parent = parent.parentElement) {
@@ -157,9 +162,24 @@
       const outdent = Math.max(0, depth - levelCap)
       wrapper.style.setProperty('--reply-offset',
         outdent ? `calc(${Array(outdent).fill('clamp(18px, 3vw, 28px)').join(' + ')})` : '0px')
-      wrapper.append(composer)
+      if (locked) {
+        const notice = document.createElement('div')
+        notice.className = 'thread-locked-notice'
+        notice.setAttribute('role', 'status')
+        notice.textContent = 'Thread is locked for new replies'
+        wrapper.append(notice)
+      }
+      else wrapper.append(composer)
       mountComposer(wrapper, post)
       const layoutCleanup = wrapper._layoutCleanup
+      if (locked) {
+        const frame = requestAnimationFrame(() => revealComposer(wrapper))
+        wrapper._layoutCleanup = () => {
+          layoutCleanup?.()
+          cancelAnimationFrame(frame)
+        }
+        return
+      }
       const revealCleanup = revealComposerAfterKeyboard(wrapper)
       wrapper._layoutCleanup = () => {
         layoutCleanup?.()
@@ -181,7 +201,8 @@
       return
     const replyLink = event.target.closest?.('.post-page-thread .post-reply-link')
     const hitArea = event.target.closest?.('.post-page-thread .post-hit-area')
-    const post = replyLink?.closest('.post') || hitArea?.closest('.post[data-reply-href]')
+    const post = replyLink?.closest('.post')
+      || hitArea?.closest('.post[data-reply-href], .post[data-thread-locked]')
     if (!post) return
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) return
