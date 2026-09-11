@@ -33,14 +33,15 @@
       const scrollerRect = scroller.getBoundingClientRect()
       const levelCap = matchMedia('(max-width: 600px)').matches ? 3 : 5
       const indent = parseFloat(getComputedStyle(scroller).marginLeft) || 0
-      let level = 1
-      let branch = post.closest('.reply-branch')
-      while (branch && branch !== scroller) {
-        level++
-        branch = branch.parentElement?.closest('.reply-branch')
+      let visibleIndent = 0
+      for (let parent = post.parentElement; parent && parent !== scroller; parent = parent.parentElement) {
+        if (parent.matches('.reply-branch, .reply-node')) {
+          visibleIndent += parseFloat(getComputedStyle(parent).marginLeft) || 0
+        }
       }
       const contentLeft = scroller.scrollLeft + postRect.left - scrollerRect.left
-      const postTarget = Math.max(0, contentLeft - (Math.min(level, levelCap) - 1) * indent)
+      const retainedIndent = Math.min(visibleIndent, (levelCap - 1) * indent)
+      const postTarget = Math.max(0, contentLeft - retainedIndent)
       const contentRight = scroller.scrollLeft + postRect.right - scrollerRect.left
       const postRightTarget = activeComposer
         ? 0

@@ -250,7 +250,7 @@ export function Layout({
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
-        {onThreadedPage && <script src="/thread-hover-scroll.js?v=31" defer />}
+        {onThreadedPage && <script src="/thread-hover-scroll.js?v=32" defer />}
         {(onFeedPage || onTagPage || onProfilePage) && <script src="/thread-expansion.js?v=4" defer />}
         {onThreadedPage && (
           <>
