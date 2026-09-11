@@ -684,7 +684,6 @@ export function Post({
   bookmarkAction = false,
   shareAction = false,
   foldControlId,
-  collapsedExpansionControlId,
   highlightTerms = [],
   tappable = false,
   tappableHref,
@@ -712,7 +711,7 @@ export function Post({
 }: { p: PostView; user: User | null; showReplyAction?: boolean; showOwnerActions?: boolean;
   showModerateAction?: boolean; showParent?: boolean; showReplyCount?: boolean; replyHref?: string; replyLabel?: string;
   reportHref?: string; bookmarkAction?: boolean; shareAction?: boolean; foldControlId?: string;
-  collapsedExpansionControlId?: string; highlightTerms?: string[]; tappable?: boolean; tappableHref?: string;
+  highlightTerms?: string[]; tappable?: boolean; tappableHref?: string;
   tappableParent?: boolean; contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
   canonicalTimestamp?: boolean; parentHref?: string; topHref?: string; flatHref?: string; treeHref?: string;
@@ -841,14 +840,9 @@ export function Post({
       )}
       {tappable && (
         <a className="post-hit-area" href={tappableHref || detailPath} rel={navigationRel}
-          aria-label={`open post by @${p.handle}`} />
-      )}
-      {collapsedExpansionControlId && (
-        <label className="collapsed-post-expander" htmlFor={collapsedExpansionControlId}
-          aria-label={`expand conversation containing post by @${p.handle}`}
-        >
-          <span className="visually-hidden">expand conversation</span>
-        </label>
+          aria-label={user
+            ? user.id === p.user_id ? 'continue writing after your post' : `reply to post by @${p.handle}`
+            : `open post by @${p.handle}`} />
       )}
       {!hideTopMeta && (
         <MetaRow className={`posttop${contextLabel ? ' posttop-context' : ''}${preview ? ' preview-post-meta' : ''}`}
@@ -1498,7 +1492,6 @@ export function ThreadReplies(
           tappableHref={anchorReplyNavigation
             ? replyAnchorReturnPath(replyPageId, reply.id, postReturnPath)
             : undefined} backHref={reply.id === backPostId ? backHref : undefined}
-          collapsedExpansionControlId={collapsedPreviewPosts.has(reply.id) ? expansionControlId : undefined}
           contextUnread={contextUnreadPostIds?.has(reply.id)}
           contextDirectedUnread={contextDirectedUnreadPostIds?.has(reply.id)} highlightTerms={highlightTerms}
           replyHref={user
@@ -1790,7 +1783,7 @@ export function FeedThreads(
               )}
               <FeedPost p={post} user={user} showParent={false} tappable returnPath={anchoredReturnPath}
                 highlightTerms={highlightTerms} hideTopMeta={hideTopMeta} contextUnread={contextUnreadPostIds?.has(post.id)}
-                foldControlId={foldControlId} collapsedExpansionControlId={collapsed ? foldControlId : undefined}
+                foldControlId={foldControlId}
                 contextParentUnread={!!post.parent && contextUnreadPostIds?.has(post.parent.id)}
                 contextDirectedUnread={contextDirectedUnreadPostIds?.has(post.id)} continuationHref={continuesElsewhere
                 ? `/post/${post.id}?from=${encodeURIComponent(anchoredReturnPath)}`

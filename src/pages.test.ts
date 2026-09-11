@@ -1217,10 +1217,7 @@ test('folded feed conversations preview the two newest replies from a recent bur
   expect(html).not.toContain('id="thread-fold-2"')
   expect(html).not.toContain('for="thread-fold-2"')
   expect(html).toContain('class="quiet thread-fold" for="feed-thread-fold-1"')
-  expect(html).toMatch(/class="thread-root"[^>]*>[\s\S]*?class="collapsed-post-expander" for="feed-thread-fold-1"/)
-  expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?class="collapsed-post-expander" for="feed-thread-fold-1"/)
-  expect(html.match(/class="collapsed-post-expander"/g)).toHaveLength(3)
-  expect(html).toContain('aria-label="expand conversation containing post by @newest"')
+  expect(html).not.toContain('collapsed-post-expander')
   expect(html).toMatch(/collapsed-preview-post[^>]*>[\s\S]*?Older deep reply/)
   expect(html).toContain(
     'class="post-hit-area" href="/post/1?from=%2Flatest%3Fexpand%3D1%23post-4#post-4"',
@@ -1232,7 +1229,7 @@ test('folded feed conversations preview the two newest replies from a recent bur
     expandedRootId: 1,
     posts: [root, olderReply, olderDeepReply, newerReply],
   }))
-  expect(expanded.match(/class="collapsed-post-expander"/g)).toHaveLength(2)
+  expect(expanded).not.toContain('collapsed-post-expander')
   expect(expanded).toContain('class="post-hit-area" href="/post/1')
   expect(expanded).toContain(
     'class="post-hit-area" href="/post/1?from=%2Flatest%3Fexpand%3D1%23post-4#post-4"',
@@ -4523,6 +4520,7 @@ test('Post carries its originating cursor into detail and edit links', () => {
   expect(html).toContain(
     'data-reply-href="/post/2?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"',
   )
+  expect(html).toContain('aria-label="continue writing after your post"')
   expect(html).not.toContain('post-reply-link')
   expect(html).toContain('href="/post/2/edit?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain('<input type="hidden" name="from" value="/latest?cursor=abc#post-2"/>')

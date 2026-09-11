@@ -44,13 +44,6 @@
     layout()
   }
 
-  const expandedThread = post => {
-    const thread = post.closest('.feed-thread')
-    if (!thread) return true
-    const fold = thread.querySelector(':scope > .thread-fold-input')
-    return !fold || !fold.checked
-  }
-
   const replyBoxFor = (post, href) => {
     const template = document.getElementById('inline-reply-template')
     if (!(template instanceof HTMLTemplateElement)) return null
@@ -161,7 +154,7 @@
     const replyLink = event.target.closest?.('.post-page-thread .post-reply-link')
     const hitArea = event.target.closest?.('.post-page-thread .post-hit-area')
     const post = replyLink?.closest('.post') || hitArea?.closest('.post[data-reply-href]')
-    if (!post || !expandedThread(post)) return
+    if (!post) return
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) return
     event.preventDefault()

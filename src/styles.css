@@ -2594,15 +2594,12 @@ body.corners-round a.button {
 }
 
 .tappable-post > .post-hit-area,
-.tappable-post .parent-hit-area,
-.tappable-post > .collapsed-post-expander {
+.tappable-post .parent-hit-area {
   -webkit-tap-highlight-color: transparent;
 }
 
 .tappable-post:has(> .post-hit-area:hover),
-.tappable-post:has(> .post-hit-area:focus-visible),
-.tappable-post:has(> .collapsed-post-expander:hover),
-.tappable-post:has(> .collapsed-post-expander:focus-visible) {
+.tappable-post:has(> .post-hit-area:focus-visible) {
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
@@ -2612,8 +2609,7 @@ body.corners-round a.button {
 }
 
 @media (hover: none) {
-  .tappable-post:has(> .post-hit-area:hover),
-  .tappable-post:has(> .collapsed-post-expander:hover) {
+  .tappable-post:has(> .post-hit-area:hover) {
     background: transparent;
   }
 
@@ -2628,19 +2624,6 @@ body.corners-round a.button {
   inset: 0;
   display: block;
   border: 0;
-}
-
-.tappable-post .collapsed-post-expander {
-  position: absolute;
-  z-index: 20;
-  inset: 0;
-  display: block;
-  cursor: cell;
-}
-
-.feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,
-.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch .collapsed-post-expander {
-  display: none;
 }
 
 .tappable-post .tappable-parent {

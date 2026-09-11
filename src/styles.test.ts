@@ -85,17 +85,11 @@ describe('in-memory stylesheet', () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area)')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;')
-    expect(css).toContain('.tappable-post .collapsed-post-expander {\n  position: absolute;\n  z-index: 20;')
-    expect(css).toContain('  cursor: cell;')
-    expect(css).toContain('.feed-thread>.thread-fold-input:not(:checked)~.thread-root .collapsed-post-expander,\n'
-      + '.feed-thread>.thread-fold-input:not(:checked)~.feed-thread-collapsed-branch'
-      + ' .collapsed-post-expander {\n  display: none;')
     expect(css).toContain(
       '.tappable-post input,\n.tappable-post .post-spoiler-summary,\n.tappable-post .redacted {\n'
         + '  position: relative;\n  z-index: 21;',
     )
     expect(css).toContain('.tappable-post:has(> .post-hit-area:hover),')
-    expect(css).toContain('.tappable-post:has(> .collapsed-post-expander:hover),')
     expect(css).toContain('background: color-mix(in srgb, var(--accent) 5%, transparent);')
     expect(css).toContain('background: color-mix(in srgb, var(--quote-bg), white 2%);')
   })
@@ -118,7 +112,6 @@ describe('in-memory stylesheet', () => {
 
   test('keeps quoted-parent links above feed collapse expanders without raising the parent hit area', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.tappable-post .collapsed-post-expander {\n  position: absolute;\n  z-index: 20;')
     expect(css).toContain('.tappable-post .tappable-parent {\n  position: relative;\n  z-index: auto;')
     expect(css).toContain('.tappable-post .parent-hit-area {\n  position: absolute;\n  z-index: 1;')
     expect(css).toContain('.tappable-post a:not(.post-hit-area):not(.parent-hit-area):not(.remote-link-popover),')
@@ -403,16 +396,16 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('--tap-highlight: color-mix(in srgb, var(--accent) 24%, transparent);')
     expect(css).toContain('-webkit-tap-highlight-color: var(--tap-highlight);')
     expect(css).toContain(
-      '.tappable-post > .post-hit-area,\n.tappable-post .parent-hit-area,\n'
-        + '.tappable-post > .collapsed-post-expander {\n  -webkit-tap-highlight-color: transparent;',
+      '.tappable-post > .post-hit-area,\n.tappable-post .parent-hit-area {\n'
+        + '  -webkit-tap-highlight-color: transparent;',
     )
   })
 
   test('removes tappable post hover backgrounds on touch devices', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
-      '@media (hover: none) {\n  .tappable-post:has(> .post-hit-area:hover),\n'
-        + '  .tappable-post:has(> .collapsed-post-expander:hover) {\n    background: transparent;',
+      '@media (hover: none) {\n  .tappable-post:has(> .post-hit-area:hover) {\n'
+        + '    background: transparent;',
     )
     expect(css).toContain(
       '.tappable-post .tappable-parent:has(> .parent-hit-area:hover) {\n    background: transparent;',
