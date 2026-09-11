@@ -160,6 +160,16 @@
     event.preventDefault()
     showReplyBox(post, replyLink?.href || post.dataset.replyHref)
   })
+  document.addEventListener('change', event => {
+    const fold = event.target
+    if (!(fold instanceof HTMLInputElement) || !fold.matches('.feed-thread > .thread-fold-input') || !fold.checked)
+      return
+    const wrapper = document.querySelector('.feed-inline-reply-compose')
+    const post = wrapper?.dataset.replyPostId
+      ? document.getElementById(`post-${wrapper.dataset.replyPostId}`)
+      : null
+    if (post?.closest('.feed-thread') === fold.parentElement) removeComposer(wrapper)
+  })
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return
     const wrapper = event.target.closest?.('.feed-inline-reply-compose')

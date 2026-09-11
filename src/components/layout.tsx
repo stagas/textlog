@@ -248,7 +248,7 @@ export function Layout({
         {(onFeedPage || onThreadPage) && <script src="/thread-hover-scroll.js?v=21" defer />}
         {(onFeedPage || onThreadPage) && (
           <>
-            <script src="/feed-reply.js?v=18" defer />
+            <script src="/feed-reply.js?v=19" defer />
             {onFeedPage && <script src="/infinite-scroll.js?v=46" defer />}
           </>
         )}
