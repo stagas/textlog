@@ -220,8 +220,6 @@ export function fontSizeChoice(request: Request): FontSizeChoice {
   const value = request.headers.get('cookie')?.match(/(?:^|;\s*)font-size=([^;]+)/)?.[1] || ''
   return FONT_SIZE_CHOICES.some(choice => choice.value === value)
     ? value as FontSizeChoice
-    : isMobileRequest(request)
-    ? 'small'
     : 'regular'
 }
 

@@ -164,8 +164,8 @@ test('font size preference is validated and emitted by the theme stylesheet', ()
   const mobile = new Request('http://localhost', {
     headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148' },
   })
-  expect(fontSizeChoice(mobile)).toBe('small')
-  expect(themeStyles(mobile)).toContain('font-size:14px')
+  expect(fontSizeChoice(mobile)).toBe('regular')
+  expect(themeStyles(mobile)).toContain('font-size:16px')
   expect(fontSizeChoice(new Request('http://localhost'))).toBe('regular')
 })
 
