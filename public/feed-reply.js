@@ -13,7 +13,7 @@
     wrapper.dataset.replyPostId = post.id.replace('post-', '')
     post.classList.add('reply-composer-target')
     const thread = post.closest('.post-page-thread')
-    const shouldHoist = !thread.classList.contains('feed-thread') || matchMedia('(max-width: 600px)').matches
+    const shouldHoist = matchMedia('(max-width: 600px)').matches
     if (!shouldHoist) {
       post.after(wrapper)
       return

@@ -3743,11 +3743,6 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   margin-top: 0;
 }
 
-.post-page-thread:not(.feed-thread) .inline-reply-compose {
-  width: calc(100% + var(--reply-offset));
-  margin-left: calc(-1 * var(--reply-offset));
-}
-
 .feed-inline-reply-compose {
   position: relative;
   z-index: 2;
@@ -3773,9 +3768,6 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
     width: 100%;
     margin-left: 0;
   }
-}
-
-@media (max-width: 600px) {
 }
 
 .post-page-thread:has(> .thread-hoisted-inline-reply-compose) {
@@ -8201,10 +8193,6 @@ a.post-context:hover {
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
-}
-
-.post-page-thread:not(.feed-thread) > .reply-branch:has(.inline-reply-compose) {
-  overflow-x: visible;
 }
 
 .post-page-thread:not(.feed-thread):has(> .root-reply-compose)

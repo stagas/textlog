@@ -156,7 +156,7 @@ test('feed pagination uses the partial feed navigation enhancement', async () =>
 })
 
 test('inline feed and post-page replies are served as immutable JavaScript', async () => {
-  const response = await request('/feed-reply.js?v=15')
+  const response = await request('/feed-reply.js?v=16')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')

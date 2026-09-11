@@ -788,19 +788,11 @@ describe('in-memory stylesheet', () => {
     )
   })
 
-  test('outdents a post-page inline reply composer to the full thread width', async () => {
+  test('keeps desktop inline replies indented and hoists mobile replies to full width', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(
       '.inline-reply-compose {\n  width: calc(100% - clamp(18px, 3vw, 28px));\n'
         + '  margin-left: clamp(18px, 3vw, 28px);',
-    )
-    expect(css).toContain(
-      '.post-page-thread:not(.feed-thread) .inline-reply-compose {\n'
-        + '  width: calc(100% + var(--reply-offset));\n  margin-left: calc(-1 * var(--reply-offset));',
-    )
-    expect(css).toContain(
-      '.post-page-thread:not(.feed-thread) > .reply-branch:has(.inline-reply-compose) {\n'
-        + '  overflow-x: visible;',
     )
     expect(css).toContain(
       '.post-page-thread:not(.feed-thread) > .inline-reply-compose.thread-hoisted-inline-reply-compose,\n'
