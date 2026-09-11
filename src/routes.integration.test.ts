@@ -156,7 +156,7 @@ test('feed pagination uses the partial feed navigation enhancement', async () =>
 })
 
 test('inline feed and post-page replies are served as immutable JavaScript', async () => {
-  const response = await request('/feed-reply.js?v=19')
+  const response = await request('/feed-reply.js?v=20')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -168,6 +168,8 @@ test('inline feed and post-page replies are served as immutable JavaScript', asy
   expect(script).not.toContain('expandedThread(post)')
   expect(script).toContain('.feed-thread > .thread-fold-input')
   expect(script).toContain('.closest(".feed-thread")')
+  expect(script).toContain("visualViewport")
+  expect(script).toMatch(/visualViewport[\s\S]*addEventListener\("resize"/)
 })
 
 test('thread hover scrolling is served as immutable JavaScript', async () => {

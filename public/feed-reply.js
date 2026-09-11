@@ -102,6 +102,29 @@
     }
   }
 
+  const revealComposerAfterKeyboard = wrapper => {
+    const viewport = window.visualViewport
+    if (!matchMedia('(max-width: 600px)').matches || !viewport) {
+      const frame = requestAnimationFrame(() => revealComposer(wrapper))
+      return () => cancelAnimationFrame(frame)
+    }
+
+    let timer = setTimeout(finish, 500)
+    const onResize = () => {
+      clearTimeout(timer)
+      timer = setTimeout(finish, 100)
+    }
+    function finish() {
+      viewport.removeEventListener('resize', onResize)
+      if (wrapper.isConnected) revealComposer(wrapper)
+    }
+    viewport.addEventListener('resize', onResize, { passive: true })
+    return () => {
+      clearTimeout(timer)
+      viewport.removeEventListener('resize', onResize)
+    }
+  }
+
   const showReplyBox = (post, href) => {
     const current = document.querySelector('.feed-inline-reply-compose')
     if (current?.dataset.replyPostId === post.id.replace('post-', '')) {
@@ -136,8 +159,13 @@
         outdent ? `calc(${Array(outdent).fill('clamp(18px, 3vw, 28px)').join(' + ')})` : '0px')
       wrapper.append(composer)
       mountComposer(wrapper, post)
+      const layoutCleanup = wrapper._layoutCleanup
+      const revealCleanup = revealComposerAfterKeyboard(wrapper)
+      wrapper._layoutCleanup = () => {
+        layoutCleanup?.()
+        revealCleanup()
+      }
       initializeTextarea(composer)
-      requestAnimationFrame(() => revealComposer(wrapper))
     }
     catch (error) {
       location.href = href
