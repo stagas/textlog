@@ -468,21 +468,30 @@ test('/about?hn starts the hn campaign without redirecting', async () => {
 })
 
 test('/post/<id>?hn starts the hn campaign without redirecting', async () => {
-  const post = database.query(`INSERT INTO posts(user_id,body) VALUES(1,'HN campaign landing') RETURNING id`)
+  const author = database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
+    VALUES('hn_campaign_author','hn-campaign-author@example.com','x',CURRENT_TIMESTAMP) RETURNING id`)
     .get() as { id: number }
-  const visitorsBefore = (database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`)
-    .get() as { count: number }).count
+  const post = database.query(`INSERT INTO posts(user_id,body) VALUES(?,'HN campaign landing') RETURNING id`)
+    .get(author.id) as { id: number }
+  try {
+    const visitorsBefore = (database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`)
+      .get() as { count: number }).count
 
-  const landing = await request(`/post/${post.id}?hn`, { ip: '203.0.113.88', acceptHtml: true })
-  expect(landing.status).toBe(200)
-  expect(await landing.text()).toContain('HN campaign landing')
-  expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=hn')
-  const campaignCookie = landing.headers.get('set-cookie')!.match(/campaign_attribution=hn/)![0]
+    const landing = await request(`/post/${post.id}?hn`, { ip: '203.0.113.88', acceptHtml: true })
+    expect(landing.status).toBe(200)
+    expect(await landing.text()).toContain('HN campaign landing')
+    expect(landing.headers.get('set-cookie')).toContain('campaign_attribution=hn')
+    const campaignCookie = landing.headers.get('set-cookie')!.match(/campaign_attribution=hn/)![0]
 
-  await request('/styles.css', { ip: '203.0.113.88', cookie: campaignCookie })
+    await request('/styles.css', { ip: '203.0.113.88', cookie: campaignCookie })
 
-  expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`).get())
-    .toEqual({ count: visitorsBefore + 1 })
+    expect(database.query(`SELECT count(*) count FROM campaign_visitors WHERE campaign='hn'`).get())
+      .toEqual({ count: visitorsBefore + 1 })
+  }
+  finally {
+    database.query('DELETE FROM posts WHERE id=?').run(post.id)
+    database.query('DELETE FROM users WHERE id=?').run(author.id)
+  }
 })
 
 test('an anonymous feed note is published after signup chooses a handle', async () => {
