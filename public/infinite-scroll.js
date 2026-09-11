@@ -6,6 +6,7 @@
   let navigationController = null
   let navigationSpinnerTimer = null
   let navigationSpinner = null
+  let restoreNavigationSpinner = null
   let heldLiveTab = null
   let heldLiveCount = 0
   const liveCounts = { 'to-me': 0, 'for-you': 0, latest: 0, new: 0 }
@@ -46,20 +47,48 @@
     void ding.play().catch(() => {})
   }
 
-  const startNavigationSpinner = tab => {
+  const startNavigationSpinner = (owner, href) => {
     clearInterval(navigationSpinnerTimer)
-    navigationSpinner?.remove()
-    const owner = tab || document.querySelector('.feed-tabs a.active')
-    if (!owner) return
-    const spinner = document.createElement('span')
-    spinner.className = 'feed-tab-loading'
-    spinner.setAttribute('role', 'status')
-    spinner.setAttribute('aria-label', 'Loading feed')
-    owner.append(spinner)
-    navigationSpinner = spinner
+    restoreNavigationSpinner?.()
+    restoreNavigationSpinner = null
+    const pagination = owner?.closest('.pagination')
+    if (pagination) {
+      const requestedPage = new URL(href, location.href).searchParams.get('page')
+      const page = [...pagination.querySelectorAll('.pagination-pages a[href]')]
+        .find(link => new URL(link.href).searchParams.get('page') === requestedPage)
+        || pagination.querySelector('.pagination-current-form .current')
+      if (!page) return
+      const original = 'value' in page ? page.value : page.textContent
+      const disabled = 'disabled' in page ? page.disabled : null
+      const role = page.getAttribute('role')
+      const ariaLabel = page.getAttribute('aria-label')
+      navigationSpinner = page
+      restoreNavigationSpinner = () => {
+        if ('value' in page) page.value = original
+        else page.textContent = original
+        if (disabled !== null) page.disabled = disabled
+        if (role === null) page.removeAttribute('role')
+        else page.setAttribute('role', role)
+        if (ariaLabel === null) page.removeAttribute('aria-label')
+        else page.setAttribute('aria-label', ariaLabel)
+      }
+      if ('value' in page) page.disabled = true
+    }
+    else {
+      const tab = owner || document.querySelector('.feed-tabs a.active')
+      if (!tab) return
+      const spinner = document.createElement('span')
+      spinner.className = 'feed-tab-loading'
+      tab.append(spinner)
+      navigationSpinner = spinner
+      restoreNavigationSpinner = () => spinner.remove()
+    }
+    navigationSpinner.setAttribute('role', 'status')
+    navigationSpinner.setAttribute('aria-label', 'Loading feed')
     let frame = 0
     const render = () => {
-      spinner.textContent = spinnerFrames[frame]
+      if ('value' in navigationSpinner) navigationSpinner.value = spinnerFrames[frame]
+      else navigationSpinner.textContent = spinnerFrames[frame]
       frame = (frame + 1) % spinnerFrames.length
     }
     render()
@@ -69,7 +98,8 @@
   const stopNavigationSpinner = () => {
     clearInterval(navigationSpinnerTimer)
     navigationSpinnerTimer = null
-    navigationSpinner?.remove()
+    restoreNavigationSpinner?.()
+    restoreNavigationSpinner = null
     navigationSpinner = null
   }
 
@@ -263,7 +293,7 @@
     const controller = new AbortController()
     navigationController = controller
     currentView.setAttribute('aria-busy', 'true')
-    startNavigationSpinner(tab)
+    startNavigationSpinner(tab, href)
     const spinnerStartedAt = performance.now()
     try {
       const response = await fetch(href, {
@@ -365,7 +395,7 @@
       void expandCompleteThread(continuation)
       return
     }
-    const link = event.target.closest('.feed-tabs a[href]')
+    const link = event.target.closest('.feed-tabs a[href], [data-feed-view] .pagination a[href]')
     if (!link || link.classList.contains('feed-tabs-top') || event.defaultPrevented || event.button !== 0
       || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.download) return
     const url = new URL(link.href)
@@ -379,6 +409,15 @@
       return
     }
     void navigateFeed(url.href, true, link, true)
+  })
+
+  document.addEventListener('submit', event => {
+    const form = event.target.closest('[data-feed-view] .pagination-current-form')
+    if (!form || event.defaultPrevented) return
+    event.preventDefault()
+    const url = new URL(form.action, location.href)
+    new FormData(form).forEach((value, name) => url.searchParams.set(name, String(value)))
+    void navigateFeed(url.href, true, form.closest('.pagination'), true)
   })
 
   addEventListener('popstate', () => {

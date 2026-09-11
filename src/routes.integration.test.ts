@@ -144,6 +144,17 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
   expect(await response.text()).toContain('data-progressive-pagination-root')
 })
 
+test('feed pagination uses the partial feed navigation enhancement', async () => {
+  const response = await request('/infinite-scroll.js?v=46')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+  const script = await response.text()
+  expect(script).toContain('[data-feed-view] .pagination a[href]')
+  expect(script).toContain('[data-feed-view] .pagination-current-form')
+  expect(script).toContain('X-Textlog-Feed-Navigation')
+})
+
 test('thread hover scrolling is served as immutable JavaScript', async () => {
   const response = await request('/thread-hover-scroll.js?v=12')
   expect(response.status).toBe(200)
