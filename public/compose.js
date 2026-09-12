@@ -146,7 +146,9 @@
 
     event.preventDefault()
     window.scrollTo({ top: 0, behavior: 'smooth' })
-    textarea.focus({ preventScroll: true })
+    const mobileTopAction = writeAction.matches('.feed-tabs-top')
+      && window.matchMedia('(max-width: 600px)').matches
+    if (!mobileTopAction) textarea.focus({ preventScroll: true })
   })
 
   if ('ResizeObserver' in window) {
