@@ -5172,6 +5172,40 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 227,
+    name: 'preserve_signup_event_when_replacing_dropped_username',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get()) return
+      database.run(`DELETE FROM personalized_feed_entries
+        WHERE event_kind='signup' AND sequence NOT IN (
+          SELECT min(sequence) FROM personalized_feed_entries WHERE event_kind='signup'
+          GROUP BY viewer_id,feed,actor_id)`)
+      const administrators = instance.administrators.map(email => email.trim().toLowerCase())
+      database.run('DROP TRIGGER IF EXISTS materialized_feed_signup_complete')
+      if (!administrators.length) return
+      const adminSql = administrators.map(email => `'${email.replaceAll('\'', '\'\'')}'`).join(',')
+      database.run(`CREATE TRIGGER materialized_feed_signup_complete
+        AFTER UPDATE OF handle_chosen_at ON users
+        WHEN OLD.handle_chosen_at IS NULL AND NEW.handle_chosen_at IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM banned_usernames WHERE dropped_user_id=NEW.id) BEGIN
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          reason,created_at)
+        SELECT administrator.id,'for-you','signup:' || printf('%020d',NEW.id) || ':' || NEW.handle_chosen_at,
+          'signup',NEW.id,0,NEW.handle_chosen_at
+        FROM users administrator WHERE lower(administrator.email) IN (${adminSql})
+          AND administrator.deleted_at IS NULL AND administrator.suspended_at IS NULL;
+        INSERT OR IGNORE INTO personalized_feed_entries(viewer_id,feed,event_key,event_kind,actor_id,
+          reason,created_at)
+        SELECT NEW.id,'for-you','signup:' || printf('%020d',actor.id) || ':' || actor.handle_chosen_at,
+          'signup',actor.id,0,actor.handle_chosen_at
+        FROM users actor WHERE lower(NEW.email) IN (${adminSql}) AND actor.handle_chosen_at IS NOT NULL
+          AND actor.deleted_at IS NULL AND actor.suspended_at IS NULL;
+      END;`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

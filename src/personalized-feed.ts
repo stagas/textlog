@@ -205,11 +205,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
         AND ($toMe=1 OR $hidePeopleFollowActivity=0)
         AND actor.suspended_at IS NULL AND ${actorBlockVisibility}
       UNION ALL
-      SELECT NULL id,u.id user_id,NULL body,NULL translation,u.handle_chosen_at created_at,NULL parent_id,NULL deleted_at,
+      SELECT NULL id,u.id user_id,NULL body,NULL translation,signup.created_at,NULL parent_id,NULL deleted_at,
         NULL has_latex,NULL has_links,NULL has_code,NULL execution_output,NULL moderation_category,NULL moderation_score,
         u.handle,
         EXISTS(SELECT 1 FROM follows vf WHERE vf.follower_id=$viewer AND vf.following_id=u.id) following,
-        'signup' activity_kind,'signup:' || printf('%020d',u.id) || ':' || u.handle_chosen_at event_key,
+        'signup' activity_kind,signup.event_key,
         u.id actor_id,u.handle actor_handle,u.bio actor_bio,
         NULL target_handle,NULL target_tag,u.bio target_bio,
         0 target_is_viewer,0 targeted_to_viewer,

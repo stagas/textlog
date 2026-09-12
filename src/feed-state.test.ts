@@ -4,6 +4,8 @@ import { markPersonalizedFeedThrough, materializedPersonalizedEventPage, materia
   personalizedFeedState } from './feed-state'
 import { claimInitialHandle, dropUsername } from './handles'
 import { migrations, runMigrations } from './migrations'
+import { loadPersonalizedFeed } from './personalized-feed'
+import type { User } from './types'
 
 test('materialized post reasons deduplicate and feed state advances through represented entries', () => {
   const database = new Database(':memory:', { strict: true })
@@ -368,12 +370,21 @@ test('choosing a replacement for a dropped username does not duplicate signup ac
 
   expect(database.query(`SELECT count(*) count FROM personalized_feed_entries
     WHERE event_kind='signup' AND actor_id=2`).get()).toEqual({ count: 1 })
+  const original = database.query(`SELECT event_key,created_at FROM personalized_feed_entries
+    WHERE event_kind='signup' AND actor_id=2`).get()
 
   dropUsername(database, 2, 1, 'rename required')
   claimInitialHandle(database, 2, 'renamed')
 
   expect(database.query(`SELECT count(*) count FROM personalized_feed_entries
     WHERE event_kind='signup' AND actor_id=2`).get()).toEqual({ count: 1 })
+  expect(database.query(`SELECT event_key,created_at FROM personalized_feed_entries
+    WHERE event_kind='signup' AND actor_id=2`).get()).toEqual(original)
+  const admin = database.query('SELECT * FROM users WHERE id=1').get() as User
+  const signupRows = loadPersonalizedFeed(database, admin, 1, 20, false, '/my-feed', false).timeline
+    .filter(row => row.activity_kind === 'signup' && row.actor_id === 2)
+  expect(signupRows).toHaveLength(1)
+  expect(signupRows[0]).toMatchObject(original as object)
 })
 
 test('re-materializing historical read entries does not resurrect unread counters', () => {
