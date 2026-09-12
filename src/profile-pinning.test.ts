@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
 import { feedSnapshotPage } from './feed-snapshots'
+import { claimInitialHandle } from './handles'
 import { runMigrations } from './migrations'
 import { loadThreadReplies } from './posts'
 
@@ -68,6 +69,13 @@ describe('profile pinning', () => {
     expect(publicDetail.status).toBe('not_found')
     expect(moderatorDetail.status).toBe('ready')
     if (moderatorDetail.status === 'ready') expect(moderatorDetail.post.hidden_post).toBeTrue()
+
+    claimInitialHandle(database, 1, 'new-writer')
+    const restoredPosts = await executeDatabaseDomain(database, 'profiles.postsPage', { ...page, viewerId: -1 })
+    const restoredDetail = await executeDatabaseDomain(database, 'posts.detail', { id: 1, viewerId: -1 })
+
+    expect(restoredPosts.posts.map(post => post.id).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(restoredDetail.status).toBe('ready')
   })
 
   test('hides dropped-username replies on parent threads except for moderators', () => {

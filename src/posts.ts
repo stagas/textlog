@@ -392,8 +392,10 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   const hiddenAuthorIds = moderator && database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'banned_usernames\'',
     ).get()
-    ? new Set((database.query(`SELECT DISTINCT dropped_user_id id FROM banned_usernames
-      WHERE dropped_user_id IN (${posts.map(() => '?').join(',')})`).all(...posts.map(post => post.user_id)) as Array<
+    ? new Set((database.query(`SELECT DISTINCT b.dropped_user_id id FROM banned_usernames b
+      JOIN users u ON u.id=b.dropped_user_id
+      WHERE u.handle_chosen_at IS NULL
+      AND b.dropped_user_id IN (${posts.map(() => '?').join(',')})`).all(...posts.map(post => post.user_id)) as Array<
       { id: number }
     >).map(row => row.id))
     : new Set<number>()

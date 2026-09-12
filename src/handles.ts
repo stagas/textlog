@@ -163,7 +163,12 @@ export function excludesDroppedUsernameUsers(database: Database, userAlias = 'u'
   const supported = database.query(
     'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'banned_usernames\'',
   ).get()
+  const supportsHandleChosenAt = database.query(
+    'SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'handle_chosen_at\'',
+  ).get()
   return supported
-    ? `NOT EXISTS (SELECT 1 FROM banned_usernames hidden_author WHERE hidden_author.dropped_user_id=${userAlias}.id)`
+    ? `NOT EXISTS (SELECT 1 FROM banned_usernames hidden_author
+      WHERE hidden_author.dropped_user_id=${userAlias}.id${
+        supportsHandleChosenAt ? ` AND ${userAlias}.handle_chosen_at IS NULL` : ''})`
     : '1'
 }
