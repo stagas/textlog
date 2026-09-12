@@ -131,6 +131,24 @@ test('first use of a PascalCase tag creates its display name without an undersco
     .get()).toEqual({ displayName: 'DifferentDisplay' })
 })
 
+test('first use preserves uppercase tag spelling and derives display names from underscores', () => {
+  const database = new Database(':memory:')
+  database.run('PRAGMA foreign_keys=ON')
+  runMigrations(database)
+  database.query('INSERT INTO users(handle,email,password) VALUES(\'writer\',\'writer@example.com\',\'x\')').run()
+
+  createPost(database, 1, '#DeepThoughts #in_the_mix', null, false)
+  expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
+    WHERE tag IN ('deepthoughts','inthemix') ORDER BY tag`).all()).toEqual([
+    { tag: 'deepthoughts', displayName: 'DeepThoughts' },
+    { tag: 'inthemix', displayName: 'InTheMix' },
+  ])
+
+  createPost(database, 1, '#alreadythere', null, false)
+  createPost(database, 1, '#already_there', null, false)
+  expect(database.query('SELECT display_name FROM tag_display_names WHERE tag=\'alreadythere\'').get()).toBeNull()
+})
+
 test('plural tags transparently normalize to their singular tag', async () => {
   const database = new Database(':memory:')
   database.run('PRAGMA foreign_keys=ON')

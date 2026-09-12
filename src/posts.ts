@@ -274,8 +274,9 @@ export function syncPostMetadata(database: Database, postId: number, body: strin
         normalized_word: string
       } | null)?.normalized_word
       : undefined
-    const extractedTag = supportsTagPresentation && database.query('SELECT 1 FROM tag_invariants WHERE tag=?')
-        .get(spelling)
+    const hasAuthoredWordBoundary = /\p{Ll}\p{Lu}/u.test(authored.normalize('NFC'))
+    const extractedTag = supportsTagPresentation && (hasAuthoredWordBoundary
+      || database.query('SELECT 1 FROM tag_invariants WHERE tag=?').get(spelling))
       ? spelling
       : wordnetTag || normalizedTag
     const tag = supportsTagPresentation

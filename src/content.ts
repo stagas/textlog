@@ -18,8 +18,16 @@ export const MAX_HASHTAGS_PER_POST = 15
 export type ExtractedHashtag = { tag: string; authored: string }
 
 export function pascalCaseHashtagDisplayName(authored: string) {
-  if (!/^[A-Z][a-z\d]+(?:[A-Z][a-z\d]+)+$/.test(authored)) return null
-  return authored
+  const spelling = authored.normalize('NFC')
+  if (spelling.includes('_')) {
+    const words = spelling.split('_').filter(Boolean)
+    if (!words.length) return null
+    return words.map(word => {
+      const [first, ...rest] = [...word]
+      return `${first.toLocaleUpperCase()}${rest.join('').toLocaleLowerCase()}`
+    }).join('')
+  }
+  return /\p{Lu}/u.test(spelling) ? spelling : null
 }
 
 export function singularHashtag(tag: string) {
