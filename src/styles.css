@@ -237,10 +237,10 @@ body.corners-round :where(
   header, .notification-banner, .feed-tabs, .feed-read-action, .site-footer, .api-docs-section,
   .post-page-actions, .recap-highlights li, .recap-closing, .legal-page h2, .feed-relationship,
   .pagination, .guest-join-row, .post, .activity-follow, .security-section, .api-key-lifetime,
-  .posting-help-section, .posting-help-tabs, .posting-help-tab-panel > div, .compose-post-preview,
+  .posting-help-tabs, .posting-help-tab-panel > div, .compose-post-preview,
   .compose-post-preview h2, .profile-presence-section, .profile-presence-tabs, .connections-empty,
   .bio-form > .composefoot, .notification-toggle,
-  .appearance-tabs, .explore-tag-chips, .activity-header, .admin-section, .admin-report,
+  .appearance-tabs, .explore-tag-chips, .admin-section, .admin-report,
   .admin-actions-log article, .admin-user-list article, .admin-ip-list article, .section-empty,
   .admin-tag-groups article, .admin-tag-display-list form,
   .account-danger-zone:not(#invite-friends), .account-settings-separator,
@@ -257,7 +257,7 @@ body.corners-round :is(.post-body .post-quote, .post .code-fence, .reply-branch,
 }
 
 body.corners-round :is(.post, .reply-preview, .internal-post-card,
-  .internal-post-popover, .post-delete-panel blockquote, .compose-post-preview) {
+  .internal-post-popover, .compose-post-preview) {
   border-radius: 0;
 }
 
@@ -1301,10 +1301,6 @@ form:has(> .follows-you) {
   height: 100%;
 }
 
-.brand-dot {
-  color: var(--accent);
-}
-
 nav {
   display: flex;
   align-items: center;
@@ -1526,12 +1522,6 @@ nav form {
 
 .feed-tabs-read-status form { margin: 0; }
 
-.feed-tabs-view-filters {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
 .feed-tabs .feed-tabs-read-status .activity-side-link {
   padding: 0;
   color: var(--accent);
@@ -1554,8 +1544,6 @@ body.corners-round button,
 body.corners-round a.button {
   border-radius: var(--corner-radius) !important;
 }
-
-.feed-tabs-action-separator { color: var(--muted); }
 
 .feed-read-action {
   display: flex;
@@ -1630,9 +1618,6 @@ body.corners-round a.button {
     gap: var(--space-1);
   }
 
-  .feed-tabs-read-status .feed-tabs-action-separator {
-    display: none;
-  }
 }
 
 .feed-tabs a:hover {
@@ -2275,16 +2260,6 @@ body.corners-round a.button {
   }
 }
 
-.nav-action {
-  padding: 0;
-  color: var(--accent);
-  background: none;
-}
-
-.nav-action:hover {
-  color: var(--accent-dark);
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -2346,7 +2321,6 @@ body.corners-round a.button {
   color: var(--accent-dark);
 }
 
-.feedhead,
 .post {
   padding: var(--space-5) var(--gutter);
 }
@@ -2359,10 +2333,6 @@ body.corners-round a.button {
   padding: var(--space-5) var(--gutter);
   border-top: 1px solid var(--soft);
   font-size: var(--font-size-12);
-}
-
-.feed-relationship-content {
-  min-width: 0;
 }
 
 .relationship-notice form {
@@ -2416,18 +2386,6 @@ body.corners-round a.button {
   margin: 0;
 }
 
-.feedhead {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: var(--font-size-11);
-}
-
-.feedhead a {
-  border: 0;
-}
-
-.feedhead form,
 .page-header form {
   margin: 0;
 }
@@ -2693,26 +2651,19 @@ body.corners-round a.button {
 
 .posttop,
 .parent-quote-top,
-.postfoot,
-.parent-quote-foot {
+.postfoot {
   display: flex;
   align-items: baseline;
   gap: var(--space-4);
   font-size: var(--font-size-12);
 }
 
-.postfoot,
-.parent-quote-foot {
+.postfoot {
   margin-top: calc(var(--space-2) + 2px);
 }
 
-.parent-quote-foot {
-  font-size: var(--font-size-11);
-}
-
 .posttop .quiet,
-.postfoot .quiet,
-.parent-quote-foot .quiet {
+.postfoot .quiet {
   font-size: inherit;
 }
 
@@ -3334,10 +3285,6 @@ body.corners-round a.button {
   letter-spacing: normal;
 }
 
-.parent-quote .content-warning + .parent-quote-foot {
-  margin-top: calc(var(--space-1) / 2);
-}
-
 .parent-quote-top {
   gap: var(--space-3);
   font-size: var(--font-size-11);
@@ -3904,10 +3851,6 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   letter-spacing: -1px;
 }
 
-.compose-at {
-  color: var(--accent);
-}
-
 .auth form,
 .bio-form {
   display: grid;
@@ -4058,7 +4001,6 @@ textarea.form-control {
 }
 
 .switch,
-.signup-terms,
 .composefoot {
   color: var(--muted);
   font-size: var(--font-size-11);
@@ -4074,13 +4016,8 @@ textarea.form-control {
   text-align: center;
 }
 
-.switch,
-.signup-terms {
+.switch {
   text-align: center;
-}
-
-.signup-terms {
-  margin: calc(-1 * var(--space-2)) 0 0;
 }
 
 .form-actions {
@@ -4279,10 +4216,6 @@ textarea.form-control {
   font-size: var(--font-size-11);
 }
 
-.security-section .email-unverified {
-  color: var(--report-ink);
-}
-
 .security-form {
   display: grid;
   gap: var(--space-4);
@@ -4434,21 +4367,6 @@ textarea.form-control {
 
 .session-list article>div {
   display: grid;
-}
-
-.report-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0 var(--gutter) var(--space-4);
-  color: var(--muted);
-  font-size: var(--font-size-11);
-}
-
-.report-status form {
-  margin: 0;
 }
 
 .report-panel {
@@ -4889,21 +4807,6 @@ form.report-panel {
   .posting-help-tabs-section {
     grid-row: 3;
   }
-}
-
-.posting-help-section {
-  min-width: 0;
-}
-
-.posting-help-section + .posting-help-section {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--soft);
-}
-
-.posting-help-section h2 {
-  margin: 0 0 var(--space-2);
-  color: var(--muted);
-  font-size: inherit;
 }
 
 .posting-help-searches {
@@ -5806,18 +5709,6 @@ form.report-panel {
   line-height: 1.4;
 }
 
-.compose-heading-at {
-  color: var(--accent);
-}
-
-.compose-heading-row-with-back {
-  border-bottom: 1px solid var(--soft);
-}
-
-.profile-logout {
-  appearance: none;
-}
-
 .profile-editing {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -6334,21 +6225,6 @@ form.report-panel {
 }
 
 .notification-toggle input:focus-visible + .notification-toggle-track {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.notification-radio-enable input:checked + .notification-toggle-track {
-  background: var(--tag-bg);
-  border-color: var(--accent);
-}
-
-.notification-radio-enable input:checked + .notification-toggle-track span {
-  background: var(--accent);
-  transform: translateX(18px);
-}
-
-.notification-radio-enable input:focus-visible + .notification-toggle-track {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -7241,10 +7117,6 @@ form.report-panel {
   margin-top: var(--space-5);
 }
 
-.activity-header {
-  border-bottom: 1px solid var(--soft);
-}
-
 .activity-side-link {
   padding: 0;
   color: var(--accent);
@@ -7743,13 +7615,6 @@ form.report-panel {
 
 .activity-item {
   position: relative;
-}
-
-.activity-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
 }
 
 .unread-dot {

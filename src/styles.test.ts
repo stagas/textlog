@@ -2,6 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import { loadStylesAsset, preferredStylesEncoding, stylesResponse } from './styles'
 
 describe('in-memory stylesheet', () => {
+  test('does not retain retired component selectors', async () => {
+    const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
+    for (const className of ['activity-link', 'compose-heading-at', 'email-unverified', 'profile-logout',
+      'report-status']) expect(css).not.toContain(`.${className}`)
+  })
+
   test('only lets standalone write forms consume spare page height', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
     expect(css).toContain(

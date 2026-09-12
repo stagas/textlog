@@ -23,6 +23,7 @@
     "users:unread-replies:v3": "bun scripts/list-unread-reply-users.ts --v3",
     "stress:routes": "bun scripts/stress-routes.ts",
     "benchmark:pages": "bun scripts/benchmark-pages.ts",
+    "audit:css": "bun scripts/audit-css-classes.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "check": "bun run typecheck && bun run test"
