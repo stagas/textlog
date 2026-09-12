@@ -113,10 +113,12 @@ export function registerPostsRoutes(app: Hono) {
       const id = Number(rawQuery)
       if (!Number.isSafeInteger(id) || id < 1) return c.json({ results: [] }, 400)
       const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
-      if (detail.status === 'not_found') return c.json({ results: [] }, 200, { 'Cache-Control': 'no-store' })
+      if (detail.status === 'not_found' || detail.post.deleted_at) {
+        return c.json({ results: [] }, 200, { 'Cache-Control': 'no-store' })
+      }
       const html = renderToStaticMarkup(
         <Post p={detail.post} user={user || null} showParent={false} showReplyCount tappable showReadAction={false}
-          className="internal-post-card" returnPath={`/post/${id}#post-${id}`} />,
+          continuationLabel="…" className="internal-post-card" returnPath={`/post/${id}#post-${id}`} />,
       )
       return c.json({ results: [{ value: String(id), label: `&${id}`, html }] }, 200,
         { 'Cache-Control': 'no-store' })

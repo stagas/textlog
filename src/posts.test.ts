@@ -591,6 +591,22 @@ describe('post persistence', () => {
     expect(html).toContain('<article class="post">referenced post</article>')
   })
 
+  test('leaves unavailable numerical post references as plain text', () => {
+    const url = 'https://textlog.test/post/12'
+    const unavailable = linkify('see &12', {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+      signedIn: true,
+      formPrefix: 'post-1',
+      linkPreviews: {},
+    })
+    const deleted = linkify('see &12', {}, [], 'https://textlog.test', undefined, '', {}, {}, {
+      signedIn: true,
+      formPrefix: 'post-1',
+      linkPreviews: { [url]: { imageUrl: url, linkedPostId: 12 } },
+    })
+    expect(unavailable).toBe('see &amp;12')
+    expect(deleted).toBe('see &amp;12')
+  })
+
   test('trims trailing whitespace from bios in user popovers', () => {
     const html = linkify('@reader', { reader: 'Builds things  \n' }, [], undefined, undefined, '', {}, { reader: 1 }, {
       signedIn: false,

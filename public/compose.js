@@ -15,6 +15,8 @@ import emojiKeywords from 'emojilib'
   let autocompleteIndex = 0
   let autocompleteRequest
   let autocompleteTimer
+  const postReferenceAvailability = new WeakMap()
+  const postAvailabilityCache = new Map()
   const emojiEntries = Object.entries(emojiKeywords).map(([emoji, keywords], order) => ({
     emoji,
     order,
@@ -50,7 +52,7 @@ import emojiKeywords from 'emojilib'
     return `${width}px`
   }
 
-  const highlightRanges = value => {
+  const highlightRanges = (value, availablePosts) => {
     const classes = Array.from({ length: value.length }, () => new Set())
     formattingPatterns.forEach(({ className, pattern }) => {
       pattern.lastIndex = 0
@@ -65,6 +67,7 @@ import emojiKeywords from 'emojilib'
     }
     const postReferencePattern = /(?<![\p{L}\p{M}\p{N}_&])&[0-9]+/gu
     for (const match of value.matchAll(postReferencePattern)) {
+      if (availablePosts?.get(match[0].slice(1)) === false) continue
       for (let index = match.index; index < match.index + match[0].length; index++) {
         classes[index].add('compose-post-reference')
       }
@@ -89,7 +92,7 @@ import emojiKeywords from 'emojilib'
     }
 
     const value = textarea.value
-    const classes = highlightRanges(value)
+    const classes = highlightRanges(value, postReferenceAvailability.get(textarea))
     const fragment = document.createDocumentFragment()
     let start = 0
     while (start < value.length) {
@@ -125,6 +128,34 @@ import emojiKeywords from 'emojilib'
     mirror.replaceChildren(fragment)
     mirror.scrollTop = textarea.scrollTop
     mirror.scrollLeft = textarea.scrollLeft
+  }
+
+  const validateExistingPostReferences = textarea => {
+    const ids = [...new Set([...textarea.value.matchAll(/(?<![\p{L}\p{M}\p{N}_&])&([0-9]+)/gu)]
+      .map(match => match[1]))].slice(0, 20)
+    if (!ids.length) return
+    let availability = postReferenceAvailability.get(textarea)
+    if (!availability) {
+      availability = new Map()
+      postReferenceAvailability.set(textarea, availability)
+    }
+    for (const id of ids) {
+      if (postAvailabilityCache.has(id)) {
+        availability.set(id, postAvailabilityCache.get(id))
+        continue
+      }
+      fetch(`/post/suggestions?kind=posts&q=${encodeURIComponent(id)}`, { headers: { accept: 'application/json' } })
+        .then(response => response.ok ? response.json() : null)
+        .then(payload => {
+          if (!payload) return
+          const available = (payload.results || []).length > 0
+          postAvailabilityCache.set(id, available)
+          postReferenceAvailability.get(textarea)?.set(id, available)
+          updateHighlight(textarea)
+        })
+        .catch(() => {})
+    }
+    updateHighlight(textarea)
   }
 
   const currentReference = textarea => {
@@ -254,7 +285,8 @@ import emojiKeywords from 'emojilib'
     autocompleteTextarea = textarea
     autocompleteMatch = match
     autocomplete.removeAttribute('aria-busy')
-    const options = results.slice(0, 5).map((result, index) => {
+    const optionResults = match.kind === 'posts' ? [] : results.slice(0, 5)
+    const options = optionResults.map((result, index) => {
       const option = document.createElement('button')
       option.type = 'button'
       option.className = 'compose-autocomplete-option'
@@ -278,6 +310,12 @@ import emojiKeywords from 'emojilib'
     if (card) {
       card.className = 'compose-post-suggestion-card internal-post-popover'
       card.innerHTML = cardResult.html
+      card.addEventListener('click', event => {
+        event.preventDefault()
+        event.stopPropagation()
+        hideAutocomplete()
+        textarea.focus()
+      })
     }
     autocomplete.replaceChildren(...options, ...(card ? [card] : []))
     autocomplete.hidden = false
@@ -312,6 +350,16 @@ import emojiKeywords from 'emojilib'
         })
         if (!response.ok) return hideAutocomplete()
         const payload = await response.json()
+        if (match.kind === 'posts') {
+          let availability = postReferenceAvailability.get(textarea)
+          if (!availability) {
+            availability = new Map()
+            postReferenceAvailability.set(textarea, availability)
+          }
+          availability.set(match.query, (payload.results || []).length > 0)
+          postAvailabilityCache.set(match.query, (payload.results || []).length > 0)
+          updateHighlight(textarea)
+        }
         if (request === autocompleteRequest) showAutocomplete(textarea, match, payload.results || [])
       }
       catch (error) {
@@ -451,6 +499,7 @@ import emojiKeywords from 'emojilib'
     const saved = storedValue(textarea)
     if (!textarea.value && saved) textarea.value = saved
     update(textarea)
+    validateExistingPostReferences(textarea)
     startPlaceholderTypewriter(textarea)
   })
   document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
@@ -489,6 +538,13 @@ import emojiKeywords from 'emojilib'
     if (!(event.target instanceof HTMLTextAreaElement) || !event.target.matches(textareaSelector)) return
     if (autocomplete.hidden || event.target !== autocompleteTextarea) {
       if (event.key === 'Escape') hideAutocomplete()
+      return
+    }
+    if (!autocomplete.querySelector('.compose-autocomplete-option')) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        hideAutocomplete()
+      }
       return
     }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

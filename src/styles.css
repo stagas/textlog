@@ -3802,6 +3802,11 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   display: none;
 }
 
+.compose-autocomplete:has(.compose-post-suggestion-card) {
+  width: min(46rem, calc(100vw - 16px));
+  max-width: min(46rem, calc(100vw - 16px));
+}
+
 .compose-autocomplete-option {
   display: block;
   width: 100%;
@@ -3828,8 +3833,11 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   display: block;
   width: 100%;
   min-width: 0;
-  margin-top: var(--space-2);
-  border-top: 1px solid var(--soft);
+  margin: 0;
+}
+
+.compose-post-suggestion-card > .post.internal-post-card {
+  border-top: 0;
 }
 
 body.corners-round .compose-autocomplete {

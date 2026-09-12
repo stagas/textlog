@@ -748,7 +748,10 @@ function linkifyAsciiReferences(body: string, mentionBios: Record<string, string
     else if (match.kind === 'post-reference') {
       const href = `/post/${Number(match.raw.slice(1))}`
       const previewUrl = appUrl ? `${appUrl.replace(/\/$/, '')}${href}` : href
-      html += previewLink(`<a href="${href}">${esc(match.raw)}</a>`, previewUrl, appUrl, popover)
+      const preview = popover?.linkPreviews?.[previewUrl]
+      html += popover && !preview?.linkedPost && !preview?.renderedPostHtml
+        ? esc(match.raw)
+        : previewLink(`<a href="${href}">${esc(match.raw)}</a>`, previewUrl, appUrl, popover)
     }
     else {
       const url = match.url!
@@ -963,7 +966,10 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
     else if (match.kind === 'post-reference') {
       const href = `/post/${Number(token.slice(1))}`
       const previewUrl = appUrl ? `${appUrl.replace(/\/$/, '')}${href}` : href
-      html += previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
+      const preview = popover?.linkPreviews?.[previewUrl]
+      html += popover && !preview?.linkedPost && !preview?.renderedPostHtml
+        ? highlighted(token, highlightTerms)
+        : previewLink(`<a href="${href}">${highlighted(token, highlightTerms)}</a>`, previewUrl, appUrl, popover)
     }
     else if (match.kind === 'location' && popover?.location) {
       const location = { ...popover.location,

@@ -196,7 +196,7 @@ export function WriteForm(
           </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=26" data-typewriter-placeholders={typewriterPlaceholders} defer />
+      <script src="/compose.js?v=29" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }
@@ -252,7 +252,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
           </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=26" data-typewriter-placeholders={typewriterPlaceholders} defer />
+      <script src="/compose.js?v=29" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }
