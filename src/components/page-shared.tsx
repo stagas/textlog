@@ -16,6 +16,8 @@ import { isMobileRequest } from '../user-agent'
 import { enterHref } from './auth-links'
 import { Panel } from './panel'
 import { writeHref } from './write-link'
+import { ActionPair } from './form-components'
+export { ActionPair, FormActions, FormMessage } from './form-components'
 
 const postTitleLength = 60
 
@@ -40,41 +42,6 @@ export function postTitle(body: string, moderationCategory?: string | null) {
   return characters.length > postTitleLength
     ? `${characters.slice(0, postTitleLength - 1).join('').trimEnd()}…`
     : text
-}
-
-export function FormMessage({ error, success, dismissible = true, className = '' }: {
-  error?: React.ReactNode
-  success?: React.ReactNode
-  dismissible?: boolean
-  className?: string
-}) {
-  if (!error && !success) return null
-  return (
-    <p className={`status-message ${error ? 'status-error' : 'status-success'}${className ? ` ${className}` : ''}`}
-      role={error ? 'alert' : 'status'}>
-      <span>{error || success}</span>
-      {error && dismissible && (
-        <label className="status-message-dismiss" title="Dismiss error">
-          <input className="visually-hidden" type="checkbox" />
-          <span className="status-message-dismiss-icon" aria-hidden="true" />
-          <span className="visually-hidden">Dismiss error</span>
-        </label>
-      )}
-    </p>
-  )
-}
-
-export function FormActions({ primary, secondary, className = '' }: {
-  primary: React.ReactNode
-  secondary?: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div className={`form-actions${className ? ` ${className}` : ''}`}>
-      {secondary && <span className="form-actions-secondary">{secondary}</span>}
-      {primary}
-    </div>
-  )
 }
 
 export type PostingSuggestionSearch = {
@@ -484,20 +451,6 @@ export function PostingSuggestionResults({ search }: { search?: PostingSuggestio
         ))
         : <span>No matching {search.kind}.</span>}
       {search.truncated && <span aria-label="More results">...</span>}
-    </div>
-  )
-}
-
-export function ActionPair({ primary, secondary, className = '' }: {
-  primary: React.ReactNode
-  secondary: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div className={`action-pair${className ? ` ${className}` : ''}`}>
-      {primary}
-      <span className="action-separator">or</span>
-      {secondary}
     </div>
   )
 }
