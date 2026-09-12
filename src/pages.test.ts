@@ -739,6 +739,8 @@ test('posting helpers use the compact action and show copyable highlighted resul
   expect(html).toContain('>tags</label>')
   expect(html).toContain('>search</label>')
   expect(html).toContain('class="posting-help-formatting-panel posting-help-tab-panel"')
+  expect(html).toContain('<code><b>:</b>smile</code>')
+  expect(html).toContain('<dt>Emoji autocomplete</dt>')
   expect(html).toContain('class="posting-help-modifiers-panel posting-help-tab-panel"')
   expect(html).toContain('<dt>Strikethrough</dt>')
   expect(html).toContain('<b>~</b>text<b>~</b> or <b>~~</b>text<b>~~</b>')

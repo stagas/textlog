@@ -153,6 +153,12 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         </div>
         <div>
           <dd>
+            <code><b>:</b>smile</code>
+          </dd>
+          <dt>Emoji autocomplete</dt>
+        </div>
+        <div>
+          <dd>
             <code>
               <b>1.</b> first<br />
               <b>2.</b> second<br />

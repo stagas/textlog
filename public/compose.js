@@ -1,3 +1,5 @@
+import emojiKeywords from 'emojilib'
+
 ;(() => {
   if (document.documentElement.dataset.composeEnhanced) return
   document.documentElement.dataset.composeEnhanced = 'true'
@@ -13,6 +15,11 @@
   let autocompleteIndex = 0
   let autocompleteRequest
   let autocompleteTimer
+  const emojiEntries = Object.entries(emojiKeywords).map(([emoji, keywords], order) => ({
+    emoji,
+    order,
+    keywords: keywords.map(keyword => ({ keyword, normalized: keyword.toLocaleLowerCase().replaceAll('_', ' ') })),
+  }))
 
   const formattingPatterns = [
     { className: 'compose-format-strike', pattern: /~~[^\n~](?:[^\n]*?[^\n~])?~~/gu },
@@ -23,6 +30,25 @@
     { className: 'compose-format-underline', pattern: /(?<!_)_[^\n_](?:[^\n]*?[^\n_])?_(?!_)/gu },
     { className: 'compose-format-italic', pattern: /(?<!\S)\/[^\/\s](?:[^\/\n]*?[^\/\s])?\/(?!\/)/gu },
   ]
+  const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)/gu
+  const emojiMeasureCanvas = document.createElement('canvas')
+  const emojiMeasureContext = emojiMeasureCanvas.getContext('2d')
+  const emojiWidthCache = new Map()
+
+  const emojiAdvance = (textarea, emoji) => {
+    if (!emojiMeasureContext) return '1ch'
+    const styles = getComputedStyle(textarea)
+    const font = `${styles.fontStyle} ${styles.fontVariant} ${styles.fontWeight} ${styles.fontStretch} ${styles.fontSize} ${styles.fontFamily}`
+    const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0
+    const cacheKey = `${font}\n${letterSpacing}\n${emoji}`
+    let width = emojiWidthCache.get(cacheKey)
+    if (width === undefined) {
+      emojiMeasureContext.font = font
+      width = emojiMeasureContext.measureText(emoji).width + letterSpacing
+      emojiWidthCache.set(cacheKey, width)
+    }
+    return `${width}px`
+  }
 
   const highlightRanges = value => {
     const classes = Array.from({ length: value.length }, () => new Set())
@@ -36,6 +62,9 @@
     for (const match of value.matchAll(referencePattern)) {
       const className = match[1] === '@' ? 'compose-mention' : 'compose-hashtag'
       for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add(className)
+    }
+    for (const match of value.matchAll(emojiPattern)) {
+      for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add('compose-emoji')
     }
     return classes
   }
@@ -61,12 +90,28 @@
       const className = [...classes[start]].sort().join(' ')
       let end = start + 1
       while (end < value.length && [...classes[end]].sort().join(' ') === className) end++
-      const node = className ? document.createElement('span') : document.createTextNode(value.slice(start, end))
-      if (node instanceof HTMLElement) {
-        node.className = className
-        node.textContent = value.slice(start, end)
+      const text = value.slice(start, end)
+      if (classes[start].has('compose-emoji')) {
+        const surroundingClasses = [...classes[start]].filter(name => name !== 'compose-emoji').join(' ')
+        for (const match of text.matchAll(emojiPattern)) {
+          const slot = document.createElement('span')
+          slot.className = `compose-emoji-slot${surroundingClasses ? ` ${surroundingClasses}` : ''}`
+          slot.style.width = emojiAdvance(textarea, match[0])
+          const glyph = document.createElement('span')
+          glyph.className = 'emoji'
+          glyph.textContent = match[0]
+          slot.append(glyph)
+          fragment.append(slot)
+        }
       }
-      fragment.append(node)
+      else {
+        const node = className ? document.createElement('span') : document.createTextNode(text)
+        if (node instanceof HTMLElement) {
+          node.className = className
+          node.textContent = text
+        }
+        fragment.append(node)
+      }
       start = end
     }
     // A final newline needs a glyph so the mirror retains the textarea's last visual line.
@@ -80,17 +125,41 @@
     if (textarea.selectionStart !== textarea.selectionEnd) return null
     const beforeCaret = textarea.value.slice(0, textarea.selectionStart)
     const match = beforeCaret.match(/(?<![\p{L}\p{M}\p{N}_])([@#])([\p{L}\p{M}\p{N}_]+)$/u)
-    if (!match) return null
-    return {
-      start: textarea.selectionStart - match[1].length - match[2].length,
-      end: textarea.selectionStart,
-      prefix: match[1],
-      query: match[2],
+    if (match) {
+      return {
+        start: textarea.selectionStart - match[1].length - match[2].length,
+        end: textarea.selectionStart,
+        prefix: match[1],
+        query: match[2],
+        kind: match[1] === '@' ? 'mentions' : 'hashtags',
+      }
     }
+    const emoji = beforeCaret.match(/(?<![\p{L}\p{M}\p{N}_]):([\p{L}\p{M}\p{N}_]+)$/u)
+    if (!emoji) return null
+    return { start: textarea.selectionStart - emoji[0].length, end: textarea.selectionStart, prefix: ':',
+      replacementPrefix: '', query: emoji[1], kind: 'emoji' }
   }
 
   const sameReference = (left, right) => left && right && left.start === right.start && left.end === right.end
-    && left.prefix === right.prefix && left.query === right.query
+    && left.prefix === right.prefix && left.query === right.query && left.kind === right.kind
+
+  const emojiMatches = query => {
+    const needle = query.toLocaleLowerCase().replaceAll('_', ' ')
+    return emojiEntries.flatMap(({ emoji, keywords, order }) => {
+      let best
+      let label
+      for (const { keyword, normalized } of keywords) {
+        const rank = normalized === needle ? 0 : normalized.startsWith(needle) ? 1 : undefined
+        if (rank === undefined) continue
+        const score = rank * 100 + normalized.length - needle.length
+        if (best === undefined || score < best) {
+          best = score
+          label = keyword.replaceAll('_', ' ')
+        }
+      }
+      return best === undefined ? [] : [{ value: emoji, label, emoji, score: best, order }]
+    }).sort((left, right) => left.score - right.score || left.order - right.order).slice(0, 5)
+  }
 
   const caretPosition = (textarea, index) => {
     const mirror = document.createElement('div')
@@ -139,7 +208,7 @@
     const option = autocomplete.children[index]
     if (!(option instanceof HTMLButtonElement) || !autocompleteTextarea || !autocompleteMatch) return
     const textarea = autocompleteTextarea
-    const replacement = autocompleteMatch.prefix + option.dataset.value
+    const replacement = (autocompleteMatch.replacementPrefix ?? autocompleteMatch.prefix) + option.dataset.value
     textarea.setRangeText(replacement, autocompleteMatch.start, autocompleteMatch.end, 'end')
     textarea.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText', data: replacement }))
     hideAutocomplete()
@@ -179,9 +248,15 @@
       option.type = 'button'
       option.className = 'compose-autocomplete-option'
       option.id = `compose-autocomplete-option-${index}`
-      option.dataset.value = result
+      option.dataset.value = typeof result === 'string' ? result : result.value
       option.setAttribute('role', 'option')
-      option.textContent = match.prefix + result
+      if (typeof result === 'string') option.textContent = match.prefix + result
+      else {
+        const emoji = document.createElement('span')
+        emoji.className = 'emoji'
+        emoji.textContent = result.emoji
+        option.append(emoji, ` ${result.label}`)
+      }
       option.addEventListener('mousedown', event => event.preventDefault())
       option.addEventListener('click', () => selectAutocomplete(index))
       return option
@@ -200,6 +275,10 @@
     if (!match) return hideAutocomplete()
     clearTimeout(autocompleteTimer)
     autocompleteRequest?.abort()
+    if (match.kind === 'emoji') {
+      const results = emojiMatches(match.query)
+      return results.length ? showAutocomplete(textarea, match, results) : hideAutocomplete()
+    }
     if (!autocomplete.hidden && textarea === autocompleteTextarea) {
       autocompleteMatch = match
       autocomplete.setAttribute('aria-busy', 'true')
@@ -209,8 +288,7 @@
       const request = new AbortController()
       autocompleteRequest = request
       try {
-        const kind = match.prefix === '@' ? 'mentions' : 'hashtags'
-        const response = await fetch(`/post/suggestions?kind=${kind}&q=${encodeURIComponent(match.query)}`, {
+        const response = await fetch(`/post/suggestions?kind=${match.kind}&q=${encodeURIComponent(match.query)}`, {
           headers: { accept: 'application/json' }, signal: request.signal,
         })
         if (!response.ok) return hideAutocomplete()

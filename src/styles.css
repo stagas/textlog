@@ -5313,6 +5313,24 @@ form.report-panel {
   text-decoration: line-through;
 }
 
+.compose-emoji-slot {
+  position: relative;
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+.compose-emoji-slot::before {
+  content: "M";
+  visibility: hidden;
+}
+
+.compose-emoji-slot > .emoji {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  line-height: 1;
+  transform: translate(-50%, -50%) scale(.9);
+}
+
 :is(.write-compose, .reply-compose) .composefoot {
   position: relative;
   z-index: 1;

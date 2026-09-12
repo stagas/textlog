@@ -8,6 +8,7 @@
         "@aws-sdk/client-s3": "^3.1111.0",
         "ansi_up": "^6.0.6",
         "canvas": "^3.2.3",
+        "emojilib": "^4.0.3",
         "highlight.js": "^11.11.2",
         "hono": "^4.13.0",
         "jszip": "^3.10.1",
@@ -192,6 +193,8 @@
     "domutils": ["domutils@3.2.2", "", { "dependencies": { "dom-serializer": "^2.0.0", "domelementtype": "^2.3.0", "domhandler": "^5.0.3" } }, "sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw=="],
 
     "ecdsa-sig-formatter": ["ecdsa-sig-formatter@1.0.11", "", { "dependencies": { "safe-buffer": "^5.0.1" } }, "sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ=="],
+
+    "emojilib": ["emojilib@4.0.3", "", {}, "sha512-KbWiYre9aRSaPbHrHZIz9zmoM+21LAsK1VFJtnTh1VCtWE/rNMDviGhQTmselFl95dhqtGlY22iH0leG5BuW0g=="],
 
     "end-of-stream": ["end-of-stream@1.4.5", "", { "dependencies": { "once": "^1.4.0" } }, "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg=="],
 

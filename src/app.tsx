@@ -704,9 +704,15 @@ app.get('/embed.css', () =>
   } }))
 for (const path of publicScriptPaths) {
   const assetUrl = new URL(`../public${path}`, import.meta.url)
-  app.get(path, async () =>
-    new Response(
-      (publicScripts?.get(path) ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
+  app.get(path, async () => {
+    let script = publicScripts?.get(path)
+    if (!script && path === '/compose.js') {
+      const build = await Bun.build({ entrypoints: [assetUrl.pathname], target: 'browser' })
+      if (!build.success) throw new Error(`Failed to build public script ${path}`)
+      script = await build.outputs[0].text()
+    }
+    return new Response(
+      (script ?? await Bun.file(assetUrl).text()).replaceAll('__APP_NAME__', appName()),
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
         'cache-control':
@@ -716,7 +722,8 @@ for (const path of publicScriptPaths) {
             : 'no-cache',
         ...(path === '/sw.js' ? { 'service-worker-allowed': '/' } : {}),
       } },
-    ))
+    )
+  })
 }
 app.get('/theme.css', c =>
   new Response(themeStyles(c.req.raw), {
