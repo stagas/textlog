@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
 import { markPersonalizedFeedThrough, materializedPersonalizedEventPage, materializedPersonalizedGroupPage,
   personalizedFeedState } from './feed-state'
+import { claimInitialHandle, dropUsername } from './handles'
 import { migrations, runMigrations } from './migrations'
 
 test('materialized post reasons deduplicate and feed state advances through represented entries', () => {
@@ -355,6 +356,24 @@ test('handle completion materializes signup activity for administrators', () => 
     { viewer_id: 1, feed: 'for-you', event_kind: 'signup', actor_id: 2, eligible: 1 },
   ])
   expect(personalizedFeedState(database, 1, 'for-you')?.unread_count).toBe(1)
+})
+
+test('choosing a replacement for a dropped username does not duplicate signup activity', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password,handle_chosen_at) VALUES
+      (1,'admin','gstagas@gmail.com','!',CURRENT_TIMESTAMP),
+      (2,'pending','new@example.com','!',NULL);
+    UPDATE users SET handle='newcomer',handle_chosen_at='2026-01-02' WHERE id=2;`)
+
+  expect(database.query(`SELECT count(*) count FROM personalized_feed_entries
+    WHERE event_kind='signup' AND actor_id=2`).get()).toEqual({ count: 1 })
+
+  dropUsername(database, 2, 1, 'rename required')
+  claimInitialHandle(database, 2, 'renamed')
+
+  expect(database.query(`SELECT count(*) count FROM personalized_feed_entries
+    WHERE event_kind='signup' AND actor_id=2`).get()).toEqual({ count: 1 })
 })
 
 test('re-materializing historical read entries does not resurrect unread counters', () => {

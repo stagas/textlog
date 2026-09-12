@@ -83,6 +83,15 @@ export function claimInitialHandle(database: Database, userId: number, handle: s
       database.query(`UPDATE handle_history SET user_id=?,account_group_id=(
         SELECT account_group_id FROM users WHERE id=?) WHERE handle=? COLLATE NOCASE`).run(userId, userId, handle)
     }
+    if (database.query(
+      'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'personalized_feed_entries\'',
+    ).get()) {
+      // Choosing a replacement after a moderation drop transitions handle_chosen_at
+      // through NULL again. Remove the old materialized signup row before the update
+      // trigger creates its replacement, otherwise administrators see it twice.
+      database.query(`DELETE FROM personalized_feed_entries
+        WHERE event_kind='signup' AND actor_id=?`).run(userId)
+    }
     database.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, userId)
     if (claim.reclaimed && database.query(
       'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'account_creation_events\'',
