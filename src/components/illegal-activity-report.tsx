@@ -17,9 +17,7 @@ export function IllegalActivityReport(
         <h1>Report illegal activity</h1>
         {reference
           ? (
-            <p className="status-message status-success" role="status">
-              Your report was received. Reference: <strong>{reference}</strong>.
-            </p>
+            <FormMessage success={<>Your report was received. Reference: <strong>{reference}</strong>.</>} />
           )
           : (
             <>

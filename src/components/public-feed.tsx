@@ -1,10 +1,7 @@
 import type { User } from '../types'
 import type { PostFeedPage } from '../types'
-import { AnonymousWriteForm, ComposePreview, WriteForm } from './compose'
-import { feedChunkReturnPath, feedPostsWithFetchedThread } from './infinite-feed'
-import { Layout } from './layout'
-import { FeedTabs, GlobalFeedEmpty, Pagination } from './page-shared'
-import { ThreadedFeedChunks } from './threaded-feed'
+import { FeedTabs } from './page-shared'
+import { PublicFeedFrame } from './public-feed-frame'
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
@@ -28,70 +25,40 @@ export function PublicFeed(
       fetchedThread?: import('../types').PostView[]
     },
 ) {
-  feed = { ...feed, posts: feedPostsWithFetchedThread(feed.posts, fetchedThread) }
-  const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
-  const feedPath = path
   const random = path.startsWith('/any')
   const newest = path === '/new'
-  let returnPath = feedChunkReturnPath(
-    feedPath + (feed.page > 1 ? `${feedPath.includes('?') ? '&' : '?'}page=${feed.page}` : ''),
-    renderedChunk,
-  )
-  if (fetchedThread?.length) {
-    const target = new URL(returnPath, 'http://textlog.local')
-    target.searchParams.set('fetch', String(fetchedThread[0]!.id))
-    returnPath = target.pathname + target.search
-  }
-  const unreadPostIds = new Set(feed.unreadPostIds || [])
-  const directedUnreadPostIds = new Set(feed.directedUnreadPostIds || [])
-  const unreadPage = feed.unreadHref
-    ? Number(new URL(feed.unreadHref, 'http://localhost').searchParams.get('page') || 1)
-    : null
-  const chunkMarkup = <ThreadedFeedChunks posts={feed.posts} user={user} returnPath={returnPath} chunk={chunk}
-    initialChunks={initialChunks} promoteAncestors expandedByDefault={!user && (path === '/all' || random)}
-    collapseWithoutPreviews={newest} expandedRootId={expandedRootId} contextUnreadPostIds={unreadPostIds}
-    contextDirectedUnreadPostIds={directedUnreadPostIds} />
-  if (chunk > 0) return chunkMarkup
-  return (
-    <Layout user={user} title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
-      mobileWriteAction notificationBanner={notificationBanner} feeds={random ? undefined : newest
+  return <PublicFeedFrame feed={feed} user={user} path={path}
+    title={path === '/all' ? 'all' : random ? 'any' : newest ? 'new' : undefined} pageUrl={pageUrl}
+    notificationBanner={notificationBanner} feeds={random ? undefined : newest
       ? { title: 'New conversations', rss: '/new.rss', atom: '/new.atom' }
       : { title: 'All notes', rss: '/all.rss', atom: '/all.atom' }}
-      hasUnreadActivity={!!user && ((feed.toMeCount || 0) > 0 || (feed.forYouCount || 0) > 0)}
-    >
-      {writePreview && (
-        <ComposePreview user={user} body={writeBody || ''} executionOutput={writePreviewExecutionOutput}
-          location={writePreviewLocation} />
-      )}
-      {user
-        ? (
-          <WriteForm user={user} returnPath={returnPath} embedded error={writeError} body={writeBody}
-            draftId={writeDraftId} />
-        )
-        : <AnonymousWriteForm returnPath={returnPath} error={writeError} body={writeBody} />}
-      <div data-feed-view>
+    expandedRootId={expandedRootId} writeError={writeError} writeBody={writeBody} writePreview={writePreview}
+    writePreviewExecutionOutput={writePreviewExecutionOutput} writePreviewLocation={writePreviewLocation}
+    writeDraftId={writeDraftId} chunk={chunk} initialChunks={initialChunks} fetchedThread={fetchedThread}
+    emptyReturnHref={path} threadOptions={normalizedFeed => ({
+      promoteAncestors: true,
+      expandedByDefault: !user && (path === '/all' || random),
+      collapseWithoutPreviews: newest,
+      contextUnreadPostIds: new Set(normalizedFeed.unreadPostIds || []),
+      contextDirectedUnreadPostIds: new Set(normalizedFeed.directedUnreadPostIds || []),
+    })} renderHeader={normalizedFeed => {
+      const unreadPage = normalizedFeed.unreadHref
+        ? Number(new URL(normalizedFeed.unreadHref, 'http://localhost').searchParams.get('page') || 1)
+        : null
+      return <>
         {user && (
-          <span hidden data-live-counts={`${feed.toMeCount || 0}:${feed.forYouCount || 0}:${feed.latestCount || 0}:${
-            feed.newCount || 0}`} />
+          <span hidden data-live-counts={`${normalizedFeed.toMeCount || 0}:${normalizedFeed.forYouCount || 0}:${
+            normalizedFeed.latestCount || 0}:${normalizedFeed.newCount || 0}`} />
         )}
         <h1 className="visually-hidden">{random ? 'Any conversation' : newest ? 'New notes' : 'All notes'}</h1>
-        <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user} forYouCount={feed.forYouCount}
-          forYouUnread={feed.forYouUnread} toMeCount={feed.toMeCount} toMeUnread={feed.toMeUnread}
-          latestCount={feed.latestCount} newCount={feed.newCount} forYouReadStatus={user && feed.posts.length
-          ? !!feed.latestUnread && unreadPage !== null && unreadPage > feed.page
-          : undefined} unreadHref={feed.unreadHref} lastUnreadHref={feed.lastUnreadHref} readAction="/all/read-all" />
-        {feed.page > 1 && <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} top />}
-        {feed.posts.length
-          ? chunkMarkup
-          : feed.page === 1
-          ? <GlobalFeedEmpty user={user} />
-          : (
-            <div className="empty">
-              No notes on this page. <a href={path}>Return to the first page</a>.
-            </div>
-          )}
-        <Pagination page={feed.page} totalPages={feed.totalPages} path={feedPath} />
-      </div>
-    </Layout>
-  )
+        <FeedTabs active={random ? 'random' : newest ? 'new' : 'latest'} user={user}
+          forYouCount={normalizedFeed.forYouCount} forYouUnread={normalizedFeed.forYouUnread}
+          toMeCount={normalizedFeed.toMeCount} toMeUnread={normalizedFeed.toMeUnread}
+          latestCount={normalizedFeed.latestCount} newCount={normalizedFeed.newCount}
+          forYouReadStatus={user && normalizedFeed.posts.length
+          ? !!normalizedFeed.latestUnread && unreadPage !== null && unreadPage > normalizedFeed.page
+          : undefined} unreadHref={normalizedFeed.unreadHref} lastUnreadHref={normalizedFeed.lastUnreadHref}
+          readAction="/all/read-all" />
+      </>
+    }} />
 }

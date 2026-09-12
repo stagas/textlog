@@ -42,12 +42,18 @@ export function postTitle(body: string, moderationCategory?: string | null) {
     : text
 }
 
-export function FormMessage({ error, success }: { error?: string; success?: string }) {
+export function FormMessage({ error, success, dismissible = true, className = '' }: {
+  error?: React.ReactNode
+  success?: React.ReactNode
+  dismissible?: boolean
+  className?: string
+}) {
   if (!error && !success) return null
   return (
-    <p className={`status-message ${error ? 'status-error' : 'status-success'}`} role={error ? 'alert' : 'status'}>
+    <p className={`status-message ${error ? 'status-error' : 'status-success'}${className ? ` ${className}` : ''}`}
+      role={error ? 'alert' : 'status'}>
       <span>{error || success}</span>
-      {error && (
+      {error && dismissible && (
         <label className="status-message-dismiss" title="Dismiss error">
           <input className="visually-hidden" type="checkbox" />
           <span className="status-message-dismiss-icon" aria-hidden="true" />

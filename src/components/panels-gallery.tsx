@@ -3,7 +3,7 @@ import { CenteredPanel, Panel, PanelCopy, PanelHeading } from './panel'
 import type { User } from '../types'
 import { PageHeading } from './account-settings-header'
 import { Layout } from './layout'
-import { FormActions } from './page-shared'
+import { FormActions, FormMessage } from './page-shared'
 
 function SampleContent({ title, eyebrow, danger = false }: { title: string; eyebrow: string; danger?: boolean }) {
   return (
@@ -65,7 +65,7 @@ export function PanelsGallery({ user }: { user?: User | null }) {
               <p className="eyebrow">status</p>
               <div className="panel-gallery-state-content">
                 <PanelHeading>Check your email.</PanelHeading>
-                <p className="status-message status-success" role="status">A fresh verification link has been sent.</p>
+                <FormMessage success="A fresh verification link has been sent." />
                 <PanelCopy>The link expires in one hour.</PanelCopy>
               </div>
             </Panel>
@@ -73,7 +73,7 @@ export function PanelsGallery({ user }: { user?: User | null }) {
               <p className="eyebrow">error</p>
               <div className="panel-gallery-state-content">
                 <PanelHeading>Something needs attention</PanelHeading>
-                <p className="status-message status-error" role="alert">Review the highlighted information.</p>
+                <FormMessage error="Review the highlighted information." dismissible={false} />
                 <button className="button" type="button">try again</button>
               </div>
             </Panel>

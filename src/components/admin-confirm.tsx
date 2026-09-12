@@ -2,9 +2,10 @@ import { translationLanguages } from '../translation'
 import type { User } from '../types'
 import type { PostRow, ProfileRow } from '../types'
 import { displayPostBody } from '../utils'
+import { ConfirmActionPanel } from './confirm-action-panel'
 import { Layout } from './layout'
 import { FormActions } from './page-shared'
-import { Panel, PanelCopy, PanelHeading } from './panel'
+import { Panel } from './panel'
 import { Post } from './post'
 
 export function AdminTranslate({ user, post, returnTo }: {
@@ -124,38 +125,20 @@ export function AdminConfirm({ user, kind, target, post, returnTo = '/admin' }: 
   const action = kind === 'delete_post'
     ? `/admin/posts/${post!.id}/delete`
     : `/admin/users/${target!.id}/${kind === 'drop_username' ? 'drop-username' : kind.replace('_user', '')}`
-  return (
-    <Layout user={user} title="admin moderation">
-      <Panel className="confirm-delete admin-confirm">
-        <p className="eyebrow">admin moderation</p>
-        <PanelHeading as="h1">{copy[0]}</PanelHeading>
-        <PanelCopy>{copy[1]}</PanelCopy>
-        {post && (
-          <section className="confirm-delete-post" aria-label="Post to delete">
+  const danger = kind.includes('delete') || kind === 'suspend_user' || kind === 'drop_username'
+  return <ConfirmActionPanel user={user} pageTitle="admin moderation" eyebrow="admin moderation" heading={copy[0]}
+    copy={copy[1]} formAction={action} cancelHref={returnTo} submitLabel={kind.replaceAll('_', ' ')} danger={danger}
+    preview={post && (
+      <section className="confirm-delete-post" aria-label="Post to delete">
             <Post p={{ ...post, handle: post.handle || 'unknown' }} user={user} showReadAction={false}
               suppressContentWarning />
-          </section>
-        )}
-        <form method="post" action={action}>
-          <input type="hidden" name="returnTo" value={returnTo} />
-          <label>
-            moderation note (optional)
-            <textarea name="note" maxLength={500} placeholder="Context for the audit log…" autoComplete="off"
-              inputMode="text" enterkeyhint="enter" />
-          </label>
-          <FormActions secondary={<a className="secondary-action cancel-action" href={returnTo}>cancel</a>}
-            primary={
-              <button className={`button ${
-                kind.includes('delete') || kind === 'suspend_user'
-                  || kind === 'drop_username'
-                  ? 'button-danger'
-                  : ''
-              }`}>
-                {kind.replaceAll('_', ' ')}
-              </button>
-            } />
-        </form>
-      </Panel>
-    </Layout>
-  )
+      </section>
+    )}>
+    <input type="hidden" name="returnTo" value={returnTo} />
+    <label>
+      moderation note (optional)
+      <textarea name="note" maxLength={500} placeholder="Context for the audit log…" autoComplete="off"
+        inputMode="text" enterkeyhint="enter" />
+    </label>
+  </ConfirmActionPanel>
 }

@@ -1,6 +1,7 @@
 import type { User } from '../types'
 import { AccountSettingsHeader, PageHeading } from './account-settings-header'
 import { Layout } from './layout'
+import { FormMessage } from './page-shared'
 
 export function EmailPreferences({ user, recap, interactions, token, returnPath, changed = false, invalid = false }: {
   user?: User | null
@@ -19,12 +20,10 @@ export function EmailPreferences({ user, recap, interactions, token, returnPath,
           ? <AccountSettingsHeader title="emails" returnPath={returnPath} anchor="email-preferences" />
           : <PageHeading eyebrow="email preferences" title="message preferences" />}
         {invalid
-          ? <p className="status-message status-error" role="alert">This email preferences link is unavailable.</p>
+          ? <FormMessage error="This email preferences link is unavailable." dismissible={false} />
           : (
             <>
-              {changed && (
-                <p className="status-message status-success" role="status">Your email preferences have been saved.</p>
-              )}
+              {changed && <FormMessage success="Your email preferences have been saved." />}
               <p>Choose which emails you&apos;ll receive.</p>
               <form method="post" action="/account/email-preferences">
                 {token && <input type="hidden" name="token" value={token} />}

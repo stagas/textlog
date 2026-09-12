@@ -1,5 +1,6 @@
 import type { User } from '../types'
 import { Layout } from './layout'
+import { FormMessage } from './page-shared'
 import { CenteredPanel } from './panel'
 
 export function NavigationCaptcha({ user, target, captcha, error }: {
@@ -13,7 +14,7 @@ export function NavigationCaptcha({ user, target, captcha, error }: {
       <CenteredPanel shellClassName="auth-shell" className="auth-panel password-panel">
         <h1>Security check</h1>
         <p>It looks like you might be a bot, pass this challenge to prove you're human</p>
-        {error && <p className="status-message status-error" role="alert">{error}</p>}
+        <FormMessage error={error} dismissible={false} />
         <form method="post" action="/navigation-check">
           <input type="hidden" name="target" value={target} />
           <div className="captcha-field">

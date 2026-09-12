@@ -2,6 +2,7 @@ import React from 'preact/compat'
 import type { User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
+import { FormMessage } from './page-shared'
 
 export type PopularPerson = { id: number; handle: string; mood?: string | null; bio: string }
 
@@ -31,7 +32,7 @@ export function PeoplePicker({ user, people, returnTo, error }: {
         <div className="people-picker-card">
           <h1 id="people-picker-title">Pick some people</h1>
           <p>Choose a few people to follow.</p>
-          {error && <p className="status-message status-error" role="alert">{error}</p>}
+          <FormMessage error={error} dismissible={false} />
           <form method="post" action="/pick-people">
             <input type="hidden" name="returnTo" value={returnTo} />
             <fieldset className="people-picker-options">

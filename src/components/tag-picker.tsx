@@ -1,6 +1,7 @@
 import React from 'preact/compat'
 import type { User } from '../types'
 import { Layout } from './layout'
+import { FormMessage } from './page-shared'
 
 export type PopularTag = { tag: string; displayName?: string | null; count: number }
 
@@ -20,7 +21,7 @@ export function TagPicker({ user, tags, returnTo, error }: {
         <div className="tag-picker-card">
           <h1 id="tag-picker-title">Pick some tags</h1>
           <p>Choose a few topics to follow.</p>
-          {error && <p className="status-message status-error" role="alert">{error}</p>}
+          <FormMessage error={error} dismissible={false} />
           <form method="post" action="/pick-tags">
             <input type="hidden" name="returnTo" value={returnTo} />
             <fieldset className="tag-picker-options">

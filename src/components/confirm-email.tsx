@@ -1,6 +1,6 @@
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { FormActions } from './page-shared'
+import { FormActions, FormMessage } from './page-shared'
 import { Panel } from './panel'
 
 export function ConfirmEmail({ token, kind, email, invalid = false, pending = false, sent = false, error }: {
@@ -29,12 +29,9 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
               <p className="verify-email-copy">
                 We sent a link to <strong>{displayedEmail}</strong>. Open it to finish setting up your account.
               </p>
-              {sent && (
-                <p className="status-message status-success verify-email-notice" role="status">
-                  A fresh verification link has been sent.
-                </p>
-              )}
-              {error && <p className="status-message status-error verify-email-notice" role="alert">{error}</p>}
+              {sent && <FormMessage success="A fresh verification link has been sent."
+                className="verify-email-notice" />}
+              <FormMessage error={error} className="verify-email-notice" dismissible={false} />
               <div className="welcome-actions verify-email-actions">
                 <form method="post" action="/account/email/verify">
                   <button className="button">send another link</button>
@@ -84,7 +81,7 @@ export function ConfirmEmail({ token, kind, email, invalid = false, pending = fa
                     </>
                   )}
               </p>
-              {error && <p className="status-message status-error" role="alert">{error}</p>}
+              <FormMessage error={error} dismissible={false} />
               <form method="post" action={kind === 'authorize-change'
                 ? '/account/email/change/authorize'
                 : '/verify-email'}

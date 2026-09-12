@@ -2,7 +2,7 @@ import { appName } from '../brand'
 import { activeThemeLogoSvg } from '../theme'
 import { maskEmail } from './email-address'
 import { Layout } from './layout'
-import { FormActions } from './page-shared'
+import { FormActions, FormMessage } from './page-shared'
 import { CenteredPanel } from './panel'
 
 export { maskEmail } from './email-address'
@@ -34,7 +34,7 @@ export function Auth({ error, email = '', next, returning = false, pendingNotice
         </div>
         <h1>{returning ? 'Welcome back.' : 'New here or returning?'}</h1>
         {pendingNotice && <p className="auth-pending-notice" role="status">{pendingNotice}</p>}
-        {error && <p className="status-message status-error" role="alert">{error}</p>}
+        <FormMessage error={error} dismissible={false} />
         <form method="post" action="/enter" autoComplete="on">
           {next && <input type="hidden" name="next" value={next} />}
           <label htmlFor="enter-identifier">
@@ -76,8 +76,8 @@ export function PasswordLogin({ nonce, error, identifier = '', next, reset = fal
         <AuthBrand />
         <h1>Log in</h1>
         {pendingNotice && <p className="auth-pending-notice" role="status">{pendingNotice}</p>}
-        {reset && <p className="status-message status-success" role="status">Password reset. You can log in now.</p>}
-        {error && <p className="status-message status-error" role="alert">{error}</p>}
+        {reset && <FormMessage success="Password reset. You can log in now." />}
+        <FormMessage error={error} dismissible={false} />
         <form method="post" action="/enter/password" autoComplete="on">
           <input type="hidden" name="nonce" value={nonce} />
           {next && <input type="hidden" name="next" value={next} />}
@@ -147,7 +147,7 @@ export function MagicLinkSent({ email, magicUrl, error, handle = false }: {
         </p>
         <p className="email-delivery-hint">Can’t find it? Check your spam or junk folder.</p>
         <p className="entry-code-copy">or enter the six-digit code</p>
-        {error && <p className="status-message status-error" role="alert">{error}</p>}
+        <FormMessage error={error} dismissible={false} />
         <form method="post" action="/enter/code" autoComplete="one-time-code">
           <input type="hidden" name="identifier" value={email} />
           <div className="entry-code-row">
@@ -184,7 +184,7 @@ export function ChooseHandle({ error, handle = '', next, previousAccountId }: {
         <div className="handle-picker-card">
           <h1 id="handle-picker-title">Choose a handle</h1>
           <p>Pick the name people will see.</p>
-          {error && <p className="status-message status-error" role="alert">{error}</p>}
+          <FormMessage error={error} dismissible={false} />
           <form method="post" action="/choose-handle">
             {next && <input type="hidden" name="next" value={next} />}
             {previousAccountId && <input type="hidden" name="previousAccountId" value={previousAccountId} />}

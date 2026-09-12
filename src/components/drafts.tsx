@@ -1,8 +1,7 @@
 import type { DraftView, User } from '../types'
 import { PageHeading } from './account-settings-header'
+import { ConfirmActionPanel } from './confirm-action-panel'
 import { Layout } from './layout'
-import { FormActions } from './page-shared'
-import { Panel, PanelCopy, PanelHeading } from './panel'
 import { Post } from './post'
 
 export function Drafts({ user, drafts, returnPath }: { user: User; drafts: DraftView[]; returnPath?: string }) {
@@ -48,13 +47,10 @@ export function ConfirmDraftDelete({ user, draft, returnPath }: {
   returnPath?: string
 }) {
   const draftsPath = `/drafts${returnPath ? '?from=' + encodeURIComponent(returnPath) : ''}`
-  return (
-    <Layout user={user} title="delete draft">
-      <Panel className="confirm-delete admin-confirm">
-        <p className="eyebrow">draft deletion</p>
-        <PanelHeading as="h1">Delete this draft?</PanelHeading>
-        <PanelCopy>This can’t be undone.</PanelCopy>
-        <section className="confirm-delete-post" aria-label="Draft to delete">
+  return <ConfirmActionPanel user={user} pageTitle="delete draft" eyebrow="draft deletion"
+    heading="Delete this draft?" copy="This can’t be undone." formAction={`/drafts/${draft.public_id}/delete`}
+    cancelHref={draftsPath} submitLabel="delete draft" danger preview={
+      <section className="confirm-delete-post" aria-label="Draft to delete">
           <Post p={{
             id: -draft.id,
             user_id: user.id,
@@ -66,15 +62,8 @@ export function ConfirmDraftDelete({ user, draft, returnPath }: {
             bio: user.bio,
             parent: draft.parent,
           }} user={user} showReadAction={false} suppressContentWarning />
-        </section>
-        <form method="post" action={`/drafts/${draft.public_id}/delete`}>
-          {returnPath && <input type="hidden" name="from" value={returnPath} />}
-          <FormActions
-            secondary={<a className="secondary-action cancel-action" href={draftsPath}>cancel</a>}
-            primary={<button className="button button-danger" type="submit">delete draft</button>}
-          />
-        </form>
-      </Panel>
-    </Layout>
-  )
+      </section>
+    }>
+    {returnPath && <input type="hidden" name="from" value={returnPath} />}
+  </ConfirmActionPanel>
 }
