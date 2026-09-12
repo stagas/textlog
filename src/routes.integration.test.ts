@@ -927,6 +927,29 @@ test('notification banners are hidden from logged-out visitors', async () => {
   }
 })
 
+test('curling the app root serves the new feed as ANSI text', async () => {
+  const response = await request('/', { userAgent: 'curl/8.7.1' })
+  const body = await response.text()
+
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+  expect(response.headers.get('vary')).toContain('User-Agent')
+  expect(body).toContain('\x1b[1mtextlog\x1b[0m')
+  expect(body).toContain('\x1b[38;2;116;150;104mnew\x1b[0m')
+  expect(body).not.toContain('<!doctype html>')
+
+  const direct = await request('/new', { userAgent: 'curl/8.7.1' })
+  expect(direct.status).toBe(200)
+  expect(direct.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+
+  for (const name of ['hot', 'all', 'any']) {
+    const feed = await request(`/${name}`, { userAgent: 'curl/8.7.1' })
+    expect(feed.status).toBe(200)
+    expect(feed.headers.get('content-type')).toBe('text/plain; charset=utf-8')
+    expect(await feed.text()).toContain(`\x1b[38;2;116;150;104m${name}\x1b[0m`)
+  }
+})
+
 test('new feed first page participates in materialized caching', async () => {
   const first = await request('/new')
   expect(first.status).toBe(200)

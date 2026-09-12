@@ -40,6 +40,7 @@ import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody }
 import { withRequestContext } from '../request-context'
 import { resolvedDensity, resolvedPageSize } from '../request-preferences'
 import { withAppearance } from '../theme'
+import { isCurlRequest, terminalFeedResponse } from '../terminal-feed'
 import type { PersonalizedFeedData, PostFeedPage } from '../types'
 import { currentUser } from '../utils'
 import { previewLocation } from './posts'
@@ -486,6 +487,15 @@ export function registerFeedsRoutes(app: Hono) {
   app.post('/latest/read-all', moved('/all/read-all'))
 
   app.get('/', async c => {
+    if (isCurlRequest(c.req.raw)) {
+      const feed = await databaseService().call('feeds.newPage', {
+        viewerId: -1,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+        markRead: false,
+      })
+      return terminalFeedResponse(feed, c.req.url)
+    }
     const user = currentUser(c.req.raw)
     if (!user) {
       const campaign = c.req.query('reddit') !== undefined
@@ -578,6 +588,15 @@ export function registerFeedsRoutes(app: Hono) {
   })
 
   app.on(['GET', 'POST'], '/all', async c => {
+    if (c.req.method === 'GET' && isCurlRequest(c.req.raw)) {
+      const feed = await databaseService().call('feeds.latestPage', {
+        viewerId: -1,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+        markRead: false,
+      })
+      return terminalFeedResponse(feed, c.req.url, 'all')
+    }
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     const chunk = requestedFeedChunk(c)
@@ -632,6 +651,15 @@ export function registerFeedsRoutes(app: Hono) {
   })
 
   app.on(['GET', 'POST'], '/any', async c => {
+    if (c.req.method === 'GET' && isCurlRequest(c.req.raw)) {
+      const seed = anySeed(c.req.query('seed')) || randomInt(1, 2_147_483_647)
+      const feed = await databaseService().call('feeds.randomPage', {
+        viewerId: -1,
+        pageSize: resolvedPageSize(c.req.raw),
+        sampleSeed: seed,
+      })
+      return terminalFeedResponse(feed, c.req.url, 'any')
+    }
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const write = await writeState(c)
@@ -665,6 +693,15 @@ export function registerFeedsRoutes(app: Hono) {
   })
 
   app.on(['GET', 'POST'], '/new', async c => {
+    if (c.req.method === 'GET' && isCurlRequest(c.req.raw)) {
+      const feed = await databaseService().call('feeds.newPage', {
+        viewerId: -1,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+        markRead: false,
+      })
+      return terminalFeedResponse(feed, c.req.url)
+    }
     const user = currentUser(c.req.raw)
     rememberFeedVisitor(c.req.raw, user)
     const write = await writeState(c)
@@ -794,6 +831,14 @@ export function registerFeedsRoutes(app: Hono) {
   })
 
   app.on(['GET', 'POST'], '/hot', async c => {
+    if (c.req.method === 'GET' && isCurlRequest(c.req.raw)) {
+      const feed = await databaseService().call('feeds.hotPage', {
+        viewerId: -1,
+        page: currentPage(c.req.query('page')),
+        pageSize: resolvedPageSize(c.req.raw),
+      })
+      return terminalFeedResponse(feed, c.req.url, 'hot')
+    }
     const user = currentUser(c.req.raw)
     const write = await writeState(c)
     const chunk = requestedFeedChunk(c)
