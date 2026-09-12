@@ -135,6 +135,20 @@
   })
   document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
 
+  document.addEventListener('click', event => {
+    if (!(event.target instanceof Element)) return
+
+    const writeAction = event.target.closest('.feed-tabs-top, .mobile-write-action a')
+    if (!writeAction) return
+
+    const textarea = document.querySelector('.embedded-write-compose textarea[name="body"]')
+    if (!(textarea instanceof HTMLTextAreaElement)) return
+
+    event.preventDefault()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    textarea.focus({ preventScroll: true })
+  })
+
   if ('ResizeObserver' in window) {
     const observer = new ResizeObserver(entries => entries.forEach(entry => update(entry.target)))
     textareas.forEach(textarea => observer.observe(textarea))
