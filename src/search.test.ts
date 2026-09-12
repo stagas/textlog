@@ -89,6 +89,9 @@ describe('post search', () => {
     expect(searchTags(database, 'sqlite', 1).total).toBe(0)
     database.run('UPDATE post_hashtags SET tag=\'database-tips\' WHERE post_id=3')
     expect(searchTags(database, 'database').total).toBe(1)
+    expect(searchTags(database, 'tips', -1, 1, { prefixOnly: true }).total).toBe(0)
+    expect(searchTags(database, 'database', -1, 1, { prefixOnly: true }).rows.map(tag => tag.tag))
+      .toEqual(['database-tips'])
   })
 
   test('can rank followed people and tags before generic search results', () => {
@@ -103,5 +106,19 @@ describe('post search', () => {
       .map(person => person.handle)).toEqual(['commoncarol', 'commonbob'])
     expect(searchTags(database, 'common', 1, 1, { followedFirst: true }).rows.map(tag => tag.tag))
       .toEqual(['common-followed', 'common-popular'])
+  })
+
+  test('can rank matching handles by their most recent post or reply', () => {
+    const database = testDatabase()
+    database.run(`UPDATE users SET handle=CASE id
+      WHEN 1 THEN 'commonalice' WHEN 2 THEN 'commonbob' ELSE 'commoncarol' END;
+      UPDATE posts SET created_at=CASE id
+        WHEN 1 THEN '2026-01-01 10:00:00'
+        WHEN 2 THEN '2026-03-01 10:00:00'
+        ELSE '2026-02-01 10:00:00' END;`)
+
+    expect(searchPeople(database, 'common', -1, 1,
+      { handleOnly: true, recentActivityFirst: true }).rows.map(person => person.handle))
+      .toEqual(['commonbob', 'commoncarol', 'commonalice'])
   })
 })

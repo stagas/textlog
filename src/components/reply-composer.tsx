@@ -59,7 +59,7 @@ export function ReplyBox(
           </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=6" defer />
+      <script src="/compose.js?v=17" defer />
     </>
   )
 }

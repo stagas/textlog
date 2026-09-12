@@ -1880,8 +1880,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'posts.suggestions': {
       const { kind, query, viewerId } = input as DatabaseDomainInput<'posts.suggestions'>
       const found = kind === 'hashtags'
-        ? searchTags(database, query, viewerId, 1, { followedFirst: true })
-        : searchPeople(database, query, viewerId, 1, { followedFirst: true, handleOnly: true })
+        ? searchTags(database, query, viewerId, 1, { followedFirst: true, prefixOnly: true })
+        : searchPeople(database, query, viewerId, 1,
+          { followedFirst: true, handleOnly: true, recentActivityFirst: true })
       const results = kind === 'hashtags'
         ? found.rows.map(row => 'tag' in row ? row.tag : '')
         : found.rows.map(row => 'handle' in row ? row.handle : '')

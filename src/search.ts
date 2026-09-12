@@ -48,7 +48,7 @@ export function searchPosts(database: Database, query: string, viewerId = -1, pa
 }
 
 export function searchPeople(database: Database, query: string, viewerId = -1, page = 1,
-  { followedFirst = false, handleOnly = false } = {})
+  { followedFirst = false, handleOnly = false, recentActivityFirst = false } = {})
 {
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as PersonView[], total: 0 }
@@ -61,16 +61,20 @@ export function searchPeople(database: Database, query: string, viewerId = -1, p
     .get(matchExpression, ...parameters) as { count: number }).count
   const rows = database.query(`SELECT u.*,
     (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) posts,
+    (SELECT max(p.created_at) FROM posts p WHERE p.user_id=u.id AND p.deleted_at IS NULL) latestActivity,
     EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=? AND f.following_id=u.id) viewerFollowing,
     EXISTS(SELECT 1 FROM follows rf WHERE rf.follower_id=u.id AND rf.following_id=?) followsViewer
     FROM user_search JOIN users u ON u.id=user_search.rowid
     WHERE user_search MATCH ? AND ${visibility}
-    ORDER BY ${followedFirst ? 'viewerFollowing DESC,' : ''}bm25(user_search),u.handle LIMIT ? OFFSET ?`)
+    ORDER BY ${recentActivityFirst ? 'latestActivity DESC,' : ''}${followedFirst ? 'viewerFollowing DESC,' : ''}
+      bm25(user_search),u.handle LIMIT ? OFFSET ?`)
     .all(viewerId, viewerId, matchExpression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as PersonView[]
   return { rows, total }
 }
 
-export function searchTags(database: Database, query: string, viewerId = -1, page = 1, { followedFirst = false } = {}) {
+export function searchTags(database: Database, query: string, viewerId = -1, page = 1,
+  { followedFirst = false, prefixOnly = false } = {})
+{
   const expression = searchExpression(query)
   if (!expression) return { rows: [] as TagView[], total: 0 }
   const visibility = `p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}
@@ -80,14 +84,15 @@ export function searchTags(database: Database, query: string, viewerId = -1, pag
   const parameters = visibilityParameters(viewerId)
   const matches = `FROM tag_search JOIN post_hashtags ph ON ph.rowid=tag_search.rowid
     JOIN posts p ON p.id=ph.post_id JOIN users u ON u.id=p.user_id
-    WHERE tag_search MATCH ? AND ${visibility}`
+    WHERE tag_search MATCH ? ${prefixOnly ? 'AND ph.tag LIKE ? || \'%\'' : ''} AND ${visibility}`
+  const matchParameters = prefixOnly ? [expression, query.toLocaleLowerCase(), ...parameters] : [expression, ...parameters]
   const total = (database.query(`SELECT count(*) count FROM (SELECT ph.tag ${matches} GROUP BY ph.tag)`)
-    .get(expression, ...parameters) as { count: number }).count
+    .get(...matchParameters) as { count: number }).count
   const rows = database.query(`SELECT ph.tag,count(*) count,
     EXISTS(SELECT 1 FROM hashtag_follows hf WHERE hf.user_id=? AND hf.tag=ph.tag) viewerFollowing
     ${matches} GROUP BY ph.tag ORDER BY ${
     followedFirst ? 'viewerFollowing DESC,' : ''
   }count DESC,ph.tag LIMIT ? OFFSET ?`)
-    .all(viewerId, expression, ...parameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as TagView[]
+    .all(viewerId, ...matchParameters, PAGE_SIZE, (page - 1) * PAGE_SIZE) as TagView[]
   return { rows, total }
 }

@@ -3780,6 +3780,63 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   opacity: 1;
 }
 
+.compose-autocomplete {
+  position: fixed;
+  z-index: 1000;
+  min-width: 9rem;
+  max-width: min(22rem, calc(100vw - 16px));
+  max-height: min(16rem, calc(100vh - 16px));
+  overflow-y: auto;
+  padding: var(--space-2);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  font-size: var(--post-body-font-size, var(--font-size-13));
+  line-height: var(--post-body-line-height, 1.65);
+  letter-spacing: var(--post-body-letter-spacing, normal);
+}
+
+.compose-autocomplete[hidden] {
+  display: none;
+}
+
+.compose-autocomplete-option {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.compose-autocomplete-option:is(:hover, [aria-selected="true"]) {
+  color: var(--accent-dark);
+  background: var(--pagination-hover-bg);
+}
+
+body.corners-round .compose-autocomplete {
+  border-radius: var(--corner-radius);
+}
+
+body.corners-round .compose-autocomplete-option {
+  border-radius: var(--corner-radius-small);
+}
+
+@media (max-width: 600px) {
+  body.iphone-agent .compose-autocomplete {
+    font-size: var(--font-size-16);
+  }
+}
+
 :is(.write-compose, .reply-compose) .posting-suggestion-results {
   padding-inline: var(--gutter);
 }

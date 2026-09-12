@@ -102,6 +102,18 @@ export async function previewLocation(body: string) {
 }
 
 export function registerPostsRoutes(app: Hono) {
+  app.get('/post/suggestions', async c => {
+    const user = currentUser(c.req.raw)
+    const kind = c.req.query('kind')
+    const rawQuery = c.req.query('q') || ''
+    const query = normalizeSearchQuery(rawQuery)
+    if ((kind !== 'mentions' && kind !== 'hashtags') || !query || rawQuery.length > 100) {
+      return c.json({ results: [] }, 400)
+    }
+    const result = await databaseService().call('posts.suggestions', { kind, query, viewerId: user?.id ?? -1 })
+    return c.json({ results: result.results.slice(0, 5) }, 200, { 'Cache-Control': 'no-store' })
+  })
+
   app.get('/write', c => {
     const user = currentUser(c.req.raw)
     const requestedReturnPath = c.req.query('from')
