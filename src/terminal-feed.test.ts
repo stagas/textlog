@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test'
+import { appOrigin } from './brand'
 import { isCurlRequest, terminalFeed } from './terminal-feed'
 
 test('recognizes curl without treating browsers as terminal clients', () => {
@@ -22,7 +23,7 @@ test('renders a minimal ANSI new-post feed', () => {
 
   expect(output).toContain('\x1b[1mtextlog\x1b[0m  \x1b[38;2;116;150;104mnew\x1b[0m')
   expect(output).toContain('\x1b[38;2;116;150;104m@alice\x1b[0m')
-  expect(output).toContain('https://textlog.test/post/2 · 30s')
+  expect(output).toContain(`${appOrigin() || 'https://textlog.test'}/post/2 · 30s`)
   expect(output).toContain('\x1b[38;2;116;150;104m@friend\x1b[0m')
   expect(output).toContain('\x1b[38;2;116;150;104m#Terminal\x1b[0m')
   expect(output).toContain('not injected site')
@@ -64,4 +65,22 @@ test('renders nested replies like tree', () => {
   expect(plain).toContain('\n│   first\n│   └── @nested')
   expect(plain).toContain('\n└── @last')
   expect(plain).toContain('\n    last')
+})
+
+test('uses the configured public origin for post URLs', () => {
+  const previous = Bun.env.APP_URL
+  Bun.env.APP_URL = 'https://public.textlog.test/'
+  try {
+    const output = terminalFeed({
+      posts: [{ id: 7, user_id: 1, parent_id: null, body: 'hello', created_at: new Date().toISOString(),
+        deleted_at: null, handle: 'alice' }],
+      page: 1, totalItems: 1, totalPages: 1,
+    }, 'http://internal:3000/new', 'new')
+    expect(output).toContain('https://public.textlog.test/post/7')
+    expect(output).not.toContain('http://internal:3000/post/7')
+  }
+  finally {
+    if (previous === undefined) delete Bun.env.APP_URL
+    else Bun.env.APP_URL = previous
+  }
 })

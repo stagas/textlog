@@ -3823,6 +3823,15 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   background: var(--pagination-hover-bg);
 }
 
+.compose-post-suggestion-card {
+  position: static;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--soft);
+}
+
 body.corners-round .compose-autocomplete {
   border-radius: var(--corner-radius);
 }
@@ -5293,7 +5302,7 @@ form.report-panel {
   }
 }
 
-.compose-highlight :is(.compose-hashtag, .compose-mention) {
+.compose-highlight :is(.compose-hashtag, .compose-mention, .compose-post-reference) {
   color: var(--accent);
 }
 

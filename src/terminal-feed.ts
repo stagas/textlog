@@ -1,4 +1,4 @@
-import { appName } from './brand'
+import { appName, appOrigin } from './brand'
 import { markdownPlainText } from './markdown'
 import { shortPostAge } from './components/post-age'
 import type { PostFeedPage } from './types'
@@ -27,7 +27,7 @@ export function isCurlRequest(request: Request) {
 export function terminalFeed(feed: PostFeedPage, requestUrl: string, title: 'new' | 'hot' | 'all' | 'any',
   now = Date.now())
 {
-  const origin = new URL(requestUrl).origin
+  const origin = appOrigin() || new URL(requestUrl).origin
   const posts = feed.posts
   const heading = `${ansi.bold}${appName()}${ansi.reset}  ${ansi.accent}${title}${ansi.reset}`
   if (!posts.length) return `${heading}\n\n${ansi.dim}No posts.${ansi.reset}\n`

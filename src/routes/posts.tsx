@@ -9,7 +9,7 @@ import {
   PublicThread,
   Reply,
 } from '../components/pages'
-import { conversationTopPath, FeedThreads, postAnchorId, postedPostPath,
+import { conversationTopPath, FeedThreads, Post, postAnchorId, postedPostPath,
   postedReplyPath } from '../components/post'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
@@ -37,6 +37,7 @@ import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody }
 import { postRateLimitMessage } from '../post-rate-limit'
 import { finalizePublishedPost, persistPostEnrichment } from '../post-publication'
 import { normalizeSearchQuery } from '../search'
+import { renderToStaticMarkup } from '../render'
 import { appearanceRequestVariant } from '../theme'
 import { toggleTodo } from '../todos'
 import { postTranslation } from '../translation'
@@ -107,6 +108,19 @@ export function registerPostsRoutes(app: Hono) {
     const kind = c.req.query('kind')
     const rawQuery = c.req.query('q') || ''
     const query = normalizeSearchQuery(rawQuery)
+    if (kind === 'posts') {
+      if (!/^\d{1,15}$/.test(rawQuery)) return c.json({ results: [] }, 400)
+      const id = Number(rawQuery)
+      if (!Number.isSafeInteger(id) || id < 1) return c.json({ results: [] }, 400)
+      const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
+      if (detail.status === 'not_found') return c.json({ results: [] }, 200, { 'Cache-Control': 'no-store' })
+      const html = renderToStaticMarkup(
+        <Post p={detail.post} user={user || null} showParent={false} showReplyCount tappable showReadAction={false}
+          className="internal-post-card" returnPath={`/post/${id}#post-${id}`} />,
+      )
+      return c.json({ results: [{ value: String(id), label: `&${id}`, html }] }, 200,
+        { 'Cache-Control': 'no-store' })
+    }
     if ((kind !== 'mentions' && kind !== 'hashtags') || !query || rawQuery.length > 100) {
       return c.json({ results: [] }, 400)
     }

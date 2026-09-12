@@ -63,6 +63,12 @@ import emojiKeywords from 'emojilib'
       const className = match[1] === '@' ? 'compose-mention' : 'compose-hashtag'
       for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add(className)
     }
+    const postReferencePattern = /(?<![\p{L}\p{M}\p{N}_&])&[0-9]+/gu
+    for (const match of value.matchAll(postReferencePattern)) {
+      for (let index = match.index; index < match.index + match[0].length; index++) {
+        classes[index].add('compose-post-reference')
+      }
+    }
     for (const match of value.matchAll(emojiPattern)) {
       for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add('compose-emoji')
     }
@@ -135,9 +141,14 @@ import emojiKeywords from 'emojilib'
       }
     }
     const emoji = beforeCaret.match(/(?<![\p{L}\p{M}\p{N}_]):([\p{L}\p{M}\p{N}_]+)$/u)
-    if (!emoji) return null
-    return { start: textarea.selectionStart - emoji[0].length, end: textarea.selectionStart, prefix: ':',
-      replacementPrefix: '', query: emoji[1], kind: 'emoji' }
+    if (emoji) {
+      return { start: textarea.selectionStart - emoji[0].length, end: textarea.selectionStart, prefix: ':',
+        replacementPrefix: '', query: emoji[1], kind: 'emoji' }
+    }
+    const post = beforeCaret.match(/(?<![\p{L}\p{M}\p{N}_&])&([0-9]+)$/u)
+    if (!post) return null
+    return { start: textarea.selectionStart - post[0].length, end: textarea.selectionStart, prefix: '&',
+      query: post[1], kind: 'posts' }
   }
 
   const sameReference = (left, right) => left && right && left.start === right.start && left.end === right.end
@@ -205,7 +216,7 @@ import emojiKeywords from 'emojilib'
   }
 
   const selectAutocomplete = index => {
-    const option = autocomplete.children[index]
+    const option = autocomplete.querySelectorAll(':scope > .compose-autocomplete-option')[index]
     if (!(option instanceof HTMLButtonElement) || !autocompleteTextarea || !autocompleteMatch) return
     const textarea = autocompleteTextarea
     const replacement = (autocompleteMatch.replacementPrefix ?? autocompleteMatch.prefix) + option.dataset.value
@@ -216,7 +227,7 @@ import emojiKeywords from 'emojilib'
   }
 
   const setAutocompleteIndex = index => {
-    const options = [...autocomplete.children]
+    const options = [...autocomplete.querySelectorAll(':scope > .compose-autocomplete-option')]
     if (!options.length) return
     autocompleteIndex = (index + options.length) % options.length
     options.forEach((option, optionIndex) => option.setAttribute('aria-selected', String(optionIndex === autocompleteIndex)))
@@ -243,7 +254,7 @@ import emojiKeywords from 'emojilib'
     autocompleteTextarea = textarea
     autocompleteMatch = match
     autocomplete.removeAttribute('aria-busy')
-    autocomplete.replaceChildren(...results.slice(0, 5).map((result, index) => {
+    const options = results.slice(0, 5).map((result, index) => {
       const option = document.createElement('button')
       option.type = 'button'
       option.className = 'compose-autocomplete-option'
@@ -251,16 +262,24 @@ import emojiKeywords from 'emojilib'
       option.dataset.value = typeof result === 'string' ? result : result.value
       option.setAttribute('role', 'option')
       if (typeof result === 'string') option.textContent = match.prefix + result
-      else {
+      else if (result.emoji) {
         const emoji = document.createElement('span')
         emoji.className = 'emoji'
         emoji.textContent = result.emoji
         option.append(emoji, ` ${result.label}`)
       }
+      else option.textContent = result.label
       option.addEventListener('mousedown', event => event.preventDefault())
       option.addEventListener('click', () => selectAutocomplete(index))
       return option
-    }))
+    })
+    const cardResult = results.find(result => typeof result !== 'string' && result.html)
+    const card = cardResult && document.createElement('div')
+    if (card) {
+      card.className = 'compose-post-suggestion-card internal-post-popover'
+      card.innerHTML = cardResult.html
+    }
+    autocomplete.replaceChildren(...options, ...(card ? [card] : []))
     autocomplete.hidden = false
     textarea.setAttribute('role', 'combobox')
     textarea.setAttribute('aria-autocomplete', 'list')
