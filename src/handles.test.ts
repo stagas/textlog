@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { createAccountGroup } from './account-groups'
 import { anonymizeUser } from './admin'
-import { createAccount, dropUsername, resolveHandle, updateProfileHandle } from './handles'
+import { createAccount, dropUsername, resolveHandle, updateProfileHandle, updateProfileHandleAsModerator } from './handles'
 import { claimInitialHandle } from './handles'
 import { runMigrations } from './migrations'
 
@@ -66,6 +66,19 @@ describe('handle history', () => {
     database.query('UPDATE handle_change_events SET changed_at=datetime(\'now\',\'start of month\',\'-1 day\')').run()
     updateProfileHandle(database, 1, 'delta', '')
     expect(database.query('SELECT handle FROM users WHERE id=1').get()).toEqual({ handle: 'delta' })
+  })
+
+  test('allows a moderator rename without consuming a change slot', () => {
+    const database = fixture()
+    updateProfileHandle(database, 1, 'beta', '')
+
+    expect(updateProfileHandleAsModerator(database, 1, 'moderated_name')).toEqual({ status: 'ready' })
+    expect(database.query('SELECT handle,handle_chosen_at FROM users WHERE id=1').get()).toMatchObject({
+      handle: 'moderated_name',
+    })
+    expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=1').get())
+      .toEqual({ count: 1 })
+    expect(resolveHandle(database, 'beta')).toEqual({ id: 1, handle: 'moderated_name', alias: true })
   })
 
   test('drops and bans a username without recording a handle change or historical alias', () => {

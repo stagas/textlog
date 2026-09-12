@@ -7507,6 +7507,111 @@ form.report-panel {
   padding: var(--space-6) var(--gutter) var(--space-8);
 }
 
+:is(.admin-username-management, .admin-username-records) h3 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: var(--font-size-12);
+}
+
+.admin-username-rename {
+  display: grid;
+  grid-template-columns: minmax(220px, 420px) auto;
+  grid-template-areas: "field submit" "hint .";
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--panel);
+  border: 1px solid var(--soft);
+}
+
+.admin-username-rename label {
+  grid-area: field;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-username-rename .form-hint {
+  grid-area: hint;
+  margin: 0;
+}
+
+.admin-username-rename>.button {
+  grid-area: submit;
+  align-self: end;
+}
+
+.admin-username-slots,
+.admin-username-list article {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.admin-username-slots {
+  justify-content: space-between;
+  margin-top: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--quote-bg);
+  border: 1px solid var(--soft);
+}
+
+.admin-username-slots form,
+.admin-username-list form {
+  margin: 0;
+}
+
+.admin-username-slots>div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.admin-username-slots span {
+  color: var(--muted);
+  font-size: var(--font-size-10);
+}
+
+.admin-username-list article {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--soft);
+  font-size: var(--font-size-11);
+}
+
+.admin-username-list article>strong {
+  min-width: 180px;
+  font-weight: 500;
+}
+
+.admin-username-list time,
+.admin-username-events {
+  color: var(--muted);
+  font-size: var(--font-size-10);
+}
+
+@media (max-width: 600px) {
+  .admin-username-rename {
+    grid-template-columns: 1fr;
+    grid-template-areas: "field" "hint" "submit";
+  }
+
+  .admin-username-rename .button {
+    width: 100%;
+  }
+
+}
+
+.admin-username-list article>p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.admin-username-list form {
+  margin-left: auto;
+}
+
+.admin-username-events {
+  display: grid;
+  gap: var(--space-2);
+}
+
 .admin-email {
   width: 100%;
   padding: var(--space-6) var(--gutter) var(--space-8);

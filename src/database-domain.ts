@@ -23,7 +23,7 @@ import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
 import { materializedPersonalizedGroupPage } from './feed-state'
 import { hasUnreadForYou, hasUnreadToMe, markAllForYouRead, markForYouEntriesRead, markVisibleForYouEntriesRead,
   unreadForYouCount, unreadToMeCount } from './for-you-state'
-import { dropUsername, excludesDroppedUsernameUsers, resolveHandle } from './handles'
+import { dropUsername, excludesDroppedUsernameUsers, resolveHandle, updateProfileHandleAsModerator } from './handles'
 import { claimInitialHandle, HandleChangeLimitError, updateProfileHandle } from './handles'
 import { getHotPosts, hotFeedProjectionNeedsRefresh, hotRankingVersion, refreshHotFeedProjection } from './hot'
 import { getImageUrl, isImageKey } from './image-storage'
@@ -59,7 +59,7 @@ import { sitemapIndex, sitemapSection } from './seo'
 import { insertSession, markSessionUsed, renewSession, SESSION_LIFETIME_MS, sessionHash } from './sessions'
 import { dashboardStats } from './stats'
 import { FONT_CHOICES, SANS_SERIF_FONT_CHOICES } from './theme'
-import type { PostFeedPage, User } from './types'
+import type { PostFeedPage, ProfileRow, User } from './types'
 import type { PostView } from './types'
 import { excludesWhisperPosts, isWhisperThread, whisperThreadRelevantToViewer,
   whisperThreadTargetsViewer } from './whisper'
@@ -1548,8 +1548,48 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'admin.user': {
       const { id } = input as DatabaseDomainInput<'admin.user'>
-      return (database.query(`SELECT id,handle,email,bio,suspended_at,deleted_at FROM users
-        WHERE id=? AND deleted_at IS NULL`).get(id) || null) as DatabaseDomainOutput<K>
+      const user = database.query(`SELECT id,coalesce(deleted_handle,handle) handle,email,bio,suspended_at,deleted_at
+        FROM users WHERE id=?`).get(id) as ProfileRow | null
+      if (!user) return null as DatabaseDomainOutput<K>
+      const previousUsernames = database.query(`SELECT handle username,created_at FROM handle_history
+        WHERE user_id=? ORDER BY created_at DESC,handle`).all(id)
+      const bannedUsernames = database.query(`SELECT username,note,created_at FROM banned_usernames
+        WHERE dropped_user_id=? ORDER BY created_at DESC,username`).all(id)
+      const usernameChanges = database.query(`SELECT id,changed_at FROM handle_change_events
+        WHERE user_id=? ORDER BY changed_at DESC,id DESC`).all(id)
+      const usernameChangesThisMonth = (database.query(`SELECT COUNT(*) count FROM handle_change_events
+        WHERE user_id=? AND changed_at>=datetime('now','start of month')
+          AND changed_at<datetime('now','start of month','+1 month')`).get(id) as { count: number }).count
+      return { ...user, previousUsernames, bannedUsernames, usernameChanges,
+        usernameChangesThisMonth } as DatabaseDomainOutput<K>
+    }
+    case 'admin.manageUsername': {
+      const request = input as DatabaseDomainInput<'admin.manageUsername'>
+      const target = database.query('SELECT id,deleted_at FROM users WHERE id=?').get(request.id) as
+        { id: number; deleted_at: string | null } | null
+      if (!target) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (target.deleted_at && !['remove-history', 'remove-ban'].includes(request.action)) {
+        return { status: 'not_found' } as DatabaseDomainOutput<K>
+      }
+      if (request.action === 'rename') {
+        const changed = updateProfileHandleAsModerator(database, request.id, request.username)
+        if (changed.status === 'ready') invalidatePostFeedCaches()
+        return changed as DatabaseDomainOutput<K>
+      }
+      if (request.action === 'reset-slots') {
+        database.query(`DELETE FROM handle_change_events WHERE user_id=?
+          AND changed_at>=datetime('now','start of month')
+          AND changed_at<datetime('now','start of month','+1 month')`).run(request.id)
+        return { status: 'ready' } as DatabaseDomainOutput<K>
+      }
+      const result = request.action === 'remove-history'
+        ? database.query('DELETE FROM handle_history WHERE user_id=? AND handle=? COLLATE NOCASE')
+          .run(request.id, request.username)
+        : database.query('DELETE FROM banned_usernames WHERE dropped_user_id=? AND username=? COLLATE NOCASE')
+          .run(request.id, request.username)
+      if (!result.changes) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (request.action === 'remove-ban') invalidatePostFeedCaches()
+      return { status: 'ready' } as DatabaseDomainOutput<K>
     }
     case 'admin.moderateUser': {
       const { id, actorId, action, note } = input as DatabaseDomainInput<'admin.moderateUser'>

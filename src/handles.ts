@@ -134,6 +134,32 @@ export function updateProfileHandle(database: Database, userId: number, handle: 
   })()
 }
 
+export function updateProfileHandleAsModerator(database: Database, userId: number, handle: string) {
+  return database.transaction(() => {
+    const account = database.query('SELECT handle FROM users WHERE id=? AND deleted_at IS NULL').get(userId) as
+      | { handle: string }
+      | null
+    if (!account) return { status: 'not_found' as const }
+    if (account.handle.toLowerCase() === handle.toLowerCase()) {
+      database.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, userId)
+      return { status: 'ready' as const }
+    }
+    if (bannedHandle(database, handle)) return { status: 'unavailable' as const }
+    if (database.query('SELECT 1 FROM users WHERE handle=? COLLATE NOCASE AND id!=? AND deleted_at IS NULL')
+      .get(handle, userId)) return { status: 'unavailable' as const }
+    const claim = historicalHandleClaim(database, userId, handle)
+    if (!claim.allowed) return { status: 'unavailable' as const }
+    if (handleHistoryHasGroups(database)) {
+      database.query(`UPDATE handle_history SET user_id=?,account_group_id=(
+        SELECT account_group_id FROM users WHERE id=?) WHERE handle=? COLLATE NOCASE`).run(userId, userId, handle)
+    }
+    database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
+      .run(account.handle.toLowerCase(), userId)
+    database.query('UPDATE users SET handle=?,handle_chosen_at=CURRENT_TIMESTAMP WHERE id=?').run(handle, userId)
+    return { status: 'ready' as const }
+  })()
+}
+
 export function dropUsername(database: Database, userId: number, actorId: number, note: string) {
   return database.transaction(() => {
     const account = database.query('SELECT handle FROM users WHERE id=? AND deleted_at IS NULL').get(userId) as

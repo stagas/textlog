@@ -191,7 +191,20 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_found' } | { status: 'ready'; imageKeys: string[] } }
   'admin.translatePost': { input: { id: number; translation: string };
     output: { status: 'not_found' } | { status: 'ready' } }
-  'admin.user': { input: { id: number }; output: ProfileRow | null }
+  'admin.user': { input: { id: number }; output: (ProfileRow & {
+    previousUsernames: Array<{ username: string; created_at: string }>
+    bannedUsernames: Array<{ username: string; note: string; created_at: string }>
+    usernameChanges: Array<{ id: number; changed_at: string }>
+    usernameChangesThisMonth: number
+  }) | null }
+  'admin.manageUsername': {
+    input: { id: number; actorId: number } & (
+      { action: 'rename'; username: string }
+      | { action: 'reset-slots' }
+      | { action: 'remove-history' | 'remove-ban'; username: string }
+    )
+    output: { status: 'ready' | 'not_found' | 'unavailable' }
+  }
   'admin.moderateUser': {
     input: { id: number; actorId: number; action: 'suspend' | 'restore' | 'delete' | 'drop-username'; note: string }
     output:

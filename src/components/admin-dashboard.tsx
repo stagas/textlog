@@ -197,7 +197,9 @@ export function AdminDashboard(
         {bannedUsernames.length
           ? (
             <div className="admin-banned-username-list">
-              {bannedUsernames.map(entry => <span key={entry.username}>@{entry.username}</span>)}
+              {bannedUsernames.map(entry => entry.dropped_user_id
+                ? <a key={entry.username} href={`/admin/users/${entry.dropped_user_id}`}>@{entry.username}</a>
+                : <span key={entry.username}>@{entry.username}</span>)}
             </div>
           )
           : <p className="section-empty">No usernames have been dropped.</p>}
@@ -207,7 +209,7 @@ export function AdminDashboard(
         {deletions.length
           ? deletions.map(deletion => (
             <article key={deletion.id}>
-              <span>@{deletion.handle} deleted their account</span>
+              <span><a href={`/admin/users/${deletion.id}`}>@{deletion.handle}</a> deleted their account</span>
               <p>reason: {deletion.reason}</p>
               <time dateTime={deletion.deleted_at}>{fmtFull(deletion.deleted_at)}</time>
             </article>

@@ -432,6 +432,33 @@ export function registerAdminRoutes(app: Hono) {
     return page(<AdminUser user={signedIn} target={target} />)
   })
 
+  app.post('/admin/users/:id/username', async c => {
+    const signedIn = currentUser(c.req.raw)
+    if (!signedIn) return redirect('/enter?next=' + encodeURIComponent('/admin'))
+    if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
+    const id = Number(c.req.param('id'))
+    if (!Number.isInteger(id)) return c.text('Not found', 404)
+    const target = await databaseService().call('admin.user', { id })
+    if (!target) return c.text('Not found', 404)
+    if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
+    const f = await form(c.req.raw)
+    const action = f.action
+    if (!['rename', 'reset-slots', 'remove-history', 'remove-ban'].includes(action)) {
+      return c.text('Invalid username action', 400)
+    }
+    const usernameAction = action as 'rename' | 'reset-slots' | 'remove-history' | 'remove-ban'
+    const username = (f.username || '').trim().toLowerCase()
+    if (usernameAction !== 'reset-slots' && !/^[a-z0-9_]{2,24}$/.test(username)) {
+      return c.text('Invalid username', 400)
+    }
+    const result = await databaseService().call('admin.manageUsername', usernameAction === 'reset-slots'
+      ? { id, actorId: signedIn.id, action: usernameAction }
+      : { id, actorId: signedIn.id, action: usernameAction, username })
+    if (result.status === 'not_found') return c.text('Username entry not found', 404)
+    if (result.status === 'unavailable') return c.text('That username is unavailable', 409)
+    return redirect(`/admin/users/${id}`)
+  })
+
   app.get('/admin/users/:id/:action', async c => {
     const signedIn = currentUser(c.req.raw)
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
@@ -441,6 +468,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!['suspend', 'restore', 'delete', 'drop-username'].includes(action)) return c.text('Not found', 404)
     const target = Number.isInteger(id) ? await databaseService().call('admin.user', { id }) : null
     if (!target) return c.text('Not found', 404)
+    if (target.deleted_at) return c.text('Account is deleted', 409)
     if (target.id === signedIn.id || isAdminEmail(target.email)) return c.text('Protected admin account', 403)
     if (action === 'suspend' && target.suspended_at) return c.text('Account is already suspended', 409)
     if (action === 'restore' && !target.suspended_at) return c.text('Account is not suspended', 409)

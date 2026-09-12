@@ -2715,8 +2715,9 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })
   expect(passwordDeletion.status).toBe(303)
   expect(database.query('SELECT 1 FROM users WHERE handle=?').get('passworddelete')).toBeNull()
-  expect(database.query(`SELECT deleted_handle,deletion_reason FROM users WHERE deleted_handle='passworddelete'`).get())
-    .toEqual({ deleted_handle: 'passworddelete', deletion_reason: 'Other' })
+  const deletedPasswordAccount = database.query(`SELECT id,deleted_handle,deletion_reason FROM users
+    WHERE deleted_handle='passworddelete'`).get() as { id: number; deleted_handle: string; deletion_reason: string }
+  expect(deletedPasswordAccount).toMatchObject({ deleted_handle: 'passworddelete', deletion_reason: 'Other' })
 
   const adminCookie = await signup('admin', 'gstagas@gmail.com', 'admin password 123')
   const adminActivity = await (await request('/my-feed', { cookie: adminCookie })).text()
@@ -2744,8 +2745,21 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(dashboard.status).toBe(200)
   const dashboardHtml = await dashboard.text()
   expect(dashboardHtml).toContain('A route-level integration post')
-  expect(dashboardHtml).toContain('@passworddelete deleted their account')
+  expect(dashboardHtml).toContain('@passworddelete</a> deleted their account')
+  expect(dashboardHtml).toContain(`href="/admin/users/${deletedPasswordAccount.id}"`)
   expect(dashboardHtml).toContain('reason: Other')
+  database.query('INSERT OR IGNORE INTO handle_history(handle,user_id) VALUES(?,?)')
+    .run('passworddelete', deletedPasswordAccount.id)
+  const deletedModeration = await request(`/admin/users/${deletedPasswordAccount.id}`, { cookie: adminCookie })
+  const deletedModerationHtml = await deletedModeration.text()
+  expect(deletedModerationHtml).toContain('reserved username cleanup')
+  expect(deletedModerationHtml).toContain('@passworddelete')
+  expect(deletedModerationHtml).not.toContain('save username')
+  expect((await request(`/admin/users/${deletedPasswordAccount.id}/username`, {
+    method: 'POST', cookie: adminCookie,
+    form: { action: 'remove-history', username: 'passworddelete' },
+  })).status).toBe(303)
+  expect(database.query('SELECT 1 FROM handle_history WHERE handle=?').get('passworddelete')).toBeNull()
   const displayName = await request('/admin/tags/display-name', {
     method: 'POST',
     cookie: adminCookie,
@@ -2801,8 +2815,44 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(database.query('SELECT action,note FROM admin_actions WHERE target_post_id=? ORDER BY id DESC LIMIT 1')
     .get(post.id)).toEqual({ action: 'resolve_report', note: 'Resolved by integration test' })
 
+  database.query('INSERT INTO handle_history(handle,user_id) VALUES(?,?)').run('bob_previous_admin_test', bob.id)
+  database.query('INSERT INTO handle_change_events(user_id) VALUES(?)').run(bob.id)
+  const adminId = (database.query('SELECT id FROM users WHERE email=?').get('gstagas@gmail.com') as { id: number }).id
+  database.query(`INSERT INTO banned_usernames(username,dropped_user_id,dropped_by,note)
+    VALUES(?,?,?,?)`).run('bob_banned_admin_test', bob.id, adminId, 'reserved after moderation')
   const moderateBob = await request(`/admin/users/${bob.id}`, { cookie: adminCookie })
-  expect(await moderateBob.text()).not.toContain('bot status')
+  const moderateBobHtml = await moderateBob.text()
+  expect(moderateBobHtml).not.toContain('bot status')
+  expect(moderateBobHtml).toContain('mailto:bob@example.com')
+  expect(moderateBobHtml).toContain('bob_previous_admin_test')
+  expect(moderateBobHtml).toContain('bob_banned_admin_test')
+  expect(moderateBobHtml).toContain('1 of 2')
+
+  const renameBob = await request(`/admin/users/${bob.id}/username`, {
+    method: 'POST', cookie: adminCookie,
+    form: { action: 'rename', username: 'bob_moderated_admin_test' },
+  })
+  expect(renameBob.status).toBe(303)
+  expect(database.query('SELECT handle FROM users WHERE id=?').get(bob.id))
+    .toEqual({ handle: 'bob_moderated_admin_test' })
+  expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=?').get(bob.id))
+    .toEqual({ count: 1 })
+
+  for (const [action, username] of [
+    ['remove-history', 'bob_previous_admin_test'],
+    ['remove-ban', 'bob_banned_admin_test'],
+  ]) {
+    expect((await request(`/admin/users/${bob.id}/username`, {
+      method: 'POST', cookie: adminCookie, form: { action, username },
+    })).status).toBe(303)
+  }
+  expect((await request(`/admin/users/${bob.id}/username`, {
+    method: 'POST', cookie: adminCookie, form: { action: 'reset-slots' },
+  })).status).toBe(303)
+  expect(database.query('SELECT 1 FROM handle_history WHERE handle=?').get('bob_previous_admin_test')).toBeNull()
+  expect(database.query('SELECT 1 FROM banned_usernames WHERE username=?').get('bob_banned_admin_test')).toBeNull()
+  expect(database.query('SELECT COUNT(*) count FROM handle_change_events WHERE user_id=?').get(bob.id))
+    .toEqual({ count: 0 })
 
   const suspend = await request(`/admin/users/${bob.id}/suspend`, {
     method: 'POST',
