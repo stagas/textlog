@@ -4,6 +4,7 @@ import { Layout } from './layout'
 import { PostingHelpAction, type PostingSuggestionSearch } from './page-shared'
 import { Post, PreviewPost, ThreadReplies } from './post'
 import { ReplyBox, ReplyPreview } from './reply'
+import { ComposeMoreActions } from './reply-composer'
 
 export function EditPost(
   { user, post, parent, replies = [], error, body = post.body, preview = false, returnPath, suggestionSearch,
@@ -67,19 +68,13 @@ export function EditPost(
             <button className="button">save →</button>
           </span>
         } moreActions={
-          <>
-            <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-              title="Enrich post with hashtags"
-            >
-              autotag
-            </button>
-            <button className="secondary-action" name="action" value="preview">preview</button>
+          <ComposeMoreActions>
             {!moderator && (
               <button className="secondary-action unpublish-action" name="action" value="unpublish" formNoValidate>
                 draft
               </button>
             )}
-          </>
+          </ComposeMoreActions>
         } />
         {post.parent_id && parent && (
           <ThreadReplies parentId={parent.id} replies={replies} user={user} returnPath={returnPath}

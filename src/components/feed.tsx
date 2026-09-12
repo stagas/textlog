@@ -8,6 +8,7 @@ import { MetaRow } from './meta'
 import { ActionPair, FeedTabs, Pagination } from './page-shared'
 import { BioReferenceForms, FeedThreads, renderableFeedPosts, TagReference, UserReference } from './post'
 import { writeHref } from './write-link'
+import type { SharedFeedPageProps } from './feed-page-props'
 
 export type ForYouCursor = { createdAt: string; key: string; direction: 'next' | 'previous' }
 
@@ -49,24 +50,10 @@ export function groupSimilarActivities(timeline: PersonalizedTimelineRow[]): Tim
 export function Feed(
   { user, data, title, path = '/my-feed', pageUrl, notificationBanner = false, toMe = false, expandedRootId, writeError,
     writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation, writeDraftId, chunk = 0,
-    initialChunks = 1, fetchedThread }: {
+    initialChunks = 1, fetchedThread }: SharedFeedPageProps & {
       user: User
       data: PersonalizedFeedData
-      title?: string
-      path?: string
-      pageUrl?: string
-      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
       toMe?: boolean
-      expandedRootId?: number
-      writeError?: string
-      writeBody?: string
-      writePreview?: boolean
-      writePreviewExecutionOutput?: string | null
-      writePreviewLocation?: import('../types').LocationView
-      writeDraftId?: string
-      chunk?: number
-      initialChunks?: number
-      fetchedThread?: import('../types').PostView[]
     },
 ) {
   const feedPath = path

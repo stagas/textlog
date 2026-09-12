@@ -97,19 +97,27 @@ export function ReplyComposer(
           <PostingHelpAction id={helpId} defaultChecked={!!suggestionSearch} />
         </span>
       } primary={<button className="button" accessKey={user ? 'p' : undefined}>post →</button>} moreActions={
-      <>
-        <button className="secondary-action compose-autotag-action" name="action" value="autotag"
-          title="Enrich post with hashtags"
-        >
-          autotag
-        </button>
-        <button className="secondary-action" name="action" value="preview">preview</button>
+      <ComposeMoreActions>
         <button className="secondary-action" name="action" value="draft"
           formAction={draftId ? `/drafts/${draftId}` : undefined}
         >
           draft
         </button>
-      </>
+      </ComposeMoreActions>
     } />
+  )
+}
+
+export function ComposeMoreActions({ children }: { children?: React.ReactNode }) {
+  return (
+    <>
+      <button className="secondary-action compose-autotag-action" name="action" value="autotag"
+        title="Enrich post with hashtags"
+      >
+        autotag
+      </button>
+      <button className="secondary-action" name="action" value="preview">preview</button>
+      {children}
+    </>
   )
 }

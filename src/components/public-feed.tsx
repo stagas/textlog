@@ -2,28 +2,18 @@ import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { FeedTabs } from './page-shared'
 import { PublicFeedFrame } from './public-feed-frame'
+import type { SharedFeedPageProps } from './feed-page-props'
+
+type PublicFeedProps = SharedFeedPageProps & {
+  feed?: PostFeedPage
+  cursor?: unknown
+  user?: User | null
+}
 
 export function PublicFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user = null, path = '/', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: {
-      feed?: PostFeedPage
-      cursor?: unknown
-      user?: User | null
-      path?: string
-      pageUrl?: string
-      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-      expandedRootId?: number
-      writeError?: string
-      writeBody?: string
-      writePreview?: boolean
-      writePreviewExecutionOutput?: string | null
-      writePreviewLocation?: import('../types').LocationView
-      writeDraftId?: string
-      chunk?: number
-      initialChunks?: number
-      fetchedThread?: import('../types').PostView[]
-    },
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: PublicFeedProps,
 ) {
   const random = path.startsWith('/any')
   const newest = path === '/new'

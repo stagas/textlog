@@ -5,35 +5,28 @@ import { feedChunkReturnPath, feedPostsWithFetchedThread } from './infinite-feed
 import { Layout } from './layout'
 import { GlobalFeedEmpty, Pagination } from './page-shared'
 import { ThreadedFeedChunks } from './threaded-feed'
+import type { FeedChunkProps, FeedComposerProps, NotificationBanner } from './feed-page-props'
 
-type NotificationBanner = false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
 type ThreadOptions = Omit<React.ComponentProps<typeof ThreadedFeedChunks>,
   'posts' | 'user' | 'returnPath' | 'chunk' | 'initialChunks'>
 
+type PublicFeedFrameProps = FeedComposerProps & FeedChunkProps & {
+  feed: PostFeedPage
+  user: User | null
+  path: string
+  title?: string
+  pageUrl?: string
+  feeds?: { title: string; rss: string; atom: string }
+  notificationBanner?: NotificationBanner
+  renderHeader: (feed: PostFeedPage) => React.ReactNode
+  threadOptions: (feed: PostFeedPage) => ThreadOptions
+  emptyReturnHref: string
+}
+
 export function PublicFeedFrame({ feed, user, path, title, pageUrl, feeds, notificationBanner = false,
   expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput, writePreviewLocation,
-  writeDraftId, chunk = 0, initialChunks = 1, fetchedThread, renderHeader, threadOptions, emptyReturnHref }: {
-    feed: PostFeedPage
-    user: User | null
-    path: string
-    title?: string
-    pageUrl?: string
-    feeds?: { title: string; rss: string; atom: string }
-    notificationBanner?: NotificationBanner
-    expandedRootId?: number
-    writeError?: string
-    writeBody?: string
-    writePreview?: boolean
-    writePreviewExecutionOutput?: string | null
-    writePreviewLocation?: import('../types').LocationView
-    writeDraftId?: string
-    chunk?: number
-    initialChunks?: number
-    fetchedThread?: import('../types').PostView[]
-    renderHeader: (feed: PostFeedPage) => React.ReactNode
-    threadOptions: (feed: PostFeedPage) => ThreadOptions
-    emptyReturnHref: string
-  }) {
+  writeDraftId, chunk = 0, initialChunks = 1, fetchedThread, renderHeader, threadOptions,
+  emptyReturnHref }: PublicFeedFrameProps) {
   const normalizedFeed = { ...feed, posts: feedPostsWithFetchedThread(feed.posts, fetchedThread) }
   const renderedChunk = chunk === 0 ? initialChunks - 1 : chunk
   const pagePath = path + (normalizedFeed.page > 1 ? `${path.includes('?') ? '&' : '?'}page=${normalizedFeed.page}` : '')

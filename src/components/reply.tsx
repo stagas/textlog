@@ -9,7 +9,9 @@ import {
 } from './page-shared'
 import { Post, postAnchorId, ThreadReplies } from './post'
 import { ReplyBox, ReplyComposer } from './reply-composer'
+import { ThreadReplySlot } from './thread-reply-slot'
 export { ReplyBox, ReplyComposer } from './reply-composer'
+export { ThreadLockedNotice, ThreadReplySlot } from './thread-reply-slot'
 
 export function ReplyPreview({ parent, user, body, executionOutput, location }: {
   parent: PostView
@@ -53,10 +55,6 @@ export function HiddenRepliesNotice() {
       </div>
     </div>
   )
-}
-
-export function ThreadLockedNotice() {
-  return <div className="thread-locked-notice" role="status">Thread is locked for new replies</div>
 }
 
 export function Reply(
@@ -119,12 +117,7 @@ export function Reply(
             location={previewLocation} />
         )}
         {showForm && !post.thread_locked && !replyTo && replyComposer}
-        {showForm && post.thread_locked && !replyTo && (
-          <div className="inline-reply-compose thread-locked-reply-notice"
-            style={{ '--reply-offset': '0px' } as React.CSSProperties}>
-            <ThreadLockedNotice />
-          </div>
-        )}
+        {showForm && post.thread_locked && !replyTo && <ThreadReplySlot locked />}
         {post.replies_hidden && <HiddenRepliesNotice />}
         <ThreadReplies parentId={post.id} replies={replies} user={user} returnPath={returnPath} flat={flat}
           backHref={backTargetsReply || backTargetId ? returnPath : undefined} backTargetId={backTargetId} replyOnPage
@@ -132,25 +125,16 @@ export function Reply(
           afterReply={(reply, depth) =>
             showForm && reply.id === replyTo?.id
               ? post.thread_locked
-                ? (
-                  <div className="inline-reply-compose thread-locked-reply-notice" style={{
-                    '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
-                  } as React.CSSProperties}>
-                    <ThreadLockedNotice />
-                  </div>
-                )
+                ? <ThreadReplySlot depth={depth} locked />
                 : (
                   <>
                     {preview && (
                       <ReplyPreview parent={replyParent} user={user} body={body}
                         executionOutput={previewExecutionOutput} location={previewLocation} />
                     )}
-                    <div className="inline-reply-compose feed-inline-reply-compose"
-                      data-reply-post-id={reply.id} style={{
-                      '--reply-offset': `calc(${Array(depth).fill('clamp(18px, 3vw, 28px)').join(' + ')})`,
-                    } as React.CSSProperties}>
+                    <ThreadReplySlot depth={depth} className="feed-inline-reply-compose" replyPostId={reply.id}>
                       {replyComposer}
-                    </div>
+                    </ThreadReplySlot>
                   </>
                 )
               : undefined} />

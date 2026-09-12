@@ -3,29 +3,18 @@ import type { User } from '../types'
 import type { PostFeedPage } from '../types'
 import { FeedTabs } from './page-shared'
 import { PublicFeedFrame } from './public-feed-frame'
+import type { SharedFeedPageProps } from './feed-page-props'
+
+type HotFeedProps = SharedFeedPageProps & {
+  feed?: PostFeedPage
+  cursor?: HotCursor | null
+  user: User | null
+}
 
 export function HotFeed(
   { feed = { posts: [], page: 1, totalItems: 0, totalPages: 1 }, user, title, path = '/hot', pageUrl,
     notificationBanner = false, expandedRootId, writeError, writeBody, writePreview, writePreviewExecutionOutput,
-    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: {
-      feed?: PostFeedPage
-      cursor?: HotCursor | null
-      user: User | null
-      title?: string
-      path?: string
-      pageUrl?: string
-      notificationBanner?: false | 'notifications' | 'appearance' | 'invite' | 'bio' | 'notification-update' | 'donate'
-      expandedRootId?: number
-      writeError?: string
-      writeBody?: string
-      writePreview?: boolean
-      writePreviewExecutionOutput?: string | null
-      writePreviewLocation?: import('../types').LocationView
-      writeDraftId?: string
-      chunk?: number
-      initialChunks?: number
-      fetchedThread?: import('../types').PostView[]
-    },
+    writePreviewLocation, writeDraftId, chunk = 0, initialChunks = 1, fetchedThread }: HotFeedProps,
 ) {
   return <PublicFeedFrame feed={feed} user={user} path={path} title={title} pageUrl={pageUrl}
     notificationBanner={notificationBanner} feeds={{ title: 'Hot notes', rss: '/hot.rss', atom: '/hot.atom' }}
