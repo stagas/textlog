@@ -2723,6 +2723,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(dashboardHtml).toContain('A route-level integration post')
   expect(dashboardHtml).toContain('@passworddelete deleted their account')
   expect(dashboardHtml).toContain('reason: Other')
+  const displayName = await request('/admin/tags/display-name', {
+    method: 'POST',
+    cookie: adminCookie,
+    form: { tag: 'deepthoughts', displayName: 'DeepThoughts' },
+  })
+  expect(displayName.status).toBe(303)
+  expect(database.query(`SELECT tag,display_name displayName FROM tag_display_names
+    WHERE display_name='DeepThoughts'`).get()).toEqual({ tag: 'deepthoughts', displayName: 'DeepThoughts' })
   const emailPage = await request('/admin/email', { cookie: adminCookie })
   expect(emailPage.status).toBe(200)
   const emailPageHtml = await emailPage.text()
