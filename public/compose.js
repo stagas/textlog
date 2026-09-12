@@ -14,6 +14,68 @@
   let autocompleteRequest
   let autocompleteTimer
 
+  const formattingPatterns = [
+    { className: 'compose-format-strike', pattern: /~~[^\n~](?:[^\n]*?[^\n~])?~~/gu },
+    { className: 'compose-format-strike', pattern: /(?<!~)~[^\n~](?:[^\n]*?[^\n~])?~(?!~)/gu },
+    { className: 'compose-format-bold', pattern: /\*\*[^\n*](?:[^\n]*?[^\n*])?\*\*/gu },
+    { className: 'compose-format-bold', pattern: /(?<!\*)\*[^\n*](?:[^\n]*?[^\n*])?\*(?!\*)/gu },
+    { className: 'compose-format-underline', pattern: /__[^\n_](?:[^\n]*?[^\n_])?__/gu },
+    { className: 'compose-format-underline', pattern: /(?<!_)_[^\n_](?:[^\n]*?[^\n_])?_(?!_)/gu },
+    { className: 'compose-format-italic', pattern: /(?<!\S)\/[^\/\s](?:[^\/\n]*?[^\/\s])?\/(?!\/)/gu },
+  ]
+
+  const highlightRanges = value => {
+    const classes = Array.from({ length: value.length }, () => new Set())
+    formattingPatterns.forEach(({ className, pattern }) => {
+      pattern.lastIndex = 0
+      for (const match of value.matchAll(pattern)) {
+        for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add(className)
+      }
+    })
+    const referencePattern = /(?<![\p{L}\p{M}\p{N}_])([@#])[\p{L}\p{M}\p{N}_]+/gu
+    for (const match of value.matchAll(referencePattern)) {
+      const className = match[1] === '@' ? 'compose-mention' : 'compose-hashtag'
+      for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add(className)
+    }
+    return classes
+  }
+
+  const updateHighlight = textarea => {
+    let mirror = textarea.parentElement?.querySelector(':scope > .compose-highlight')
+    if (!(mirror instanceof HTMLElement)) {
+      const wrapper = document.createElement('div')
+      wrapper.className = 'compose-highlight-wrap'
+      mirror = document.createElement('pre')
+      mirror.className = 'compose-highlight'
+      mirror.setAttribute('aria-hidden', 'true')
+      textarea.before(wrapper)
+      wrapper.append(mirror, textarea)
+      textarea.classList.add('compose-highlight-textarea')
+    }
+
+    const value = textarea.value
+    const classes = highlightRanges(value)
+    const fragment = document.createDocumentFragment()
+    let start = 0
+    while (start < value.length) {
+      const className = [...classes[start]].sort().join(' ')
+      let end = start + 1
+      while (end < value.length && [...classes[end]].sort().join(' ') === className) end++
+      const node = className ? document.createElement('span') : document.createTextNode(value.slice(start, end))
+      if (node instanceof HTMLElement) {
+        node.className = className
+        node.textContent = value.slice(start, end)
+      }
+      fragment.append(node)
+      start = end
+    }
+    // A final newline needs a glyph so the mirror retains the textarea's last visual line.
+    if (value.endsWith('\n')) fragment.append('\u200b')
+    mirror.replaceChildren(fragment)
+    mirror.scrollTop = textarea.scrollTop
+    mirror.scrollLeft = textarea.scrollLeft
+  }
+
   const currentReference = textarea => {
     if (textarea.selectionStart !== textarea.selectionEnd) return null
     const beforeCaret = textarea.value.slice(0, textarea.selectionStart)
@@ -162,6 +224,7 @@
   }
 
   const update = textarea => {
+    updateHighlight(textarea)
     const counter = textarea.closest('.compose-editor-row')?.querySelector('.compose-character-count')
     const characterLimit = Number(textarea.dataset.characterLimit)
     const lineLimit = Number(textarea.dataset.lineLimit)
@@ -358,6 +421,15 @@
   })
   window.addEventListener('resize', positionAutocomplete)
   document.addEventListener('scroll', positionAutocomplete, true)
+  document.addEventListener('scroll', event => {
+    if (event.target instanceof HTMLTextAreaElement && event.target.matches(textareaSelector)) {
+      const mirror = event.target.parentElement?.querySelector(':scope > .compose-highlight')
+      if (mirror) {
+        mirror.scrollTop = event.target.scrollTop
+        mirror.scrollLeft = event.target.scrollLeft
+      }
+    }
+  }, true)
 
   document.addEventListener('submit', event => {
     if (!(event.target instanceof HTMLFormElement)) return

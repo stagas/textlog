@@ -6,23 +6,43 @@ import { decodeHtmlEntities } from './link-preview'
 import { displayPostBody } from './utils'
 
 marked.use({
-  extensions: [{
-    name: 'slashItalics',
-    level: 'inline',
-    start(src) {
-      const match = /(?:^|\s)\/[^\/\s]/.exec(src)
-      return match ? match.index + (match[0].startsWith('/') ? 0 : 1) : undefined
+  extensions: [
+    {
+      name: 'singleTildeStrikethrough',
+      level: 'inline',
+      start(src) {
+        return src.match(/~(?!~)[^~\s]/)?.index
+      },
+      tokenizer(src) {
+        const match = /^~(?!~)([^~\s](?:[^~\r\n]*?[^~\s])?)~(?!~)/.exec(src)
+        if (!match) return
+        return {
+          type: 'singleTildeStrikethrough', raw: match[0], text: match[1], tokens: this.lexer.inlineTokens(match[1]),
+        }
+      },
+      renderer(token) {
+        return `<del>${this.parser.parseInline(token.tokens!)}</del>`
+      },
+      childTokens: ['tokens'],
     },
-    tokenizer(src) {
-      const match = /^\/([^\/\s](?:[^\/\r\n]*?[^\/\s])?)\/(?!\/)/.exec(src)
-      if (!match) return
-      return { type: 'slashItalics', raw: match[0], text: match[1], tokens: this.lexer.inlineTokens(match[1]) }
+    {
+      name: 'slashItalics',
+      level: 'inline',
+      start(src) {
+        const match = /(?:^|\s)\/[^\/\s]/.exec(src)
+        return match ? match.index + (match[0].startsWith('/') ? 0 : 1) : undefined
+      },
+      tokenizer(src) {
+        const match = /^\/([^\/\s](?:[^\/\r\n]*?[^\/\s])?)\/(?!\/)/.exec(src)
+        if (!match) return
+        return { type: 'slashItalics', raw: match[0], text: match[1], tokens: this.lexer.inlineTokens(match[1]) }
+      },
+      renderer(token) {
+        return `<em>${this.parser.parseInline(token.tokens!)}</em>`
+      },
+      childTokens: ['tokens'],
     },
-    renderer(token) {
-      return `<em>${this.parser.parseInline(token.tokens!)}</em>`
-    },
-    childTokens: ['tokens'],
-  }],
+  ],
 })
 
 hljs.registerLanguage('typescript', typescript)
