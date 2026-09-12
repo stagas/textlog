@@ -316,6 +316,11 @@ describe('in-memory stylesheet', () => {
       + '  overscroll-behavior-inline: contain;\n  scrollbar-width: none;')
     expect(css).toContain('.post-page-thread > .reply-branch::-webkit-scrollbar {\n  display: none;')
     expect(css).toContain('.thread-scroll-enhanced .post-page-thread > .reply-branch {\n  overflow-x: hidden;')
+    expect(css).toContain(
+      '.post-page-thread > .reply-branch .reference-menu:is(:hover, :focus-within)\n'
+        + '  > .reference-menu-popover {\n  position: fixed;\n'
+        + '  position-anchor: --thread-reference-popover;',
+    )
     expect(css).toContain('@media (max-width: 600px) {\n  body.iphone-agent '
       + ':is(.write-compose, .reply-compose) textarea.form-control {\n'
       + '    font-size: var(--font-size-16);')

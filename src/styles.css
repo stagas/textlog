@@ -8086,6 +8086,22 @@ a.post-context:hover {
   overflow-x: hidden;
 }
 
+.post-page-thread > .reply-branch .reference-menu {
+  anchor-scope: --thread-reference-popover;
+}
+
+.post-page-thread > .reply-branch .reference-menu > .reference-menu-trigger {
+  anchor-name: --thread-reference-popover;
+}
+
+.post-page-thread > .reply-branch .reference-menu:is(:hover, :focus-within)
+  > .reference-menu-popover {
+  position: fixed;
+  position-anchor: --thread-reference-popover;
+  top: calc(anchor(bottom) + var(--space-1));
+  left: anchor(left);
+}
+
 .post-page-thread > .reply-branch::-webkit-scrollbar {
   display: none;
 }
