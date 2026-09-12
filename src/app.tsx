@@ -32,6 +32,7 @@ import { NavigationCaptchaChallenges, NavigationCaptchaGate, NESTED_FROM_MAX_DEP
 import { renderDefaultOg } from './og'
 import { PUBLIC_ARCHIVE_CHECK_INTERVAL_MS } from './public-archive'
 import { sendPushForFollow, sendPushForUserFollow, startPostPushWorker } from './push'
+import { staticAssetTypes } from './static-assets'
 import { resumeRelationshipFeedInvalidation,
   scheduleRelationshipFeedInvalidation } from './relationship-feed-invalidation'
 import { allowNavigationCaptcha, flushIpRequests, isIpBlocked, isNavigationCaptchaAllowed, loadBlockedIps,
@@ -178,19 +179,7 @@ const publicScripts = devReloadEnabled ? undefined : new Map(await Promise.all(p
   if (!build.success) throw new Error(`Failed to build public script ${path}`)
   return [path, await build.outputs[0].text()] as const
 })))
-const publicAssets = await Promise.all([
-  ['/favicon.ico', 'image/x-icon'],
-  ['/favicon-16x16.png', 'image/png'],
-  ['/favicon-32x32.png', 'image/png'],
-  ['/apple-touch-icon.png', 'image/png'],
-  ['/apple-touch-icon-precomposed.png', 'image/png'],
-  ['/android-chrome-192x192.png', 'image/png'],
-  ['/android-chrome-512x512.png', 'image/png'],
-  ['/notification-badge-96x96.png', 'image/png'],
-  ['/maskable-icon-512x512.png', 'image/png'],
-  ['/email-logo.png', 'image/png'],
-  ['/ding.mp3', 'audio/mpeg'],
-].map(async ([path, contentType]) => ({
+const publicAssets = await Promise.all(staticAssetTypes.map(async ([path, contentType]) => ({
   path,
   contentType,
   body: await Bun.file(new URL(`../public${path}`, import.meta.url)).arrayBuffer(),

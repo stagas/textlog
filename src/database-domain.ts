@@ -35,6 +35,7 @@ import { userBioLinkPreviews } from './link-preview'
 import { LOCATION_MAP_STYLE_VERSION, LOCATION_ZOOM } from './locations'
 import { runBoundedCleanup } from './maintenance'
 import { MAX_MATERIALIZED_PAGES } from './materialized-feed-pages'
+import { templateMaterializedFeedHtml } from './materialized-feed-html'
 import { excludesMetaPosts } from './meta-thread'
 import { PAGE_SIZE } from './pagination'
 import { TAG_PAGE_SIZE } from './pagination'
@@ -260,24 +261,7 @@ export function materializedForYouCount(html: string) {
 }
 
 export function materializedFeedTemplate(html: string) {
-  const token = (source: string, path: string, label: string, name: string) =>
-    source.replace(
-      new RegExp(`(<a[^>]*href="${path}"[^>]*>${label})(?:<span class="to-me-count">\\d+\\+?</span>)?(</a>)`),
-      `$1{{${name}-count}}$2`,
-    )
-  const accountTokens = html.replace(
-    /(<form\b[^>]*action="\/account\/accounts\/select"[^>]*>[\s\S]*?<input\b[^>]*name="accountId"\s+value="(\d+)"[^>]*>[\s\S]*?<button\b[^>]*class="account-menu-account"[^>]*>)(?:<span class="unread-dot"\s+aria-label="unread activity"><\/span>)?/g,
-    (_match, prefix: string, accountId: string) => `${prefix}{{account-${accountId}-unread}}`,
-  ).replace(
-    /(<(?:summary|a)\b[^>]*class="account-menu-handle"[^>]*>)(?:\s*<span class="unread-dot"\s+aria-label="unread account activity"><\/span>)?/,
-    '$1{{linked-account-unread}}',
-  )
-  return token(token(token(token(accountTokens, '\/my-feed', 'my feed', 'for-you'), '\/@', '@', 'to-me'),
-    '\/new', 'new', 'new'), '\/all', 'all', 'latest')
-    .replace(
-      /<a href="\/drafts(?:\?[^\"]*)?">drafts<\/a>|(?=<\/span>\s*<span class="account-nav-row account-nav-primary">)/,
-      '{{drafts-link}}',
-    )
+  return templateMaterializedFeedHtml(html, 'label')
 }
 
 export function hydrateMaterializedFeedCounts(html: string,

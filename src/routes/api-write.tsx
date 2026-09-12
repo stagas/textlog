@@ -1,7 +1,6 @@
 import type { Context, Hono } from 'hono'
 import { clearAnonymousPostPageCache } from '../anonymous-post-page-cache'
 import { apiOrigin, encodeCursor, parseCollectionParams } from '../api'
-import { publishPost } from '../api-broker'
 import { AUTH_LIMITS } from '../auth-rate-limit'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import { executePostCode } from '../code-execution'
@@ -10,14 +9,14 @@ import type { DatabaseService } from '../database-service'
 import { sendMagicLink } from '../email'
 import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
-import { parseLocationQuery, resolveLocation } from '../locations'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
 import { autotagText } from '../openrouter'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
+import { finalizePublishedPost, persistPostEnrichment } from '../post-publication'
 import { canPublishPosts } from '../posting-policy'
-import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow, wakePostPushWorker } from '../push'
+import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { sessionHash } from '../sessions'
 import { postTranslation } from '../translation'
@@ -79,33 +78,6 @@ function serialize(user: User) {
     bio: user.bio,
     email_verified: Boolean(user.email_verified_at),
     can_post: canPublishPosts(user),
-  }
-}
-
-async function persistPostPreviews(service: DatabaseService, postId: number, mode: 'save' | 'replace',
-  previews: Awaited<ReturnType<typeof discoverLinkPreviews>>)
-{
-  const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])
-  try {
-    const result = await service.call('api.persistPostPreviews', { postId, mode, previews })
-    await deleteImagesAfterCommit(result.obsoleteImageKeys)
-  }
-  catch (error) {
-    await deleteImages(newKeys)
-    throw error
-  }
-}
-
-async function persistPostLocation(service: DatabaseService, postId: number, content: string) {
-  const query = parseLocationQuery(content)
-  if (!query) return service.call('api.persistPostLocation', { postId, query: null, location: null })
-  try {
-    const cached = await service.call('api.cachedLocation', { query })
-    const location = cached === 'miss' ? null : cached || await resolveLocation(query)
-    await service.call('api.persistPostLocation', { postId, query, location })
-  }
-  catch (error) {
-    logError(`API location preview failed post=${postId}`, error)
   }
 }
 
@@ -292,12 +264,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
-    if (!result.duplicate) publishPost(result.id)
-    if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(content))
-    if (!result.duplicate) await persistPostLocation(service, result.id, content)
-    if (!result.duplicate) {
-      wakePostPushWorker(service)
-    }
+    await finalizePublishedPost(service, result, content, 'API location preview failed')
     return json({ data: result.post }, result.duplicate ? 200 : 201)
   })
 
@@ -410,12 +377,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
-    if (!result.duplicate) publishPost(result.id)
-    if (!result.duplicate) await persistPostPreviews(service, result.id, 'save', await discoverLinkPreviews(draft.body))
-    if (!result.duplicate) await persistPostLocation(service, result.id, draft.body)
-    if (!result.duplicate) {
-      wakePostPushWorker(service)
-    }
+    await finalizePublishedPost(service, result, draft.body, 'API location preview failed')
     return json({ data: result.post }, result.duplicate ? 200 : 201)
   })
 
@@ -468,8 +430,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
         ? fail('not_found', 'Post not found', 404)
         : fail('forbidden', 'That post belongs to someone else', 403)
     }
-    await persistPostPreviews(service, id, 'replace', await discoverLinkPreviews(content))
-    await persistPostLocation(service, id, content)
+    await persistPostEnrichment(service, id, content, 'replace', 'API location preview failed')
     return json({ data: result.post })
   })
 

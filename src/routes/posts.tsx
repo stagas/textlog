@@ -20,7 +20,6 @@ import type { Hono } from 'hono'
 import type { ComponentProps } from 'preact/compat'
 import { isAdmin } from '../admin'
 import { cachedAnonymousPostPage, materializeAnonymousPostPage } from '../anonymous-post-page-cache'
-import { publishPost } from '../api-broker'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import { campaignAttributionCookie, safeRefererPath } from '../http'
 import { clearPendingPollCookie, clearPendingPostCookie, pendingPoll, pendingPollCookie, pendingPost,
@@ -36,16 +35,12 @@ import { autotagText } from '../openrouter'
 import { pollDisplayBody } from '../polls'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
-import { wakePostPushWorker } from '../push'
+import { finalizePublishedPost, persistPostEnrichment } from '../post-publication'
 import { normalizeSearchQuery } from '../search'
 import { appearanceRequestVariant } from '../theme'
 import { toggleTodo } from '../todos'
 import { postTranslation } from '../translation'
 import { currentUser } from '../utils'
-
-function notifyPost() {
-  wakePostPushWorker()
-}
 
 async function replyDestination(replyPageId: number, _replyId: number, viewerId: number) {
   const detail = await databaseService().call('posts.detail', { id: replyPageId, viewerId })
@@ -78,32 +73,6 @@ async function postingSuggestionSearch(fields: Record<string, string>,
   const query = normalizeSearchQuery(rawQuery.replace(kind === 'hashtags' ? /^#+\s*/u : /^@+\s*/u, ''))
   const result = await databaseService().call('posts.suggestions', { kind, query, viewerId })
   return { kind, query, ...result }
-}
-
-async function persistPreviews(postId: number, mode: 'save' | 'replace', body: string) {
-  const previews = await discoverLinkPreviews(body)
-  const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])
-  try {
-    const result = await databaseService().call('api.persistPostPreviews', { postId, mode, previews })
-    await deleteImagesAfterCommit(result.obsoleteImageKeys)
-  }
-  catch (error) {
-    await deleteImages(newKeys)
-    throw error
-  }
-  const query = parseLocationQuery(body)
-  if (!query) {
-    await databaseService().call('api.persistPostLocation', { postId, query: null, location: null })
-    return
-  }
-  try {
-    const cached = await databaseService().call('api.cachedLocation', { query })
-    const location = cached === 'miss' ? null : cached || await resolveLocation(query)
-    await databaseService().call('api.persistPostLocation', { postId, query, location })
-  }
-  catch (error) {
-    logError(`location preview failed post=${postId}`, error)
-  }
 }
 
 export async function previewLocation(body: string) {
@@ -187,9 +156,7 @@ export function registerPostsRoutes(app: Hono) {
       }
       if (result.status === 'locked') return c.text('This thread is locked', 409)
       if (result.status === 'not_found') return c.text('Not found', 404)
-      if (!result.duplicate) publishPost(result.id)
-      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
-      if (!result.duplicate) notifyPost()
+      await finalizePublishedPost(databaseService(), result, body)
       const replyPageId = pending.replyPageId || pending.parentId
       let destination = postedPostPath(result.id)
       if (pending.parentId) {
@@ -536,9 +503,7 @@ export function registerPostsRoutes(app: Hono) {
         )
       }
       if (result.status === 'not_found') throw new Error('Post parent unavailable')
-      if (!result.duplicate) publishPost(result.id)
-      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
-      if (!result.duplicate) notifyPost()
+      await finalizePublishedPost(databaseService(), result, body)
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       return redirect(postedPostPath(result.id))
     }
@@ -729,7 +694,7 @@ export function registerPostsRoutes(app: Hono) {
         return c.text(result.status === 'not_found' ? 'Not found' : 'Forbidden',
           result.status === 'not_found' ? 404 : 403)
       }
-      await persistPreviews(id, 'replace', body)
+      await persistPostEnrichment(databaseService(), id, body, 'replace')
       return redirect('/post/' + id + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
     }
     catch (error) {
@@ -875,9 +840,7 @@ export function registerPostsRoutes(app: Hono) {
         return renderReplyState({ error: postRateLimitMessage(result.retryAfter), body, returnPath }, 429)
       }
       if (result.status === 'not_found') return c.text('Not found', 404)
-      if (!result.duplicate) publishPost(result.id)
-      if (!result.duplicate) await persistPreviews(result.id, 'save', body)
-      if (!result.duplicate) notifyPost()
+      await finalizePublishedPost(databaseService(), result, body)
       if (editingDraftId) await databaseService().call('drafts.delete', { id: editingDraftId, userId: user.id })
       const replyTarget = await replyDestination(replyPageId, result.id, user.id)
       return redirect(postedReplyPath(replyTarget.pageId, result.id, returnPath, replyTarget.expandedRootId))

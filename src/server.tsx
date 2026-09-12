@@ -8,6 +8,7 @@ import { closeLogConnections } from './log-stream'
 import { PAGE_SIZE } from './pagination'
 import { withRequestContext } from './request-context'
 import { DatabaseUnavailableError, RuntimeWorkerClient } from './runtime-worker-client'
+import { staticAssetTypes } from './static-assets'
 
 const configuration = validateStartupConfiguration()
 Bun.env.NODE_ENV = configuration.environment
@@ -55,19 +56,7 @@ const STARTUP_QUEUE_WAIT_MS = 55_000
 const STARTUP_QUEUE_LIMIT = 1_000
 let startupQueueSize = 0
 
-const degradedAssets = new Map<string, string>([
-  ['/favicon.ico', 'image/x-icon'],
-  ['/favicon-16x16.png', 'image/png'],
-  ['/favicon-32x32.png', 'image/png'],
-  ['/apple-touch-icon.png', 'image/png'],
-  ['/apple-touch-icon-precomposed.png', 'image/png'],
-  ['/android-chrome-192x192.png', 'image/png'],
-  ['/android-chrome-512x512.png', 'image/png'],
-  ['/notification-badge-96x96.png', 'image/png'],
-  ['/maskable-icon-512x512.png', 'image/png'],
-  ['/email-logo.png', 'image/png'],
-  ['/ding.mp3', 'audio/mpeg'],
-])
+const degradedAssets = new Map<string, string>(staticAssetTypes)
 
 function requestPath(request: Request) {
   return new URL(request.url, 'http://localhost').pathname
