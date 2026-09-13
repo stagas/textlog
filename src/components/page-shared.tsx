@@ -372,13 +372,13 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
-              For @someone <b>#private</b>
+              For @someone and @another <b>#private</b>
             </code>
           </dd>
           <dt>
             <span className="posting-help-modifier-heading">Private conversations</span>
             <small>
-              Only the signed-in author and mentioned users can read this branch.
+              Only the author and mentioned users can read this branch.
             </small>
           </dt>
         </div>
