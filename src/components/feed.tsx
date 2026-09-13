@@ -144,7 +144,7 @@ export function Feed(
                 user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
                 referenceData={row.actorBioReferences}
                 showPopover={row.activity_kind !== 'signup' && !row.target_is_viewer} />
-              <span className="activity-context post-context">
+              <span className={row.target_is_viewer ? 'activity-context post-context' : 'activity-context'}>
                 {row.activity_kind === 'signup' ? 'signed up.' : row.target_is_viewer
                   ? <>followed <span className="post-context-author">you{user.mood
                     && <span className="post-mood">{user.mood}</span>}</span>:</>

@@ -771,6 +771,7 @@ test('activity targets do not duplicate their details in hovercards', () => {
   const signupActivity = {
     ...postActivity(13, 5, 'erin'),
     activity_kind: 'signup' as const,
+    actor_mood: '🤸',
     event_key: 'signup:13',
     target_bio: 'Erin builds things',
     renderedPost: undefined,
@@ -792,7 +793,8 @@ test('activity targets do not duplicate their details in hovercards', () => {
   expect(followHtml).toContain('href="/u/dave?from=%2Fmy-feed%23a-')
   expect(followHtml).not.toContain('<span class="reference-popover-bio">Dave builds things</span>')
   expect(signupHtml).toContain('href="/u/erin?from=%2Fmy-feed%23a-')
-  expect(signupHtml).toContain('signed up.')
+  expect(signupHtml).toContain('>@erin</a><span class="post-mood">🤸</span>')
+  expect(signupHtml).toContain('<span class="activity-context">signed up.</span>')
   expect(signupHtml).not.toContain('/admin/users/5')
   expect(signupHtml).not.toContain('reference-menu-popover')
   const signupActivityHtml = signupHtml.match(/<article class="activity-follow"[\s\S]*?<\/article>/)?.[0]

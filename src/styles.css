@@ -630,7 +630,6 @@ body:has(.feed-inline-reply-compose) > .mobile-write-action {
   left: 0;
   display: none;
   width: max-content;
-  min-width: 12rem;
   max-width: min(760px, calc(100vw - 2 * var(--gutter)));
   padding: var(--space-2);
   color: var(--ink);
@@ -1155,7 +1154,7 @@ body:has(.feed-inline-reply-compose) > .mobile-write-action {
 }
 
 .reference-menu-popover:has(> .reference-popover-actions):has(> .reference-popover-bio) {
-  grid-template-columns: max-content minmax(12rem, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   column-gap: var(--space-2);
 }
@@ -8020,6 +8019,13 @@ a.post-context:hover,
   min-width: 0;
   align-items: baseline;
   gap: var(--space-2);
+}
+
+.activity-follow-main > .reference-menu {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .activity-follow-main .unread-dot {

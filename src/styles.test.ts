@@ -678,7 +678,7 @@ describe('in-memory stylesheet', () => {
       + '  padding-bottom: var(--space-2);\n  border-bottom: 1px solid var(--soft);\n  color: var(--quote-ink);')
     expect(css).toContain(
       '.reference-menu-popover:has(> .reference-popover-actions):has(> .reference-popover-bio) {\n'
-        + '  grid-template-columns: max-content minmax(12rem, 1fr);',
+        + '  grid-template-columns: max-content minmax(0, 1fr);',
     )
     expect(css).toContain(
       '.reference-menu-popover:has(> .reference-popover-actions) > .reference-popover-bio {\n'
