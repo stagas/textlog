@@ -20,7 +20,7 @@ type MemoryMaterialization = MaterializedResponse & {
 }
 const memoryMaterializations = new Map<string, MemoryMaterialization>()
 const MAX_MEMORY_MATERIALIZATIONS = 256
-const MATERIALIZED_HTML_VERSION = 49
+const MATERIALIZED_HTML_VERSION = 50
 let memoryGeneration = 0
 const DEFERRED_CACHE_DELAY_MS = 25
 
@@ -114,6 +114,10 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   // modes; ordinary hot-reload development still bypasses it so direct fixture/database edits remain visible.
   const profilingMaterialization = Bun.env.FEED_QUERY_METRICS === 'true'
     || Bun.env.REACT_RENDER_METRICS === 'true'
+  // One-shot scroll state must never be stored in shared materialized HTML.
+  if (/(?:^|;\s*)textlog_scroll=instant(?:;|$)/.test(activeRequest(request).headers.get('cookie') || '')) {
+    return await render()
+  }
   if (Bun.env.DEV_RELOAD === 'true' && !profilingMaterialization) return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
   const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())

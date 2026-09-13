@@ -161,7 +161,7 @@ test('feed pagination uses the partial feed navigation enhancement', async () =>
 })
 
 test('inline feed and post-page replies are served as immutable JavaScript', async () => {
-  const response = await request('/feed-reply.js?v=23')
+  const response = await request('/feed-reply.js?v=25')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -212,7 +212,7 @@ test('tag feeds include the complete shared thread enhancement contract', async 
   const html = await response.text()
   expect(html).toContain('/thread-hover-scroll.js?v=32')
   expect(html).toContain('/thread-expansion.js?v=4')
-  expect(html).toContain('/feed-reply.js?v=23')
+  expect(html).toContain('/feed-reply.js?v=25')
   expect(html).toContain('/infinite-scroll.js?v=53')
   expect(html).toContain('id="inline-reply-template"')
   expect(html).toContain('data-feed-view="true"')
@@ -233,7 +233,7 @@ test('profile tabs include the shared progressive feed navigation contract', asy
       const html = await response.text()
       expect(html).toContain('/thread-hover-scroll.js?v=32')
       expect(html).toContain('/thread-expansion.js?v=4')
-      expect(html).toContain('/feed-reply.js?v=23')
+      expect(html).toContain('/feed-reply.js?v=25')
       expect(html).toContain('/infinite-scroll.js?v=53')
       expect(html).toContain('id="inline-reply-template"')
       expect(html).toContain('data-feed-view="true"')
@@ -784,7 +784,7 @@ test('an anonymous poll response survives signup and returns to the poll after o
   expect(guardedPollHtml).toContain(`name="returnTo" value="/post/${poll.id}"`)
 })
 
-test('instant scroll actions are applied once without client-side scripts', async () => {
+test('instant scroll actions are applied once through server-rendered CSS', async () => {
   const marked = await request('/about?_scroll=instant')
   expect(marked.status).toBe(303)
   expect(marked.headers.get('location')).toBe('/about')
@@ -793,8 +793,12 @@ test('instant scroll actions are applied once without client-side scripts', asyn
   const destination = await request('/about', { cookie: 'textlog_scroll=instant' })
   const html = await destination.text()
   expect(html).toContain('<html class="scroll-instant" lang="en">')
-  expect(html).not.toContain('<script')
+  expect(html).not.toMatch(/<script\b(?![^>]*\bsrc=)[^>]*>/i)
   expect(destination.headers.get('set-cookie')).toContain('textlog_scroll=; Max-Age=0')
+
+  const subsequent = await request('/about')
+  expect(await subsequent.text()).not.toContain('class="scroll-instant"')
+  expect(subsequent.headers.get('set-cookie') || '').not.toContain('textlog_scroll=')
 })
 
 async function signup(handle: string, email: string, _password: string, ip?: string) {
