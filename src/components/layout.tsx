@@ -249,12 +249,13 @@ export function Layout({
         <link rel="stylesheet" href="/styles.css?v=1625" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
+        <script src="/keyboard.js?v=3" defer />
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onThreadedPage && <script src="/thread-hover-scroll.js?v=32" defer />}
         {(onFeedPage || onTagPage || onProfilePage) && <script src="/thread-expansion.js?v=4" defer />}
         {onThreadedPage && (
           <>
-            <script src="/feed-reply.js?v=23" defer />
+            <script src="/feed-reply.js?v=25" defer />
             {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=53" defer />}
           </>
         )}

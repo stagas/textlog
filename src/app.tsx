@@ -159,6 +159,7 @@ const logsClientBuild = await Bun.build({
 if (!logsClientBuild.success) throw new Error('Failed to build logs client')
 const logsClient = await logsClientBuild.outputs[0].text()
 const publicScriptPaths = [
+  '/keyboard.js',
   '/notifications.js',
   '/infinite-scroll.js',
   '/feed-reply.js',
@@ -716,7 +717,7 @@ for (const path of publicScriptPaths) {
       { headers: {
         'content-type': 'text/javascript; charset=utf-8',
         'cache-control':
-          ['/infinite-scroll.js', '/feed-reply.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
+          ['/keyboard.js', '/infinite-scroll.js', '/feed-reply.js', '/progressive-pagination.js', '/compose.js', '/contextual-back.js',
               '/reference-follow.js', '/thread-hover-scroll.js', '/thread-expansion.js'].includes(path)
             ? 'public, max-age=31536000, immutable'
             : 'no-cache',
