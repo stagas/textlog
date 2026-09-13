@@ -7913,11 +7913,18 @@ form.report-panel {
   white-space: nowrap;
 }
 
-a.post-context {
+.post-context-link {
+  display: inline-block;
+  padding-bottom: 0;
+}
+
+a.post-context,
+.post-context-link {
   color: var(--muted);
 }
 
-a.post-context:hover {
+a.post-context:hover,
+.post-context-link:hover {
   color: var(--quote-ink);
 }
 

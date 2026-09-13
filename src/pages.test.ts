@@ -2546,8 +2546,8 @@ test('latest and hot feeds label posts addressed to the viewer', () => {
   const latest = renderToStaticMarkup(React.createElement(PublicFeed, { user, feed, path: '/latest' }))
   const hot = renderToStaticMarkup(React.createElement(HotFeed, { user, feed }))
 
-  const replyToViewerLabel = '<span class="post-context">replied to <span class="post-context-author">you'
-    + '<span class="post-mood">🤸</span></span>:</span>'
+  const replyToViewerLabel = '<span class="post-context"><a class="post-context-link" href="/post/9">replied to</a> <span class="post-context-author">you'
+    + '<span class="post-mood">🤸</span></span></span>'
   expect(latest).toContain(replyToViewerLabel)
   expect(hot).toContain(replyToViewerLabel)
 })
@@ -2603,7 +2603,7 @@ test('posts describe whether their author wrote or replied', () => {
   expect(mentioned).toContain('<span class="post-context">replied to</span><span class="reference-menu">')
   expect(mentioned).not.toContain('<span class="post-context">replied to and mentioned you:</span>')
   expect(mentioned).toContain('<span class="post-context post-context-punctuation post-context-mention-suffix">'
-    + ' and mentioned you:</span>')
+    + ' and mentioned <span class="post-context-author">you<span class="post-mood">🤸</span></span>:</span>')
   expect(replyToDeletedUser).toContain('<span class="post-context">replied to</span>'
     + '<span class="post-context deleted-context">(deleted account)</span>')
   expect(replyToDeletedUser).not.toContain('<span class="post-context">replied to</span>'

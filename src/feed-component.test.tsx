@@ -216,8 +216,8 @@ test('a feed branch root continues beneath its retained parent in the tree', () 
     totalPages: 1,
   }} />)
   expect(html).toMatch(/id="post-2547"[\s\S]*?class="reply-branch[^\"]*"[\s\S]*?id="post-2553"/)
-  expect(html).toContain('<span class="post-context">continued:</span>')
-  expect(html).toContain('<span class="post-context">wrote:</span>')
+  expect(html).toContain('<a class="post-context" href="/post/2553">continued</a>')
+  expect(html).toContain('<a class="post-context" href="/post/2547">wrote</a>')
   expect(html).not.toContain('class="parent-quote')
 })
 
@@ -236,7 +236,7 @@ test('latest shows approximate age wording only for unread post metadata', () =>
     directedUnreadPostIds: [],
   }} />)
 
-  expect(html).toContain(`title="${postAgeTitle(createdAt)}">wrote recently:</span>`)
+  expect(html).toContain(`title="${postAgeTitle(createdAt)}">wrote recently</a>`)
   expect(html).toContain('id="post-73"')
   expect(html.match(/wrote recently/g)).toHaveLength(1)
 })
@@ -699,7 +699,7 @@ test('for-you labels a descendant that replies to its own author as continued', 
       toMeUnread: true }}
   />)
 
-  expect(html).toMatch(/continued [^<]+ ago:<\/span>/)
+  expect(html).toMatch(/continued [^<]+ ago<\/a>/)
   expect(html).not.toContain('replied to you:')
 })
 
@@ -960,4 +960,26 @@ test('hot and latest keep the to-me tab without a count when it has no unread co
   ]) {
     expect(html).toContain('href="/@">@</a>')
   }
+})
+
+test('feed reply mention metadata links and mentioned separately from the viewer', () => {
+  const parent = { id: 901, user_id: 2, parent_id: null, body: 'parent', handle: 'foo',
+    created_at: '2026-08-19 10:00:00', deleted_at: null, reply_count: 1 }
+  const post = { id: 902, user_id: 3, parent_id: parent.id, parent, body: 'reply', handle: 'writer',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, viewer_mentioned: true, reply_count: 0 }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest"
+    user={{ id: 1, handle: 'reader', mood: '🌞', email: 'reader@example.com', bio: '' }}
+    feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
+  expect(html).toContain('<a class="post-context-link" href="/post/902">and mentioned</a> '
+    + '<span class="post-context-author">you<span class="post-mood">🌞</span></span>:')
+})
+
+test('feed notes keep wrote and mentioned in one permalink', () => {
+  const post = { id: 903, user_id: 3, parent_id: null, body: 'note', handle: 'writer',
+    created_at: '2026-08-19 11:00:00', deleted_at: null, viewer_mentioned: true, reply_count: 0 }
+  const html = renderToStaticMarkup(<PublicFeed path="/latest"
+    user={{ id: 1, handle: 'reader', mood: '🌞', email: 'reader@example.com', bio: '' }}
+    feed={{ posts: [post], page: 1, totalItems: 1, totalPages: 1 }} />)
+  expect(html).toContain('<a class="post-context-link" href="/post/903">wrote and mentioned</a> '
+    + '<span class="post-context-author">you<span class="post-mood">🌞</span></span>')
 })

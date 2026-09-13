@@ -526,21 +526,44 @@ function replyAtPagePost(path: string) {
 }
 
 function contextLabelWithViewerMood(label: React.ReactNode, mood?: string) {
-  if (!mood || typeof label !== 'string') return label
-  const marker = 'replied to you'
-  const markerIndex = label.indexOf(marker)
-  if (markerIndex < 0) return label
-  const youIndex = markerIndex + 'replied to '.length
-  const moodIndex = markerIndex + marker.length
+  if (typeof label !== 'string') return label
+  return label.split(/((?:replied to|mentioned) you)/).map((part, index) => {
+    if (part !== 'replied to you' && part !== 'mentioned you') return part
+    return (
+      <React.Fragment key={index}>
+        {part.slice(0, -3)}
+        <span className="post-context-author">
+          you
+          {mood && <span className="post-mood">{mood}</span>}
+        </span>
+      </React.Fragment>
+    )
+  })
+}
+
+function ContextPermalink({ label, id, title, mood }: {
+  label: React.ReactNode; id: number; title?: string; mood?: string;
+}) {
+  if (typeof label !== 'string' || !/(?:replied to|mentioned) you/.test(label)) {
+    return <a className="post-context" href={`/post/${id}`} title={title}>{label}</a>
+  }
   return (
-    <>
-      {label.slice(0, youIndex)}
-      <span className="post-context-author">
-        you
-        <span className="post-mood">{mood}</span>
-      </span>
-      {label.slice(moodIndex)}
-    </>
+    <span className="post-context" title={title}>
+      {label.split(/((?<=(?:replied to|mentioned) )you)/).map((part, index) => {
+        if (!part) return null
+        if (part === 'you') {
+          return <span key={index} className="post-context-author">you{mood && <span className="post-mood">{mood}</span>}</span>
+        }
+        const text = part.trim()
+        return (
+          <React.Fragment key={index}>
+            {part.startsWith(' ') && ' '}
+            {text && <a href={`/post/${id}`} className="post-context-link">{text}</a>}
+            {part.endsWith(' ') && ' '}
+          </React.Fragment>
+        )
+      })}
+    </span>
   )
 }
 
@@ -634,6 +657,7 @@ export function Post({
   returnPath,
   backHref,
   canonicalTimestamp = false,
+  contextPermalink = false,
   parentHref,
   topHref,
   flatHref,
@@ -652,7 +676,7 @@ export function Post({
   highlightTerms?: string[]; tappable?: boolean; tappableHref?: string;
   tappableParent?: boolean; contextLabel?: React.ReactNode; contextUnread?: boolean; contextParentUnread?: boolean;
   contextDirectedUnread?: boolean; preview?: boolean; returnPath?: string; backHref?: string;
-  canonicalTimestamp?: boolean; parentHref?: string; topHref?: string; flatHref?: string; treeHref?: string;
+  contextPermalink?: boolean; canonicalTimestamp?: boolean; parentHref?: string; topHref?: string; flatHref?: string; treeHref?: string;
   authorPopoverAction?: React.ReactNode; continuationHref?: string; continuationLabel?: string; className?: string;
   topActions?: React.ReactNode; showReadAction?: boolean; hideTopMeta?: boolean; suppressContentWarning?: boolean })
 {
@@ -811,14 +835,11 @@ export function Post({
             )}
           {p.blocked_viewer && <span className="post-context">(user has blocked you)</span>}
           {p.hidden_post && <span className="post-context">(hidden post)</span>}
-          {contextLabel && (canonicalTimestamp
+          {contextLabel && ((canonicalTimestamp || contextPermalink) && !preview
             ? (
               <>
-                <a className="post-context" href={`/post/${p.id}`} title={postPageAgeTitle}>
-                  {typeof contextLabel === 'string'
-                    ? contextLabelWithViewerMood(contextLabel.replace(/:$/, ''), user?.mood)
-                    : contextLabel}
-                </a>
+                <ContextPermalink id={p.id} title={postPageAgeTitle} mood={user?.mood}
+                  label={typeof contextLabel === 'string' ? contextLabel.replace(/:$/, '') : contextLabel} />
                 {!contextTarget && <span className="post-context post-context-punctuation">:</span>}
               </>
             )
@@ -851,13 +872,21 @@ export function Post({
                 }`}
                 title={postPageAgeTitle}
               >
-                {p.viewer_mentioned
-                  ? `${
-                    postPageAge ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording} ` : ' '
-                  }and mentioned you:`
-                  : postPageAge
-                  ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording}:`
-                  : ':'}
+                {p.viewer_mentioned && (canonicalTimestamp || contextPermalink) && !preview
+                  ? (
+                    <>
+                      {postPageAge
+                        ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording} `
+                        : ' '}
+                      <a className="post-context-link" href={`/post/${p.id}`}>and mentioned</a>{' '}
+                      <span className="post-context-author">you{user?.mood && <span className="post-mood">{user.mood}</span>}</span>:
+                    </>
+                  )
+                  : contextLabelWithViewerMood(p.viewer_mentioned
+                    ? `${postPageAge ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording} ` : ' '}and mentioned you:`
+                    : postPageAge
+                    ? `\u00a0${postPageAge.wording === 'just' ? 'just now' : postPageAge.wording}:`
+                    : ':', user?.mood)}
               </span>
             </>
           )}
@@ -1040,7 +1069,10 @@ export function Post({
                             navigationQuery={referenceQuery} referenceData={parentContextTarget.bio_reference} />
                         )}
                       <span className="post-context post-context-punctuation">
-                        {parent.viewer_mentioned ? ' and mentioned you:' : ':'}
+                        {parent.viewer_mentioned && (canonicalTimestamp || contextPermalink) && !preview
+                          ? <>{' '}<a className="post-context-link" href={`/post/${parent.id}`}>and mentioned</a>{' '}
+                            <span className="post-context-author">you{user?.mood && <span className="post-mood">{user.mood}</span>}</span>:</>
+                          : contextLabelWithViewerMood(parent.viewer_mentioned ? ' and mentioned you:' : ':', user?.mood)}
                       </span>
                     </>
                   )}
@@ -1161,7 +1193,7 @@ export function Post({
 type FeedPostProps = React.ComponentProps<typeof Post>
 
 function FeedPost(props: FeedPostProps) {
-  return <Post {...props} />
+  return <Post {...props} contextPermalink />
 }
 
 function HiddenRepliesNotice({ href }: { href?: string }) {
