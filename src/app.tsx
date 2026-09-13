@@ -159,6 +159,7 @@ const logsClientBuild = await Bun.build({
 if (!logsClientBuild.success) throw new Error('Failed to build logs client')
 const logsClient = await logsClientBuild.outputs[0].text()
 const publicScriptPaths = [
+  '/api-docs.js',
   '/keyboard.js',
   '/notifications.js',
   '/infinite-scroll.js',

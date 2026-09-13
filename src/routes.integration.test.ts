@@ -127,6 +127,16 @@ test('web manifest is cached by browsers', async () => {
   })
 })
 
+test('API anchor enhancement is served and included in the documentation', async () => {
+  const response = await request('/api-docs.js?v=1')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('content-type')).toContain('text/javascript')
+  expect(await response.text()).toMatch(/\.open\s*=\s*(true|!0)/)
+  const html = await (await request('/api')).text()
+  expect(html).toContain('src="/api-docs.js?v=1"')
+  expect(html).toContain('id="embedding"')
+})
+
 test('reference follow enhancement is served as immutable JavaScript', async () => {
   const response = await request('/reference-follow.js?v=7')
   expect(response.status).toBe(200)

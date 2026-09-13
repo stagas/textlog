@@ -93,6 +93,7 @@ function mainThreadAsset(request: Request) {
 }
 
 const databaseIndependentPaths = new Set([
+  '/api-docs.js',
   '/keyboard.js',
   '/site.webmanifest',
   '/styles.css',

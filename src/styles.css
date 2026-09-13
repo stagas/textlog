@@ -5672,6 +5672,13 @@ form.report-panel {
   margin: 0;
 }
 
+.profile p.account-share-see-also {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  text-align: center;
+  font-size: var(--font-size-10);
+}
+
 @media (min-width: 901px) {
   .account-share-panels {
     grid-template-columns: repeat(2, minmax(0, 1fr));

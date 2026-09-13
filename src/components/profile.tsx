@@ -227,6 +227,7 @@ export function Profile(
                   </div>
                   {presence}
                 </div>
+                <p className="account-share-see-also">see also <a href="/api#embedding">Embedding</a></p>
                 <div className="account-danger-zone" id="appearance">
                   <div>
                     <strong>Appearance</strong>

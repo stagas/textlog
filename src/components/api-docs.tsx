@@ -298,7 +298,7 @@ curl '${origin}/api/v1/activities/@/conversations?limit=20' \\
           <CodeBlock language="bash">{`curl -O ${origin}/dump.zip`}</CodeBlock>
         </ApiSection>
 
-        <ApiSection title="Embeds" id="embeds">
+        <ApiSection title="Embedding" id="embedding">
           <p>
             Add a read-only {name}{' '}
             card to any website with an iframe. Copy an example and replace the handle, hashtag, or post number. Feed
@@ -447,6 +447,7 @@ curl -X POST ${origin}/api/v1/auth/verify \\
           </CodeBlock>
         </ApiSection>
       </article>
+      <script src="/api-docs.js?v=1" defer />
     </Layout>
   )
 }
@@ -478,7 +479,7 @@ export function EmbedExamples(
         <h1>Live embed examples</h1>
         <p>
           These are the same cross-domain iframes you can place on another website, shown with different themes and
-          accents. See the <a href="/api#embeds">embed documentation</a> for copy-paste code and every option.
+          accents. See the <a href="/api#embedding">embed documentation</a> for copy-paste code and every option.
         </p>
         <div className="embed-example-grid">
           {examples.map(example => (
