@@ -686,7 +686,7 @@ export function Post({
       && Object.values(linkPreviews).some(preview => preview.linkedPost)
       ? Object.fromEntries(Object.entries(linkPreviews).map(([url, preview]) => [url, preview.linkedPost
         ? { ...preview, renderedPostHtml: renderToStaticMarkup(
-          <Post p={preview.linkedPost as PostView} user={user} showParent={false} showReplyCount tappable
+          <Post p={preview.linkedPost as PostView} user={user} showParent={false} tappable
             showReadAction={false} className="internal-post-card" returnPath={linkedPostReturnPath} />,
         ), linkedPostReturnPath }
         : preview]

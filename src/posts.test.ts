@@ -137,6 +137,13 @@ describe('post persistence', () => {
     expect(linkify('escaped \\&123 and word&123 and old ~123', {}, [], 'https://textlog.test'))
       .toBe('escaped \\&amp;123 and word&amp;123 and old ~123')
   })
+  test('displays absolute links to this site as numerical post references', () => {
+    expect(linkify('https://textlog.test/post/123?from=%2Flatest#post-123', {}, [], 'https://textlog.test'))
+      .toBe('<a href="https://textlog.test/post/123?from=%2Flatest#post-123" class="raw-link" title="https://textlog.test/post/123?from=%2Flatest#post-123" rel="nofollow ugc">&amp;123</a>')
+    expect(linkify('https://other.test/post/123', {}, [], 'https://textlog.test')).not.toContain('&amp;123')
+    expect(linkify('/post/123', {}, [], 'https://textlog.test')).not.toContain('&amp;123')
+    expect(linkify('`https://textlog.test/post/123`', {}, [], 'https://textlog.test')).not.toContain('&amp;123')
+  })
   test('renders single and double Markdown bold and underline markers in posts', () => {
     expect(linkify('*bold* and **also bold**')).toBe('<strong>bold</strong> and <strong>also bold</strong>')
     expect(linkify('_underlined_ and __also underlined__')).toBe('<u>underlined</u> and <u>also underlined</u>')
@@ -266,13 +273,13 @@ describe('post persistence', () => {
       )
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test'))
       .toBe(
-        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc">&amp;1</a>',
       )
     expect(linkify('[post](https://textlog.test/post/1)', {}, [], 'https://textlog.test'))
       .toBe('<a href="https://textlog.test/post/1" title="https://textlog.test/post/1" rel="nofollow ugc">post</a>')
     expect(linkify('textlog.cc/post/1', {}, [], 'https://textlog.cc'))
       .toBe(
-        '<a href="https://textlog.cc/post/1" class="raw-link" title="https://textlog.cc/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+        '<a href="https://textlog.cc/post/1" class="raw-link" title="https://textlog.cc/post/1" rel="nofollow ugc">&amp;1</a>',
       )
   })
   test('normalizes literal APP_URL links when APP_URL has a trailing slash', () => {
@@ -282,7 +289,7 @@ describe('post persistence', () => {
       )
     expect(linkify('https://textlog.test/post/1', {}, [], 'https://textlog.test/'))
       .toBe(
-        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc"><span class="raw-link-rest">/post/1</span></a>',
+        '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc">&amp;1</a>',
       )
   })
   test('escapes Markdown link labels and destinations', () => {

@@ -4123,7 +4123,7 @@ test('Post uses the full Post component for internal link hover cards', () => {
   expect(card).toContain('The linked note')
   expect(card).toContain('<code class="code-fence execution-output ascii-art">result: 42</code>')
   expect(card).not.toContain('post-reply-link')
-  expect(card).toContain('>more</a>')
+  expect(card).not.toContain('>more</a>')
   expect(card).not.toContain('>read</a>')
 })
 

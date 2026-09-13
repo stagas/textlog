@@ -14,6 +14,30 @@ describe('post bodies', () => {
     expect(normalizePostBody('one\r\ntwo\rthree')).toBe('one\ntwo\nthree')
   })
 
+  test('preserves relative post links', () => {
+    const body = 'See /post/123, (/post/456). /post/789?from=%2Flatest#post-789!'
+    expect(normalizePostBody(body)).toBe(body)
+  })
+
+  test('condenses links to this site while preserving external links', () => {
+    const previous = Bun.env.APP_URL
+    Bun.env.APP_URL = 'https://textlog.test'
+    try {
+      expect(normalizePostBody('https://textlog.test/post/123?from=%2Fall#post-123, https://other.test/post/456'))
+        .toBe('&123, https://other.test/post/456')
+      expect(normalizePostBody('https://textlog.test/post/123/edit'))
+        .toBe('https://textlog.test/post/123/edit')
+      const code = '`https://textlog.test/post/123`\n```\nhttps://textlog.test/post/456\n```'
+      expect(normalizePostBody(code)).toBe(code)
+      expect(normalizePostBody('[post](https://textlog.test/post/789)'))
+        .toBe('[post](https://textlog.test/post/789)')
+    }
+    finally {
+      if (previous === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previous
+    }
+  })
+
   test('still rejects empty and genuinely oversized bodies', () => {
     expect(validPostBody('   \n')).toBe(false)
     expect(validPostBody('x'.repeat(501))).toBe(false)

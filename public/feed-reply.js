@@ -201,6 +201,7 @@
       return
     const replyLink = event.target.closest?.('.post-page-thread .post-reply-link')
     const hitArea = event.target.closest?.('.post-page-thread .post-hit-area')
+    if (hitArea?.closest('.post')?.classList.contains('internal-post-card')) return
     const post = replyLink?.closest('.post')
       || hitArea?.closest('.post[data-reply-href], .post[data-thread-locked]')
     if (!post) return
