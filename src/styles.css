@@ -6163,16 +6163,16 @@ form.report-panel {
 
 #delete-account {
   position: relative;
-  border-top: 2px solid var(--error-ink);
+  margin-top: 0;
+  padding: var(--space-7) var(--space-4) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--error-ink) 40%, var(--soft));
+  background: color-mix(in srgb, var(--error-ink) 8%, transparent);
 }
 
 .account-danger-zone > .danger-zone-label {
   position: absolute;
-  top: 0;
-  left: 50%;
-  padding-inline: var(--space-2);
-  transform: translate(-50%, -50%);
-  background: var(--bg);
+  top: var(--space-4);
+  left: var(--space-4);
   color: var(--error-ink);
   font-size: var(--font-size-9);
   font-weight: 700;
