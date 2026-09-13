@@ -807,7 +807,21 @@ export function registerPostsRoutes(app: Hono) {
     const body = normalizePostBody(f.body || '')
     if (!user) {
       if (!Number.isInteger(parentId) || parentId < 1) return c.text('Not found', 404)
-      if (!validPostBody(body)) return c.text(postBodyValidationMessage(body), 400)
+      if (!validPostBody(body)) {
+        const answeredQuizIds = [...(anonymousQuizAnswers()?.keys() || [])]
+        const detail = await databaseService().call('posts.detail', { id: replyPageId, viewerId: -1,
+          answeredQuizIds })
+        if (detail.status !== 'ready') return c.text('Not found', 404)
+        const replies = await databaseService().call('posts.threadReplies', { parentId: replyPageId, viewerId: -1,
+          answeredQuizIds })
+        const replyTo = replyPageId === parentId ? undefined : replies.find(reply => reply.id === parentId)
+        if (replyPageId !== parentId && !replyTo) return c.text('Not found', 404)
+        return page(
+          <PublicThread post={detail.post} replies={replies} returnPath={returnPath} replyTo={replyTo}
+            body={body} error={postBodyValidationMessage(body)} />,
+          400,
+        )
+      }
       return redirect('/enter?next=' + encodeURIComponent('/pending-post'),
         pendingPostCookie(body, returnPath || `/post/${replyPageId}`, parentId, replyPageId))
     }

@@ -2073,6 +2073,23 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const quotedReply = database.query(
     'INSERT INTO posts(user_id,parent_id,body,created_at) VALUES(?,?,?,datetime(\'now\')) RETURNING id',
   ).get(alice.id, post.id, 'A reply quoting the original post') as { id: number }
+  for (const cookie of [undefined, aliceCookie]) {
+    for (const parentId of [post.id, quotedReply.id]) {
+      const emptyReply = await request(`/post/${parentId}/reply`, {
+        method: 'POST',
+        cookie,
+        form: { body: '   ', reply_page_id: String(post.id), from: '/all' },
+      })
+      expect(emptyReply.status).toBe(400)
+      expect(emptyReply.headers.get('content-type')).toContain('text/html')
+      const html = await emptyReply.text()
+      expect(html).toContain('status-message status-error')
+      expect(html).toContain('The note cannot be empty')
+      expect(html).toContain(`action="/post/${parentId}/reply#post-${parentId}"`)
+      expect(html).toContain('name="from" value="/all"')
+      expect(html).toContain('A route-level integration post')
+    }
+  }
   const replyPreview = await request(`/post/${quotedReply.id}/reply`, {
     method: 'POST',
     cookie: aliceCookie,

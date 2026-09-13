@@ -7,7 +7,7 @@ import { HiddenRepliesNotice, ReplyComposer } from './reply'
 import { ThreadReplySlot } from './thread-reply-slot'
 
 export function PublicThread(
-  { post, replies = [], social, returnPath, topHref, flatHref, treeHref, flat = false, showForm = true, replyTo }: {
+  { post, replies = [], social, returnPath, topHref, flatHref, treeHref, flat = false, showForm = true, replyTo, body = '', error }: {
     post: PostView
     replies?: PostView[]
     social?: { title?: string; description: string; image: string; url: string }
@@ -17,6 +17,8 @@ export function PublicThread(
     treeHref?: string
     flat?: boolean
     showForm?: boolean
+    body?: string
+    error?: string
     replyTo?: PostView
   },
 ) {
@@ -33,7 +35,8 @@ export function PublicThread(
             topHref={topHref} flatHref={flatHref} treeHref={treeHref} shareAction />
         </div>
         {showForm && !post.thread_locked && !replyTo && (
-          <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath} />
+          <ReplyComposer user={null} replyParent={post} replyPageId={post.id} returnPath={returnPath}
+            body={body} error={error} />
         )}
         {showForm && post.thread_locked && !replyTo && <ThreadReplySlot locked />}
         {post.replies_hidden && <HiddenRepliesNotice />}
@@ -46,7 +49,7 @@ export function PublicThread(
                 : (
                   <ThreadReplySlot depth={depth}>
                     <ReplyComposer user={null} replyParent={replyTo} replyPageId={post.id} returnPath={returnPath}
-                      inline />
+                      body={body} error={error} inline />
                   </ThreadReplySlot>
                 )
               : undefined} />
