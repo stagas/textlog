@@ -2938,6 +2938,37 @@ test('signed-in users can follow deeply nested backlinks without a navigation ch
   expect(response.headers.get('location')).toBeNull()
 })
 
+test('private post URLs suppress parents and replies and guard cached OG images', async () => {
+  const author = database.query(`INSERT INTO users(handle,email,password,handle_chosen_at)
+    VALUES('private_route_author','private-route@example.com','x',CURRENT_TIMESTAMP) RETURNING id`).get() as { id: number }
+  const parent = database.query(`INSERT INTO posts(user_id,body) VALUES(?,'private-route-parent') RETURNING id`)
+    .get(author.id) as { id: number }
+  const post = database.query(`INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,'private-route-secret') RETURNING id`)
+    .get(author.id, parent.id) as { id: number }
+  database.query(`INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,'private-route-reply')`).run(author.id, post.id)
+  expect((await request(`/post/${post.id}/og.png`)).status).toBe(200)
+  database.query("INSERT INTO post_hashtags(post_id,tag) VALUES(?,'private')").run(post.id)
+  for (const suffix of ['', '?reply=1', '?flat=1']) {
+    const result = await request(`/post/${post.id}${suffix}`, { acceptHtml: true })
+    expect(result.status).toBe(200)
+    const html = await result.text()
+    expect(html).toContain('(private message)')
+    expect(html).toContain('<link rel="stylesheet" href="/styles.css')
+    expect(html).toContain('<header')
+    expect(html).toContain('<main id="main-content">')
+    expect(html).toContain(`<article class="post" id="post-${post.id}">`)
+    for (const text of ['private-route-secret', 'private-route-parent', 'private-route-reply']) expect(html).not.toContain(text)
+    expect(html).not.toContain(`/post/${post.id}/reply`)
+  }
+  expect((await request(`/post/${post.id}/og.png`)).status).toBe(404)
+  const token = 'private-route-author-session'
+  const now = Date.now()
+  insertSession(database, token, author.id, now + SESSION_LIFETIME_MS, now, 'test')
+  const image = await request(`/post/${post.id}/og.png`, { cookie: `textlog=${token}` })
+  expect(image.status).toBe(200)
+  expect(image.headers.get('cache-control')).toBe('private, no-store')
+})
+
 test('a nested navigation challenge gates every subsequent page for the resolved socket IP', async () => {
   const nested =
     '/?from=%2Fpost%2F1%3Ffrom%3D%252Fpost%252F2%253Ffrom%253D%25252Fpost%25252F3%25253Ffrom%25253D%2525252Flatest'

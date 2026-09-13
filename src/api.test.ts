@@ -751,3 +751,35 @@ describe('public API', () => {
     await Promise.all(responses.map(response => response.body!.cancel()))
   })
 })
+
+test('private posts hide content, replies, previews and OG data from unauthorized readers', async () => {
+  const { app, database } = fixture()
+  database.run(`INSERT INTO post_hashtags VALUES(1,'private');
+    INSERT INTO post_mentions VALUES(1,2);
+    ALTER TABLE posts ADD COLUMN moderation_category TEXT;
+    ALTER TABLE post_link_previews ADD COLUMN linked_post_id INTEGER;
+    INSERT INTO post_link_previews(post_id,url,image_url,title,linked_post_id)
+      VALUES(3,'http://localhost/post/1','http://localhost/post/1/og.png','confidential preview',1);`)
+  const detail = await executeDatabaseDomain(database, 'posts.detail', { id: 1, viewerId: -1 })
+  expect(detail).toEqual({ status: 'private' })
+  expect(await executeDatabaseDomain(database, 'posts.detail', { id: 2, viewerId: -1 }))
+    .toEqual({ status: 'private' })
+  expect(await executeDatabaseDomain(database, 'posts.ogData', { id: 1 })).toBeNull()
+  expect(await executeDatabaseDomain(database, 'posts.ogData', { id: 2 })).toBeNull()
+  expect(await executeDatabaseDomain(database, 'posts.ogData', { id: 1, viewerId: 99 })).toBeNull()
+  expect(await executeDatabaseDomain(database, 'posts.ogData', { id: 1, viewerId: 2 }))
+    .toMatchObject({ body: 'hello #notes @bob' })
+  expect(await executeDatabaseDomain(database, 'posts.replyParent', { id: 1, userId: 99 }))
+    .toEqual({ status: 'forbidden' })
+  expect((await request(app, '/api/v1/posts/1')).status).toBe(404)
+  expect((await request(app, '/api/v1/posts/2')).status).toBe(404)
+  const publicPost = await (await request(app, '/api/v1/posts/3')).json() as any
+  expect(JSON.stringify(publicPost)).not.toContain('confidential preview')
+  const token = 'private-recipient'
+  const now = Date.now()
+  database.query(`INSERT INTO sessions(token_hash,user_id,expires_at,created_at,user_agent,last_used_at)
+    VALUES(?,?,?,?,?,?)`).run(sessionHash(token), 2, now + 60_000, now, 'test', now)
+  expect((await request(app, '/api/v1/posts/1', { headers: { authorization: `Bearer ${token}` } })).status).toBe(200)
+  expect((await request(app, '/api/v1/posts/2', { headers: { authorization: `Bearer ${token}` } })).status).toBe(200)
+  database.close()
+})

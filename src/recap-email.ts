@@ -1,3 +1,4 @@
+import { canReadPrivatePost, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { appName } from './brand'
 import { markdownPlainText } from './markdown'
@@ -132,7 +133,7 @@ function recapNotes(database: Database) {
   const placeholders = RECAP_POPULAR_NOTE_IDS.map(() => '?').join(',')
   const notes = database.query(`SELECT p.id,p.body,u.handle FROM posts p JOIN users u ON u.id=p.user_id
     WHERE p.id IN (${placeholders}) AND p.deleted_at IS NULL`).all(...RECAP_POPULAR_NOTE_IDS) as RecapNote[]
-  const byId = new Map(notes.map(note => [note.id, note]))
+  const byId = new Map(notes.filter(note => canReadPrivatePost(database, note.id)).map(note => [note.id, note]))
   return RECAP_POPULAR_NOTE_IDS.flatMap(id => byId.has(id) ? [byId.get(id)!] : [])
 }
 
@@ -140,7 +141,7 @@ function recapV2Notes(database: Database) {
   const notes = database.query(`WITH RECURSIVE descendants(root_id,id,deleted_at) AS (
       SELECT p.id,p.id,p.deleted_at FROM posts p WHERE p.parent_id IS NULL
       UNION ALL SELECT descendants.root_id,reply.id,reply.deleted_at FROM posts reply
-        JOIN descendants ON reply.parent_id=descendants.id
+        JOIN descendants ON reply.parent_id=descendants.id WHERE ${privatePostVisible(-1, 'reply.id')}
     ), ranked AS (
       SELECT root_id,sum(CASE WHEN id!=root_id AND deleted_at IS NULL THEN 1 ELSE 0 END) replies
       FROM descendants GROUP BY root_id
@@ -150,7 +151,7 @@ function recapV2Notes(database: Database) {
     WHERE ranked.replies>0 AND p.id NOT IN (${RECAP_V2_EXCLUDED_NOTE_IDS.join(',')})
       AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       AND NOT EXISTS (SELECT 1 FROM post_hashtags ph WHERE ph.post_id=p.id
-        AND ph.tag IN ('whisper','meta','tlog','textlog'))
+        AND ph.tag IN ('private','whisper','meta','tlog','textlog'))
     ORDER BY ranked.replies DESC,p.created_at DESC LIMIT 8`).all() as Array<RecapNote & { reply_count: number }>
   return notes.map(note => {
     const replies = database.query(`WITH RECURSIVE thread(id,user_id,body,created_at,deleted_at) AS (
@@ -158,7 +159,7 @@ function recapV2Notes(database: Database) {
       UNION ALL SELECT reply.id,reply.user_id,reply.body,reply.created_at,reply.deleted_at FROM posts reply
         JOIN thread ON reply.parent_id=thread.id
     ) SELECT thread.id,thread.body,u.handle FROM thread JOIN users u ON u.id=thread.user_id
-      WHERE thread.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
+      WHERE ${privatePostVisible(-1, 'thread.id')} AND thread.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL
       ORDER BY thread.created_at DESC,thread.id DESC LIMIT 2`).all(note.id) as RecapReply[]
     return { id: note.id, body: note.body, handle: note.handle, replyCount: note.reply_count,
       replies: replies.reverse() }

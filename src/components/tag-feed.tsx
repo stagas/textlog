@@ -47,7 +47,7 @@ export function TagFeed(
               </a>
             </h1>
           </div>
-          {user
+          {tag !== 'private' && (user
             ? (
               <div className="profile-action tag-handle-actions">
                 {!blocked && (
@@ -64,7 +64,7 @@ export function TagFeed(
                 </form>
               </div>
             )
-            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>}
+            : <a className="button" href={enterHref()} rel="nofollow">enter to follow</a>)}
         </div>
         {!!aliases.length && (
           <p className="tag-aliases">{aliases.map(alias => `#${alias.displayName || alias.tag}`).join(', ')}</p>

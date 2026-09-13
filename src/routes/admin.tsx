@@ -256,7 +256,7 @@ export function registerAdminRoutes(app: Hono) {
     const status = statusValue as 'open' | 'resolved' | 'dismissed'
     const reportPage = currentPage(c.req.query('page'))
     await flushIpRequests()
-    const data = await databaseService().call('admin.dashboard', { status, page: reportPage })
+    const data = await databaseService().call('admin.dashboard', { status, page: reportPage, viewerId: signedIn.id })
     const { stats, total, reports, actions, suspended, illegalReports, ipRequests, bannedUsernames, deletions } = data
     const outOfRange = paginationRedirect(reportPage, total, `/admin?status=${status}`)
     if (outOfRange) return outOfRange
@@ -332,7 +332,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id, viewerId: signedIn.id }) : null
     if (!post) return c.text('Not found', 404)
     const returnTo = c.req.query('from')
       ? safeLocalPath(c.req.query('from'), c.req.url, `/post/${id}`)
@@ -347,7 +347,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id, viewerId: signedIn.id }) : null
     if (!post) return c.text('Not found', 404)
     const returnTo = c.req.query('from')
       ? safeLocalPath(c.req.query('from'), c.req.url, `/post/${id}`)
@@ -391,7 +391,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id, viewerId: signedIn.id }) : null
     if (!post) return c.text('Not found', 404)
     const requestedReturnTo = c.req.query('from')
     const returnTo = requestedReturnTo
@@ -405,7 +405,7 @@ export function registerAdminRoutes(app: Hono) {
     if (!signedIn) return redirect('/enter?next=' + encodeURIComponent(c.req.path))
     if (!isAdmin(signedIn)) return c.text('Forbidden', 403)
     const id = Number(c.req.param('id'))
-    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id }) : null
+    const post = Number.isInteger(id) ? await databaseService().call('admin.post', { id, viewerId: signedIn.id }) : null
     if (!post) return c.text('Not found', 404)
     const f = await form(c.req.raw)
     const source = f.source || ''

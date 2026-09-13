@@ -40,7 +40,7 @@ const projectedVisibleDescendant = `EXISTS (SELECT 1 FROM post_ancestors ancestr
   AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
     WHERE ph.post_id=d.id AND bh.user_id=$viewer))`
 const projectedWhisperThread = `EXISTS (SELECT 1 FROM post_hashtags whisper_tag
-  WHERE whisper_tag.tag='whisper' AND (whisper_tag.post_id=p.id OR EXISTS
+  WHERE whisper_tag.tag IN ('whisper','private') AND (whisper_tag.post_id=p.id OR EXISTS
     (SELECT 1 FROM post_ancestors whisper_ancestry
       WHERE whisper_ancestry.post_id=p.id AND whisper_ancestry.ancestor_id=whisper_tag.post_id)))`
 
@@ -69,7 +69,7 @@ function projectedEvents(sql: string, database: Database) {
   }
   // Recursive whisper ancestry dominates a full unread scan. When the instance has no whisper-tagged post, all
   // three whisper predicates are provably false and can be removed before SQLite prepares the count query.
-  if (!database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()) {
+  if (!database.query('SELECT 1 FROM post_hashtags WHERE tag IN (\'whisper\',\'private\') LIMIT 1').get()) {
     projected = projected.replaceAll(whisperThreadRelevantToViewer(), '0')
       .replaceAll(whisperThreadTargetsViewer(), '0')
       .replaceAll(isWhisperThread(), '0')

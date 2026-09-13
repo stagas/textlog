@@ -1,3 +1,4 @@
+import { privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import webpush from 'web-push'
 import { ADMIN_EMAILS } from './admin'
@@ -269,6 +270,7 @@ export async function sendPushForPost(postId: number, actorId: number, actorHand
       WHERE ph.post_id=? AND bh.user_id=ps.user_id)
     AND (NOT ${mutedThreadForViewer('ps.user_id', postId)} OR EXISTS (
       SELECT 1 FROM post_mentions muted_mention WHERE muted_mention.post_id=? AND muted_mention.user_id=ps.user_id))
+    AND ${privatePostVisible('ps.user_id', postId)}
     AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
       OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
         (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS

@@ -1,3 +1,4 @@
+import { canReadPrivatePost, isPrivateThread, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes, randomInt } from 'node:crypto'
 import { statSync } from 'node:fs'
@@ -52,7 +53,7 @@ import { loadBioReferenceData, loadThreadReplies } from './posts'
 import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
-import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
+import { archivePrivacyIsCurrent, createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 import { RECAP_POPULAR_NOTE_IDS, recapEmail, recapEmailV2 } from './recap-email'
 import { searchExpression, searchPeople, searchPosts, searchTags, searchTerms } from './search'
 import { sitemapIndex, sitemapSection } from './seo'
@@ -326,7 +327,7 @@ function publicFeedProjection(database: Database) {
   if (cached?.generation === generation) return cached
   const conversationIds = (database.query(`SELECT h.conversation_id FROM conversation_heads h
     WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
-      WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+      WHERE ph.post_id=h.conversation_id AND ph.tag IN ('whisper','private'))
     AND ${excludesMetaPosts('h.conversation_id')}
     ORDER BY h.latest_post_id DESC,h.conversation_id DESC`).all() as Array<{ conversation_id: number }>)
     .map(row => row.conversation_id)
@@ -605,7 +606,7 @@ function viewerIsModerator(database: Database, viewerId: number) {
 }
 
 function hiddenAuthorVisibility(database: Database, viewerId: number, userAlias = 'u') {
-  return viewerIsModerator(database, viewerId) ? '1' : excludesDroppedUsernameUsers(database, userAlias)
+  return `(${privatePostVisible(viewerId)} AND ${viewerIsModerator(database, viewerId) ? '1' : excludesDroppedUsernameUsers(database, userAlias)})`
 }
 
 function groupPostsByConversation<T extends { id: number }>(database: Database, posts: T[]) {
@@ -799,8 +800,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'maintenance.publicArchive': {
       const { path, now } = input as DatabaseDomainInput<'maintenance.publicArchive'>
       const date = new Date(now)
-      if (publicArchiveIsCurrent(path, date)) return null as DatabaseDomainOutput<K>
-      return await createPublicArchive(database, path, date) as DatabaseDomainOutput<K>
+      if (publicArchiveIsCurrent(path, date) && archivePrivacyIsCurrent(database, path)) return null as DatabaseDomainOutput<K>
+      let result
+      do { result = await createPublicArchive(database, path, date) }
+      while (!archivePrivacyIsCurrent(database, path))
+      return result as DatabaseDomainOutput<K>
     }
     case 'maintenance.recapPreview': {
       const { requestUrl } = input as DatabaseDomainInput<'maintenance.recapPreview'>
@@ -1095,7 +1099,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return database.query(`WITH canonical_tags AS (
         SELECT DISTINCT ph.post_id,${canonical} tag FROM post_hashtags ph
       ) SELECT ct.tag,${displayName} displayName,count(*) count FROM canonical_tags ct JOIN posts p ON p.id=ct.post_id
-        WHERE p.deleted_at IS NULL AND ct.tag NOT IN ('meta','whisper','launch')
+        WHERE p.deleted_at IS NULL AND ct.tag NOT IN ('meta','whisper','private','launch') AND NOT ${isPrivateThread()}
         GROUP BY ct.tag ORDER BY count DESC,ct.tag LIMIT ?`)
         .all(limit) as DatabaseDomainOutput<K>
     }
@@ -1440,12 +1444,12 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'admin.dashboard': {
-      const { status, page } = input as DatabaseDomainInput<'admin.dashboard'>
+      const { status, page, viewerId = -1 } = input as DatabaseDomainInput<'admin.dashboard'>
       const total = (database.query('SELECT count(*) count FROM reports WHERE status=?').get(status) as {
         count: number
       }).count
       const reports = database.query(`SELECT r.id,r.reason,r.status,r.created_at,r.resolved_at,r.post_id,
-        p.body post_body,p.deleted_at post_deleted_at,p.user_id author_id,author.handle author_handle,
+        CASE WHEN ${privatePostVisible(viewerId)} THEN p.body ELSE '(private message)' END post_body,p.deleted_at post_deleted_at,p.user_id author_id,author.handle author_handle,
         reporter.handle reporter_handle,resolver.handle resolver_handle
         FROM reports r JOIN posts p ON p.id=r.post_id JOIN users author ON author.id=p.user_id
         JOIN users reporter ON reporter.id=r.reporter_id LEFT JOIN users resolver ON resolver.id=r.resolved_by
@@ -1503,7 +1507,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return true as DatabaseDomainOutput<K>
     }
     case 'admin.post': {
-      const { id } = input as DatabaseDomainInput<'admin.post'>
+      const { id, viewerId = -1 } = input as DatabaseDomainInput<'admin.post'>
+      if (!canReadPrivatePost(database, id, viewerId)) return null as DatabaseDomainOutput<K>
       return (database.query(`SELECT p.id,p.user_id,p.parent_id,p.body,p.created_at,p.deleted_at,
         p.moderation_category,p.moderation_score,u.handle
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id)
@@ -1849,6 +1854,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.detail': {
       const { id, viewerId } = input as DatabaseDomainInput<'posts.detail'>
+      if (!canReadPrivatePost(database, id, viewerId)) {
+        const exists = database.query('SELECT 1 FROM posts WHERE id=?').get(id)
+        return { status: exists ? 'private' : 'not_found' } as DatabaseDomainOutput<K>
+      }
       const hiddenAuthorVisibility = viewerIsModerator(database, viewerId)
         ? '1'
         : excludesDroppedUsernameUsers(database)
@@ -1893,6 +1902,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const post = database.query(`SELECT p.*,u.handle
         FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(id) as PostView | null
       if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (!canReadPrivatePost(database, id, userId)) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       if (post.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       const parent = post.parent_id
         ? database.query(`SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?`)
@@ -1905,6 +1915,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const post = database.query('SELECT p.*,u.handle,u.bio FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id=?')
         .get(id) as PostView | null
       if (!post) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (!canReadPrivatePost(database, id, userId)) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       const blocked = database.query(`SELECT 1 FROM blocks WHERE
         (blocker_id=? AND blocked_id=?) OR (blocker_id=? AND blocked_id=?)`)
         .get(userId, post.user_id, post.user_id, userId)
@@ -1912,7 +1923,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return { status: 'ready', post: enrichPosts(database, [post], userId)[0] } as DatabaseDomainOutput<K>
     }
     case 'posts.ogData': {
-      const { id } = input as DatabaseDomainInput<'posts.ogData'>
+      const { id, viewerId = -1 } = input as DatabaseDomainInput<'posts.ogData'>
+      if (!canReadPrivatePost(database, id, viewerId)) return null as DatabaseDomainOutput<K>
       return (database.query(`SELECT p.body,p.moderation_category,u.handle FROM posts p JOIN users u ON u.id=p.user_id
         WHERE p.id=? AND p.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)}`).get(id)
         || null) as DatabaseDomainOutput<K>
@@ -1982,6 +1994,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     }
     case 'posts.votePoll': {
       const { postId, optionId, userId } = input as DatabaseDomainInput<'posts.votePoll'>
+      if (!canReadPrivatePost(database, postId, userId)) return 'not_found' as DatabaseDomainOutput<K>
       const result = voteInPoll(database, postId, optionId, userId)
       if (result === 'ready') {
         // Poll totals are rendered into cached feeds for everyone who has voted, so a new vote can stale
@@ -2603,6 +2616,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const request = input as DatabaseDomainInput<'api.tagRelationshipMutation'>
       const { userId, action } = request
       const tag = canonicalTag(database, request.tag)
+      if (tag === 'private') return { changed: false } as DatabaseDomainOutput<K>
       let changed = false
       if (action === 'follow') {
         changed = database.query(
@@ -2685,6 +2699,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (!draft || draft.body !== request.body || draft.parent_id !== request.parentId) {
         return { status: 'not_found' } as DatabaseDomainOutput<K>
       }
+      if (draft.parent_id !== null && !canReadPrivatePost(database, draft.parent_id, request.userId)) {
+        return { status: 'not_found' } as DatabaseDomainOutput<K>
+      }
       if (draft.parent_id !== null && !database.query('SELECT 1 FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(draft.parent_id)) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (draft.parent_id !== null && isThreadLocked(database, draft.parent_id)) {
@@ -2716,6 +2733,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const { userId, body, parentId, origin, translation, moderationCategory, moderationScore, executionOutput,
         pendingKey } = input as DatabaseDomainInput<'api.createPost'>
       if (parentId !== null) {
+        if (!canReadPrivatePost(database, parentId, userId)) return { status: 'not_found' } as DatabaseDomainOutput<K>
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')
           .get(parentId) as { user_id: number } | null
         if (!parent) return { status: 'not_found' } as DatabaseDomainOutput<K>
@@ -2745,6 +2763,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const existing = database.query('SELECT user_id,parent_id FROM posts WHERE id=? AND deleted_at IS NULL')
         .get(id) as { user_id: number; parent_id: number | null } | null
       if (!existing) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (!canReadPrivatePost(database, id, userId)) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       if (existing.user_id !== userId && !moderator) return { status: 'forbidden' } as DatabaseDomainOutput<K>
       updatePost(database, id, body, translation ?? null, moderationCategory ?? null, moderationScore ?? null,
         executionOutput ?? null)
@@ -3246,7 +3265,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         AND (NOT ${mutedThreadForViewer('ps.user_id', postId)} OR EXISTS (
           SELECT 1 FROM post_mentions muted_mention WHERE muted_mention.post_id=?
             AND muted_mention.user_id=ps.user_id))
-        AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
+        AND ${privatePostVisible('ps.user_id', postId)}
+    AND ((ps.notify_latest=1 AND ps.user_id!=? AND ${excludesWhisperPosts(postId)})
           OR (ps.notify_following_notes=1 AND ps.user_id!=? AND ((NOT ${isWhisperThread(postId)} AND (EXISTS
           (SELECT 1 FROM follows vf WHERE vf.follower_id=ps.user_id AND vf.following_id=?) OR EXISTS
           (SELECT 1 FROM post_hashtags ph JOIN hashtag_follows hf ON hf.tag=ph.tag
@@ -3389,7 +3409,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const state = viewerId >= 0 ? latestUnreadPostState(viewerId, database) : []
       // Whisper ancestry checks are recursive and dominate large public-feed scans. Most installations and most
       // generations have no whisper rows at all, so prove that once and remove thousands of recursive subqueries.
-      const excludesWhispers = database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()
+      const excludesWhispers = database.query('SELECT 1 FROM post_hashtags WHERE tag IN (\'whisper\',\'private\') LIMIT 1').get()
         ? excludesWhisperPosts()
         : '1'
       const blockViewerId = viewerIsModerator(database, viewerId) ? -1 : viewerId
@@ -3410,7 +3430,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         : null
       const latestFilters = viewerId < 0
         ? `NOT EXISTS (SELECT 1 FROM post_hashtags ph
-            WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+            WHERE ph.post_id=h.conversation_id AND ph.tag IN ('whisper','private'))
           AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
             JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
             AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
@@ -3480,7 +3500,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
           if (viewerId < 0) {
             return seededOrder((database.query(`SELECT h.conversation_id FROM conversation_heads h
             WHERE NOT EXISTS (SELECT 1 FROM post_hashtags ph
-              WHERE ph.post_id=h.conversation_id AND ph.tag='whisper')
+              WHERE ph.post_id=h.conversation_id AND ph.tag IN ('whisper','private'))
             AND EXISTS (SELECT 1 FROM post_conversations pc JOIN posts p ON p.id=pc.post_id
               JOIN users u ON u.id=p.user_id WHERE pc.conversation_id=h.conversation_id
               AND p.deleted_at IS NULL AND ${hiddenAuthorVisibility(database, viewerId)})
@@ -4181,10 +4201,10 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const request = input as DatabaseDomainInput<'tags.page'>
       const { viewerId, page, pageSize, tab } = request
       const tag = canonicalTag(database, request.tag)
-      const following = viewerId >= 0 && !!database.query(
+      const following = tag !== 'private' && viewerId >= 0 && !!database.query(
         'SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?',
       ).get(viewerId, tag)
-      const blocked = viewerId >= 0 && !!database.query(
+      const blocked = tag !== 'private' && viewerId >= 0 && !!database.query(
         'SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?',
       ).get(viewerId, tag)
       const taggedPosts = blocked || tab === 'followers' ? [] : database.query(
@@ -4352,7 +4372,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? database.query(`SELECT p.*,u.handle,u.bio FROM posts p
         JOIN users u ON u.id=p.user_id WHERE p.id=? AND p.deleted_at IS NULL`).get(postId) as PostView | null
         : null
-      if (!raw) return { status: 'not_found' } as DatabaseDomainOutput<K>
+      if (!raw || !canReadPrivatePost(database, postId, userId)) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (raw.user_id === userId) return { status: 'own_post' } as DatabaseDomainOutput<K>
       const blocked = database.query(`SELECT 1 FROM blocks WHERE (blocker_id=? AND blocked_id=?)
         OR (blocker_id=? AND blocked_id=?)`).get(userId, raw.user_id, raw.user_id, userId)
@@ -4368,6 +4388,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const request = input as DatabaseDomainInput<'interactions.toggleTagFollow'>
       const { userId } = request
       const tag = canonicalTag(database, request.tag)
+      if (tag === 'private') return { followed: false } as DatabaseDomainOutput<K>
       const exists = !!database.query('SELECT 1 FROM hashtag_follows WHERE user_id=? AND tag=?').get(userId, tag)
       if (exists) database.query('DELETE FROM hashtag_follows WHERE user_id=? AND tag=?').run(userId, tag)
       else {database.query(
@@ -4382,6 +4403,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const request = input as DatabaseDomainInput<'interactions.toggleTagBlock'>
       const { userId } = request
       const tag = canonicalTag(database, request.tag)
+      if (tag === 'private') return { blocked: false } as DatabaseDomainOutput<K>
       const exists = !!database.query('SELECT 1 FROM blocked_hashtags WHERE user_id=? AND tag=?').get(userId, tag)
       database.transaction(() => {
         if (exists) database.query('DELETE FROM blocked_hashtags WHERE user_id=? AND tag=?').run(userId, tag)

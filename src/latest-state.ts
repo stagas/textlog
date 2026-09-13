@@ -14,7 +14,7 @@ function usesNewReads(database: Database) {
 }
 
 function excludesExistingWhispers(database: Database) {
-  return database.query('SELECT 1 FROM post_hashtags WHERE tag=\'whisper\' LIMIT 1').get()
+  return database.query('SELECT 1 FROM post_hashtags WHERE tag IN (\'whisper\',\'private\') LIMIT 1').get()
     ? excludesWhisperPosts()
     : '1'
 }

@@ -1,3 +1,4 @@
+import { isPrivateThread } from './private'
 import type { Database } from 'bun:sqlite'
 import { META_HASHTAGS } from './meta-thread'
 import { excludesWhisperPosts } from './whisper'
@@ -28,7 +29,7 @@ export type HotCursor = {
   direction: 'next' | 'previous'
 }
 
-export const hotRankingVersion = 124
+export const hotRankingVersion = 125
 const cursorVersion = hotRankingVersion
 const activityHalfLifeHours = 6
 const postWeight = 0
@@ -195,7 +196,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
         AND ${excludesWhisperPosts('descendants.id')}
         AND ${replyIdentity}!=${candidateIdentity}
     ), activity(candidate_id,created_at,weight,is_reply) AS (
-      SELECT id,created_at,${postWeight},0 FROM posts WHERE deleted_at IS NULL
+      SELECT id,created_at,${postWeight},0 FROM posts p WHERE deleted_at IS NULL AND NOT ${isPrivateThread()}
       UNION ALL
       SELECT candidate_id,created_at,${directReplyWeight}*pow(0.5,depth-1),1
       FROM ranked_replies WHERE reply_rank=1
@@ -203,7 +204,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
         tracksPollVotes
           ? `UNION ALL
       SELECT votes.post_id,votes.created_at,${pollVoteWeight},0 FROM poll_votes votes
-      JOIN posts voted_post ON voted_post.id=votes.post_id WHERE voted_post.deleted_at IS NULL`
+      JOIN posts voted_post ON voted_post.id=votes.post_id WHERE voted_post.deleted_at IS NULL AND NOT ${isPrivateThread('voted_post.id')}`
           : ''
       }
     ), recency_replies AS (
@@ -279,7 +280,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
       AND ${excludesWhisperPosts('descendants.id')}
       AND ${replyIdentity}!=${candidateIdentity}
   ), activity(id,created_at,weight,boosts_recency,is_reply) AS (
-    SELECT id,created_at,${postWeight},1,0 FROM posts WHERE id=? AND deleted_at IS NULL
+    SELECT id,created_at,${postWeight},1,0 FROM posts p WHERE id=? AND deleted_at IS NULL AND NOT ${isPrivateThread()}
     UNION ALL
     SELECT id,created_at,${directReplyWeight}*pow(0.5,depth-1),1,1 FROM ranked_replies WHERE reply_rank=1
     UNION ALL
@@ -295,7 +296,7 @@ export function rebuildHotPosts(database: Database, postIds?: number[]) {
     tracksPollVotes
       ? `UNION ALL
     SELECT votes.option_id,votes.created_at,${pollVoteWeight},1,0 FROM poll_votes votes
-    WHERE votes.post_id=?`
+    WHERE votes.post_id=? AND NOT ${isPrivateThread('votes.post_id')}`
       : ''
   }
   ) SELECT created_at,weight,boosts_recency,is_reply FROM activity`)
@@ -418,7 +419,7 @@ export function getHotPosts(
           THEN ${metaPostHotMultiplier} ELSE 1 END END hot_score
       FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
       LEFT JOIN poll_counts ON poll_counts.post_id=h.post_id
-      WHERE p.parent_id IS NULL
+      WHERE p.parent_id IS NULL AND ${excludesWhisperPosts()}
     ), recent_leader AS (
       SELECT scored.post_id FROM scored JOIN posts p ON p.id=scored.post_id
       WHERE scored.hot_score>0 AND p.deleted_at IS NULL AND ${excludesWhisperPosts()}

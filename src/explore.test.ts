@@ -157,12 +157,12 @@ describe('trending tags', () => {
   function tagFixture() {
     const database = new Database(':memory:')
     database.run(`
-      CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,created_at TEXT,deleted_at TEXT);
+      CREATE TABLE posts (id INTEGER PRIMARY KEY,user_id INTEGER,created_at TEXT,deleted_at TEXT,parent_id INTEGER);
       CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT);
       CREATE TABLE hashtag_follows (user_id INTEGER,tag TEXT);
       CREATE TABLE blocks (blocker_id INTEGER,blocked_id INTEGER);
       CREATE TABLE blocked_hashtags (user_id INTEGER,tag TEXT);
-      INSERT INTO posts VALUES
+      INSERT INTO posts(id,user_id,created_at,deleted_at) VALUES
         (1,2,'2026-08-07 23:00:00',NULL),(2,2,'2026-08-07 22:00:00',NULL),
         (3,3,'2026-08-06 00:00:00',NULL),(4,3,'2026-08-06 00:00:00',NULL),
         (5,3,'2026-08-06 00:00:00',NULL),(6,3,'2026-08-06 00:00:00',NULL),
@@ -183,10 +183,22 @@ describe('trending tags', () => {
     expect(tags[0].following).toBeTruthy()
   })
 
+  test('private branches and their tags never contribute to trends, including for their authors', () => {
+    const database = tagFixture()
+    database.run(`UPDATE posts SET parent_id=1 WHERE id=2;
+      INSERT INTO post_hashtags VALUES(1,'private'),(2,'confidential');`)
+    for (const viewer of [-1, 1, 2]) {
+      const tags = trendingTags(database, viewer, 12, '2026-08-08T00:00:00.000Z')
+      expect(tags.map(tag => [tag.tag, tag.count])).toEqual([['busy', 4], ['older', 1]])
+      expect(trendingTagCount(database, viewer, '2026-08-08T00:00:00.000Z')).toBe(2)
+    }
+    database.close()
+  })
+
   test('rewards participation by different authors over repetition by one author', () => {
     const database = tagFixture()
     database.run(`
-      INSERT INTO posts VALUES
+      INSERT INTO posts(id,user_id,created_at,deleted_at) VALUES
         (10,6,'2026-08-07 20:00:00',NULL),(11,6,'2026-08-07 19:00:00',NULL),
         (12,6,'2026-08-07 18:00:00',NULL),(13,6,'2026-08-07 17:00:00',NULL),
         (14,7,'2026-08-07 16:00:00',NULL),(15,8,'2026-08-07 15:00:00',NULL),
@@ -204,7 +216,7 @@ describe('trending tags', () => {
   test('keeps meaningful activity from the last few days competitive', () => {
     const database = tagFixture()
     database.run(`
-      INSERT INTO posts VALUES
+      INSERT INTO posts(id,user_id,created_at,deleted_at) VALUES
         (10,6,'2026-08-05 00:00:00',NULL),(11,7,'2026-08-05 00:00:00',NULL),
         (12,8,'2026-08-05 00:00:00',NULL);
       INSERT INTO post_hashtags VALUES(10,'sustained'),(11,'sustained'),(12,'sustained');
@@ -218,7 +230,7 @@ describe('trending tags', () => {
     database.run(`
       CREATE TABLE post_conversations (post_id INTEGER PRIMARY KEY,conversation_id INTEGER);
       CREATE TABLE hot_feed_projection (post_id INTEGER,conversation_id INTEGER,hot_score REAL);
-      INSERT INTO posts VALUES
+      INSERT INTO posts(id,user_id,created_at,deleted_at) VALUES
         (10,6,'2026-08-07 20:00:00',NULL),(11,7,'2026-08-07 20:00:00',NULL),
         (12,8,'2026-08-07 20:00:00',NULL);
       INSERT INTO post_hashtags VALUES(10,'cold'),(11,'engaged'),(12,'viral');

@@ -5206,6 +5206,28 @@ export const migrations: Migration[] = [
       END;`)
     },
   },
+  {
+    version: 228,
+    name: 'private_modifier_has_no_tag_relationships_or_hot_activity',
+    up(database) {
+      for (const table of ['hashtag_follows', 'blocked_hashtags']) {
+        if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) continue
+        database.run(`DELETE FROM ${table} WHERE lower(tag)='private'`)
+        for (const operation of ['INSERT', 'UPDATE']) {
+          database.run(`CREATE TRIGGER IF NOT EXISTS ignore_private_${table}_${operation.toLowerCase()}
+            BEFORE ${operation} ON ${table} WHEN lower(NEW.tag)='private'
+            BEGIN SELECT RAISE(IGNORE); END`)
+        }
+      }
+      if (database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'").get()) {
+        database.run("DELETE FROM personalized_feed_entries WHERE event_kind='tag_follow' AND target_tag='private'")
+      }
+      if (columns(database, 'posts').includes('parent_id') && columns(database, 'users').includes('handle')) {
+        rebuildHotPosts(database)
+        refreshHotFeedProjection(database)
+      }
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

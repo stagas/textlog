@@ -372,6 +372,19 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
         <div>
           <dd>
             <code>
+              For @someone <b>#private</b>
+            </code>
+          </dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Private conversations</span>
+            <small>
+              Only the signed-in author and mentioned users can read this branch.
+            </small>
+          </dt>
+        </div>
+        <div>
+          <dd>
+            <code>
               Answer before reading <b>#HiddenReplies</b>
             </code>
           </dd>

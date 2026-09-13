@@ -56,9 +56,14 @@ test('v2 recap email renders the complete recap and popular conversations', () =
     created_at TEXT,deleted_at TEXT
   );
   CREATE TABLE post_hashtags (post_id INTEGER,tag TEXT);
+  CREATE TABLE post_mentions (post_id INTEGER,user_id INTEGER);
   INSERT INTO users VALUES(1,'writer',NULL,NULL);
   INSERT INTO posts VALUES(10,1,NULL,'A conversation starter','2026-01-01',NULL);
-  INSERT INTO posts VALUES(11,1,10,'A reply','2026-01-02',NULL);`)
+  INSERT INTO posts VALUES(11,1,10,'A reply','2026-01-02',NULL);
+  INSERT INTO posts VALUES(12,1,10,'confidential recap reply #private','2026-01-03',NULL);
+  INSERT INTO posts VALUES(13,1,NULL,'confidential recap root #private','2026-01-04',NULL);
+  INSERT INTO posts VALUES(14,1,13,'confidential recap descendant','2026-01-05',NULL);
+  INSERT INTO post_hashtags VALUES(12,'private'),(13,'private');`)
 
   const html = recapEmailV2(database, 'https://preview.textlog.test/recap-email-v2', 'recipient-token')
 

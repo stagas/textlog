@@ -1,3 +1,4 @@
+import { canReadPrivatePost, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { publishPost } from './api-broker'
@@ -381,6 +382,9 @@ export function updatePost(database: Database, postId: number, body: string, tra
 }
 
 export function enrichPosts(database: Database, posts: PostView[], viewerId = -1) {
+  if (database.query("SELECT 1 FROM post_hashtags WHERE tag='private' LIMIT 1").get()) {
+    posts = posts.filter(post => canReadPrivatePost(database, post.id, viewerId))
+  }
   const supportsMood = !!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'mood\'').get()
   const moodUserIds = [...new Set(posts.map(post => post.user_id))]
   const moods = supportsMood && moodUserIds.length
@@ -496,7 +500,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       ${supportsExecutionOutput ? 'linked.execution_output' : 'NULL'} linked_execution_output,
       linked_user.handle linked_handle,linked_parent.user_id linked_parent_user_id,
       linked_parent_user.handle linked_parent_handle,
-      (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL) linked_reply_count,
+      (SELECT count(*) FROM posts reply WHERE reply.parent_id=linked.id AND reply.deleted_at IS NULL AND ${privatePostVisible(viewerId, 'reply.id')}) linked_reply_count,
       EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=linked.id AND lock_tag.tag='lock') linked_locked`
         : `NULL linked_post_id,NULL linked_user_id,NULL linked_parent_id,NULL linked_body,
       NULL linked_moderation_category,NULL linked_moderation_score,
@@ -506,7 +510,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       FROM post_link_previews lp
       ${
       supportsLinkedPostPreviews
-        ? `LEFT JOIN posts linked ON linked.id=lp.linked_post_id AND linked.deleted_at IS NULL
+        ? `LEFT JOIN posts linked ON linked.id=lp.linked_post_id AND linked.deleted_at IS NULL AND ${privatePostVisible(viewerId, 'linked.id')}
       LEFT JOIN users linked_user ON linked_user.id=linked.user_id AND linked_user.deleted_at IS NULL
         AND linked_user.suspended_at IS NULL`
         : ''
@@ -517,7 +521,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       LEFT JOIN users linked_parent_user ON linked_parent_user.id=linked_parent.user_id`
         : ''
     }
-      WHERE lp.post_id IN
+      WHERE ${supportsLinkedPostPreviews ? `(lp.linked_post_id IS NULL OR ${privatePostVisible(viewerId, 'lp.linked_post_id')}) AND` : ''} lp.post_id IN
       (${previewPostIds.map(() => '?').join(',')})`).all(...previewPostIds) as {
       post_id: number
       url: string
@@ -583,13 +587,13 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
       p.moderation_category,p.moderation_score,
       ${supportsExecutionOutput ? 'p.execution_output' : 'NULL execution_output'},u.handle,
       parent.user_id parent_user_id,parent_user.handle parent_handle,
-      (SELECT count(*) FROM posts reply WHERE reply.parent_id=p.id AND reply.deleted_at IS NULL) reply_count,
+      (SELECT count(*) FROM posts reply WHERE reply.parent_id=p.id AND reply.deleted_at IS NULL AND ${privatePostVisible(viewerId, 'reply.id')}) reply_count,
       EXISTS(SELECT 1 FROM post_hashtags lock_tag WHERE lock_tag.post_id=p.id AND lock_tag.tag='lock') locked
       FROM posts p JOIN users u ON u.id=p.user_id
       LEFT JOIN posts parent ON parent.id=p.parent_id
       LEFT JOIN users parent_user ON parent_user.id=parent.user_id
       WHERE p.id IN (${nativeReferenceIds.map(() => '?').join(',')})
-      AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL`)
+      AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND u.suspended_at IS NULL AND ${privatePostVisible(viewerId)}`)
       .all(...nativeReferenceIds) as Array<
         { id: number; user_id: number; parent_id: number | null; body: string; moderation_category: string | null;
           moderation_score: number | null; execution_output: string | null; handle: string;
@@ -652,7 +656,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
   }
   const countRootIds = [...new Set([...ids, ...parentIds])]
   const placeholders = countRootIds.map(() => '?').join(',')
-  const visibleReply = viewerId < 0 ? '' : `AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
+  const visibleReply = viewerId < 0 ? `AND ${privatePostVisible(viewerId)}` : `AND ${privatePostVisible(viewerId)} AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
     (b.blocker_id=? AND b.blocked_id=p.user_id) OR (b.blocker_id=p.user_id AND b.blocked_id=?))
     AND NOT EXISTS (SELECT 1 FROM post_hashtags ph JOIN blocked_hashtags bh ON bh.tag=ph.tag
       WHERE ph.post_id=p.id AND bh.user_id=?)`
@@ -693,7 +697,7 @@ export function enrichPosts(database: Database, posts: PostView[], viewerId = -1
           : 'NULL moderation_category,NULL moderation_score'
       },u.handle,u.bio,
         0 reply_count
-        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) ${parentFilter}`,
+        FROM posts p JOIN users u ON u.id=p.user_id WHERE p.id IN (${parentPlaceholders}) AND ${privatePostVisible(viewerId)} ${parentFilter}`,
     ).all(...parentParameters) as ParentPost[]
     const roots = database.query(`WITH RECURSIVE ancestors(start_id,id,parent_id) AS (
       SELECT id,id,parent_id FROM posts WHERE id IN (${parentPlaceholders})
@@ -882,7 +886,7 @@ export function rewireVisibleAncestorGaps(database: Database, posts: PostView[])
 export function loadThreadReplies(database: Database, parentId: number, viewerId = -1) {
   const moderator = moderatorViewer(database, viewerId)
   const gate = hiddenReplyGateState(database, [parentId], viewerId, moderator)
-  if (gate.hiddenRoots.has(parentId)) return []
+  if (!canReadPrivatePost(database, parentId, viewerId) || gate.hiddenRoots.has(parentId)) return []
   const blockViewerId = moderator ? -1 : viewerId
   const hiddenAuthorVisibility = moderator ? '1' : excludesDroppedUsernameUsers(database)
   const metaVisibility = moderator ? '1' : metaThreadVisibleToViewer(viewerId)

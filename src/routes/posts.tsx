@@ -14,6 +14,7 @@ import { conversationTopPath, FeedThreads, Post, postAnchorId, postedPostPath,
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
 import { canPublishPosts } from '../posting-policy'
+import { Layout } from '../components/layout'
 import { form, htmlFragment, page, redirect, safeNext } from './shared'
 
 import type { Hono } from 'hono'
@@ -113,7 +114,7 @@ export function registerPostsRoutes(app: Hono) {
       const id = Number(rawQuery)
       if (!Number.isSafeInteger(id) || id < 1) return c.json({ results: [] }, 400)
       const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
-      if (detail.status === 'not_found' || detail.post.deleted_at) {
+      if (detail.status !== 'ready' || detail.post.deleted_at) {
         return c.json({ results: [] }, 200, { 'Cache-Control': 'no-store' })
       }
       const html = renderToStaticMarkup(
@@ -286,6 +287,17 @@ export function registerPostsRoutes(app: Hono) {
     }\0${requestUrl.pathname}${requestUrl.search}`
     const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
     if (detail.status === 'not_found') return c.text('Not found', 404)
+    if (detail.status === 'private') return page(
+      <Layout user={user || null} title="(private message)">
+        <div className={`post-page-thread${user ? '' : ' public-post-page-thread'}`}>
+          <div className="thread-root">
+            <article className="post" id={`post-${id}`}>
+              <div className="post-body quiet">(private message)</div>
+            </article>
+          </div>
+        </div>
+      </Layout>,
+    )
     const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
     if (cached) {
       if (c.req.query('hn') !== undefined) cached.headers.append('set-cookie', campaignAttributionCookie('hn'))
@@ -368,17 +380,23 @@ export function registerPostsRoutes(app: Hono) {
   app.get('/post/:id/og.png', async c => {
     const id = Number(c.req.param('id'))
     const cacheKey = `post:${id}`
-    const cached = cachedOgResponse(cacheKey)
-    if (cached) return cached
-    const post = Number.isInteger(id) && id > 0 ? await databaseService().call('posts.ogData', { id }) : null
+    const user = currentUser(c.req.raw)
+    const post = Number.isInteger(id) && id > 0
+      ? await databaseService().call('posts.ogData', { id, viewerId: user?.id ?? -1 })
+      : null
     if (!post) return c.text('Not found', 404)
+    const cached = user ? null : cachedOgResponse(cacheKey)
+    if (cached) return cached
     const image = renderPostOg(post.moderation_category
       ? moderatedContentDescription(post.moderation_category)
       : post.body, post.handle)
+    if (user) return new Response(new Uint8Array(image), {
+      headers: { 'content-type': 'image/png', 'cache-control': 'private, no-store' },
+    })
     return cacheOgResponse(cacheKey, image, {
       'content-type': 'image/png',
       'content-length': String(image.byteLength),
-      'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
+      'cache-control': 'no-store',
     })
   })
 

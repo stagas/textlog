@@ -166,7 +166,7 @@ export type DatabaseDomainOperations = {
   }
   'account.deleteDeletionToken': { input: { tokenHash: string }; output: null }
   'account.delete': { input: { userId: number; reason: string }; output: { imageKeys: string[] } }
-  'admin.dashboard': { input: { status: 'open' | 'resolved' | 'dismissed'; page: number }; output: {
+  'admin.dashboard': { input: { viewerId?: number; status: 'open' | 'resolved' | 'dismissed'; page: number }; output: {
     stats: DashboardStats
     total: number
     reports: AdminReportView[]
@@ -184,7 +184,7 @@ export type DatabaseDomainOperations = {
     output: { status: 'not_open' } | { status: 'ready'; reference: string; reporterEmail: string | null } }
   'admin.decideReport': { input: { id: number; decision: 'resolve' | 'dismiss'; actorId: number; note: string };
     output: boolean }
-  'admin.post': { input: { id: number }; output: (PostRow & { handle: string }) | null }
+  'admin.post': { input: { id: number; viewerId?: number }; output: (PostRow & { handle: string }) | null }
   'admin.moderatePost': { input: { id: number; actorId: number; category: string | null };
     output: { status: 'not_found' } | { status: 'ready' } }
   'admin.deletePost': { input: { id: number; actorId: number; note: string };
@@ -295,13 +295,13 @@ export type DatabaseDomainOperations = {
     output: SerializedDomainResponse | null }
   'posts.threadReplies': { input: { parentId: number; viewerId: number }; output: PostView[] }
   'posts.detail': { input: { id: number; viewerId: number };
-    output: { status: 'not_found' } | { status: 'ready'; post: PostView; conversationRootId: number | null } }
+    output: { status: 'not_found' } | { status: 'private' } | { status: 'ready'; post: PostView; conversationRootId: number | null } }
   'posts.editData': { input: { id: number; userId: number; moderator?: boolean };
     output: { status: 'not_found' } | { status: 'forbidden' } | { status: 'ready'; post: PostView;
       parent: PostView | null } }
   'posts.replyParent': { input: { id: number; userId: number };
     output: { status: 'not_found' } | { status: 'forbidden' } | { status: 'ready'; post: PostView } }
-  'posts.ogData': { input: { id: number };
+  'posts.ogData': { input: { id: number; viewerId?: number };
     output: { body: string; handle: string; moderation_category: string | null } | null }
   'posts.suggestions': { input: { kind: 'hashtags' | 'mentions'; query: string; viewerId: number };
     output: { results: string[]; truncated: boolean } }

@@ -1,3 +1,4 @@
+import { canReadPrivatePost, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { extractHashtags, extractMentions } from './content'
 import { excludesDroppedUsernameUsers } from './handles'
@@ -93,6 +94,7 @@ const postSelect = `SELECT p.*,p.id top_id,u.handle,
 function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(
   database: Database,
   rows: T[],
+  viewerId = -1,
 ): Array<T & { reply_count: number }> {
   if (!rows.length) return []
   const placeholders = rows.map(() => '?').join(',')
@@ -104,7 +106,7 @@ function withReplyCounts<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(
   ) SELECT descendants.root_id,count(*) reply_count FROM descendants
     JOIN users u ON u.id=descendants.user_id
     WHERE descendants.id!=descendants.root_id AND descendants.deleted_at IS NULL AND u.deleted_at IS NULL
-      AND ${excludesDroppedUsernameUsers(database)}
+      AND ${excludesDroppedUsernameUsers(database)} AND ${privatePostVisible(viewerId, 'descendants.id')}
     GROUP BY descendants.root_id`).all(...rows.map(row => row.id)) as { root_id: number; reply_count: number }[]
   const countById = new Map(counts.map(row => [row.root_id, row.reply_count]))
   return rows.map(row => ({ ...row, reply_count: countById.get(row.id) || 0 }))
@@ -129,13 +131,14 @@ function withTopIds<T extends Omit<ApiPostRow, 'top_id'>>(
   })
 }
 
-function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(database: Database, rows: T[]) {
-  return withTopIds(database, withReplyCounts(database, rows))
+function enrichApiRows<T extends Omit<ApiPostRow, 'reply_count' | 'top_id'>>(database: Database, rows: T[], viewerId = -1) {
+  return withTopIds(database, withReplyCounts(database, rows, viewerId))
 }
 
 function applyApiReplyGates<T extends ApiPostRow>(database: Database, rows: T[], viewerId: number) {
+  const hasPrivatePosts = !!database.query("SELECT 1 FROM post_hashtags WHERE tag='private' LIMIT 1").get()
   const gates = hiddenReplyGates(database, rows.map(row => row.id), viewerId)
-  return rows.filter(row => !gates.hiddenDescendants.has(row.id))
+  return rows.filter(row => (!hasPrivatePosts || canReadPrivatePost(database, row.id, viewerId)) && !gates.hiddenDescendants.has(row.id))
     .map(row => gates.hiddenRoots.has(row.id) ? { ...row, reply_count: 0 } : row)
 }
 
@@ -150,9 +153,11 @@ function apiExtras(database: Database, postIds: number[], viewerId: number) {
       ).get()
       ? 'mime_type'
       : 'NULL AS mime_type'
+    const privatePreviewFilter = database.query("SELECT 1 FROM pragma_table_info('post_link_previews') WHERE name='linked_post_id'").get()
+      ? `(linked_post_id IS NULL OR ${privatePostVisible(viewerId, 'linked_post_id')}) AND` : ''
     const rows = database.query(`SELECT post_id,url,image_url,title,description,site_name,image_width,image_height,
       ${mimeTypeColumn}
-      FROM post_link_previews WHERE post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
+      FROM post_link_previews WHERE ${privatePreviewFilter} post_id IN (${postIds.map(() => '?').join(',')})`).all(...postIds) as Array<{
       post_id: number
       url: string
       image_url: string
@@ -230,7 +235,7 @@ function serializePostsWithParents(database: Database, rows: ApiPostRow[], origi
     const parentRows = database.query(`${postSelect} WHERE p.id IN (${placeholders})
       AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)} ${visibility}`)
       .all(...parentIds, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
-    const enrichedParents = applyApiReplyGates(database, enrichApiRows(database, parentRows), viewerId)
+    const enrichedParents = applyApiReplyGates(database, enrichApiRows(database, parentRows, viewerId), viewerId)
     const parentExtras = apiExtras(database, enrichedParents.map(row => row.id), viewerId)
     const parents = enrichedParents.map(row => withApiExtras(serializePost(row, origin), parentExtras, row.id))
     parentsById = new Map(parents.map(parent => [parent.id, parent]))
@@ -252,7 +257,7 @@ export function apiPostsByIds(database: Database, origin: string, ids: number[],
     AND p.deleted_at IS NULL AND u.deleted_at IS NULL AND ${excludesDroppedUsernameUsers(database)} ${visibility}`)
     .all(...ids, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow[]
   const serialized = serializePostsWithParents(database,
-    applyApiReplyGates(database, enrichApiRows(database, rows), viewerId), origin, viewerId)
+    applyApiReplyGates(database, enrichApiRows(database, rows, viewerId), viewerId), origin, viewerId)
   const byId = new Map(serialized.map(post => [post.id, post]))
   return ids.flatMap(id => {
     const post = byId.get(id)
@@ -268,10 +273,10 @@ export function apiPost(database: Database, id: number, origin: string, viewerId
   const row = database.query(`${postSelect} WHERE p.id=? AND p.deleted_at IS NULL AND u.deleted_at IS NULL
     AND ${excludesDroppedUsernameUsers(database)}
     ${visibility}`).get(id, ...(viewerId < 0 ? [] : [viewerId, viewerId, viewerId])) as ApiPostRow | null
-  if (!row) return null
+  if (!row || !canReadPrivatePost(database, id, viewerId)) return null
   const gates = hiddenReplyGates(database, [row.id], viewerId)
   if (gates.hiddenDescendants.has(row.id)) return null
-  const enriched = enrichApiRows(database, [row])
+  const enriched = enrichApiRows(database, [row], viewerId)
   if (gates.hiddenRoots.has(row.id)) enriched[0].reply_count = 0
   return serializePostsWithParents(database, enriched, origin, viewerId)[0]
 }
@@ -319,7 +324,7 @@ export function apiPosts(database: Database, origin: string, options: {
   const rows = database.query(`${postSelect} WHERE ${filters.join(' AND ')}
     ORDER BY p.id DESC LIMIT ?`).all(...parameters, options.limit + 1) as ApiPostRow[]
   const hasMore = rows.length > options.limit
-  const pageRows = applyApiReplyGates(database, enrichApiRows(database, rows.slice(0, options.limit)),
+  const pageRows = applyApiReplyGates(database, enrichApiRows(database, rows.slice(0, options.limit), options.viewerId ?? -1),
     options.viewerId ?? -1)
   return {
     data: serializePostsWithParents(database, pageRows, origin, options.viewerId ?? -1),
@@ -354,7 +359,7 @@ export function apiReplies(database: Database, origin: string, parentId: number,
     ORDER BY id DESC LIMIT ?`).all(...parameters) as Array<ApiPostRow & { depth: number }>
   const hasMore = rows.length > options.limit
   const selected = rows.slice(0, options.limit)
-  const pageRows = applyApiReplyGates(database, enrichApiRows(database, selected), options.viewerId ?? -1)
+  const pageRows = applyApiReplyGates(database, enrichApiRows(database, selected, options.viewerId ?? -1), options.viewerId ?? -1)
   return {
     data: serializePostsWithParents(database, pageRows, origin, options.viewerId ?? -1)
       .map((post, index) => ({ ...post, depth: pageRows[index].depth })),
@@ -371,7 +376,7 @@ export function apiHotPosts(database: Database, origin: string, limit: number, c
   const rows = getHotPosts(database, limit + 1, cursor, asOf, viewerId, true, 2)
   const hasMore = rows.length > limit
   const selected = rows.slice(0, limit)
-  const pageRows = applyApiReplyGates(database, enrichApiRows(database, selected), viewerId)
+  const pageRows = applyApiReplyGates(database, enrichApiRows(database, selected, viewerId), viewerId)
   return {
     data: serializePostsWithParents(database, pageRows, origin, viewerId),
     pagination: { next_cursor: hasMore ? encodeHotCursor(hotCursor(rows[limit - 1], asOf)) : null },
@@ -392,7 +397,7 @@ export function apiSearchPosts(database: Database, origin: string, query: string
     ${visibility} ORDER BY bm25(post_search),p.id DESC LIMIT ? OFFSET ?`)
     .all(expression, ...visibilityParameters, limit + 1, offset) as ApiPostRow[]
   const hasMore = rows.length > limit
-  const pageRows = applyApiReplyGates(database, enrichApiRows(database, rows.slice(0, limit)), viewerId)
+  const pageRows = applyApiReplyGates(database, enrichApiRows(database, rows.slice(0, limit), viewerId), viewerId)
   return {
     data: serializePostsWithParents(database, pageRows, origin, viewerId),
     pagination: { next_cursor: hasMore ? encodeCursor(offset + limit) : null },

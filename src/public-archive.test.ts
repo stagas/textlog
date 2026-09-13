@@ -4,7 +4,7 @@ import JSZip from 'jszip'
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createPublicArchive, publicArchiveIsCurrent } from './public-archive'
+import { archivePrivacyIsCurrent, createPublicArchive, publicArchiveIsCurrent } from './public-archive'
 
 const directories: string[] = []
 afterEach(() => {
@@ -48,13 +48,15 @@ describe('public archive', () => {
         (10,1,NULL,'first','translated first','visible output','2026-01-01',NULL),
         (11,2,10,'reply',NULL,NULL,'2026-01-02',NULL),
         (12,3,NULL,'deleted account content','private translation','private output','2026-01-03',NULL),
-        (13,1,NULL,'deleted post',NULL,NULL,'2026-01-04','2026-02-01');
+        (13,1,NULL,'deleted post',NULL,NULL,'2026-01-04','2026-02-01'),
+        (14,1,10,'confidential #private','confidential translation','confidential output','2026-01-05',NULL),
+        (15,2,14,'confidential reply',NULL,NULL,'2026-01-06',NULL);
       INSERT INTO post_locations VALUES(10,'Athens',37.98,23.72,'Athens, Greece'),
         (12,'Hidden',0,0,'Hidden location');
       INSERT INTO follows VALUES(1,2,'2026-01-05'),(1,3,'2026-01-05');
       INSERT INTO hashtag_follows VALUES(1,'bun');
-      INSERT INTO post_hashtags VALUES(10,'archive');
-      INSERT INTO post_mentions VALUES(11,1);
+      INSERT INTO post_hashtags VALUES(10,'archive'),(14,'private'),(15,'confidential');
+      INSERT INTO post_mentions VALUES(11,1),(14,2);
       INSERT INTO blocks VALUES(1,2);`)
     const path = join(directory, 'dump.zip')
     await createPublicArchive(database, path, new Date('2026-08-10T00:00:00Z'), 1)
@@ -85,6 +87,15 @@ describe('public archive', () => {
     expect(contents).not.toContain('Hidden location')
     expect(contents).not.toContain('deleted post')
     expect(contents).not.toContain('banned')
+    expect(contents).not.toContain('confidential')
+    expect(contents).not.toContain('post-14')
+    expect(contents).not.toContain('post-15')
+    expect(archivePrivacyIsCurrent(database, path)).toBe(true)
+    database.run("INSERT INTO post_hashtags VALUES(10,'private')")
+    expect(archivePrivacyIsCurrent(database, path)).toBe(false)
+    const rebuilt = await createPublicArchive(database, path)
+    expect(rebuilt.posts).toBe(0)
+    expect(archivePrivacyIsCurrent(database, path)).toBe(true)
     database.close()
   })
 })

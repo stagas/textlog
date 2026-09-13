@@ -8,7 +8,7 @@ export function isWhisperThread(postId: WhisperPostId = 'p.id') {
       JOIN whisper_ancestors whisper_child ON whisper_parent.id=whisper_child.parent_id
   ) SELECT 1 FROM whisper_ancestors
     JOIN post_hashtags whisper_tag ON whisper_tag.post_id=whisper_ancestors.id
-    WHERE whisper_tag.tag='whisper')`
+    WHERE whisper_tag.tag IN ('whisper','private'))`
 }
 
 export function excludesWhisperPosts(postId: WhisperPostId = 'p.id') {
@@ -20,12 +20,12 @@ export function whisperThreadRelevantToViewer(viewer = '$viewer', postId: 'p.id'
   WITH RECURSIVE whisper_relevant_ancestors(id,user_id,parent_id,whisper_root) AS (
     SELECT relevant_post.id,relevant_post.user_id,relevant_post.parent_id,
       EXISTS(SELECT 1 FROM post_hashtags root_tag
-        WHERE root_tag.post_id=relevant_post.id AND root_tag.tag='whisper')
+        WHERE root_tag.post_id=relevant_post.id AND root_tag.tag IN ('whisper','private'))
       FROM posts relevant_post WHERE relevant_post.id=${postId}
     UNION ALL
     SELECT relevant_parent.id,relevant_parent.user_id,relevant_parent.parent_id,
       EXISTS(SELECT 1 FROM post_hashtags root_tag
-        WHERE root_tag.post_id=relevant_parent.id AND root_tag.tag='whisper')
+        WHERE root_tag.post_id=relevant_parent.id AND root_tag.tag IN ('whisper','private'))
       FROM posts relevant_parent
       JOIN whisper_relevant_ancestors relevant_child ON relevant_parent.id=relevant_child.parent_id
       WHERE relevant_child.whisper_root=0
@@ -34,7 +34,7 @@ export function whisperThreadRelevantToViewer(viewer = '$viewer', postId: 'p.id'
     LEFT JOIN post_mentions relevant_mention ON relevant_mention.post_id=relevant.id
       AND relevant_mention.user_id=${viewer}
     LEFT JOIN post_hashtags relevant_tag ON relevant_tag.post_id=relevant.id
-    LEFT JOIN hashtag_follows relevant_follow ON relevant_follow.tag=relevant_tag.tag
+    LEFT JOIN hashtag_follows relevant_follow ON relevant_follow.tag=relevant_tag.tag AND relevant_follow.tag!='private'
       AND relevant_follow.user_id=${viewer}
       AND relevant_follow.created_at<=(SELECT created_at FROM posts WHERE id=${postId})
     WHERE relevant.user_id=${viewer} OR whisper_parent.user_id=${viewer}
@@ -48,12 +48,12 @@ export function whisperThreadTargetsViewer(viewer = '$viewer', postId: 'p.id' | 
   WITH RECURSIVE whisper_target_ancestors(id,user_id,parent_id,whisper_root) AS (
     SELECT target_post.id,target_post.user_id,target_post.parent_id,
       EXISTS(SELECT 1 FROM post_hashtags root_tag
-        WHERE root_tag.post_id=target_post.id AND root_tag.tag='whisper')
+        WHERE root_tag.post_id=target_post.id AND root_tag.tag IN ('whisper','private'))
       FROM posts target_post WHERE target_post.id=${postId}
     UNION ALL
     SELECT target_parent.id,target_parent.user_id,target_parent.parent_id,
       EXISTS(SELECT 1 FROM post_hashtags root_tag
-        WHERE root_tag.post_id=target_parent.id AND root_tag.tag='whisper')
+        WHERE root_tag.post_id=target_parent.id AND root_tag.tag IN ('whisper','private'))
       FROM posts target_parent
       JOIN whisper_target_ancestors target_child ON target_parent.id=target_child.parent_id
       WHERE target_child.whisper_root=0

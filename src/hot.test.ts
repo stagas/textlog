@@ -212,3 +212,34 @@ describe('freshness-forward hot feed ranking', () => {
     expect(getHotPosts(database, 20, null, asOf).map(result => [result.id, result.hot_score])).toEqual(incremental)
   })
 })
+
+
+test('private branches cannot boost public parents or the hot score ceiling', () => {
+  database.run(`INSERT INTO users(id,handle) VALUES(2,'reader'),(3,'another');
+    CREATE TABLE poll_votes(post_id INTEGER,option_id INTEGER,created_at TEXT);`)
+  post(1, 1, '2026-08-03 10:00:00')
+  post(2, 2, '2026-08-03 11:00:00', 1)
+  post(3, 3, '2026-08-03 12:00:00', 2)
+  rebuildHotPosts(database)
+  const baseline = getHotPosts(database, 20, null, asOf)
+  database.run("INSERT INTO post_hashtags VALUES(2,'private')")
+  for (const ids of [[1, 2, 3], undefined]) {
+    rebuildHotPosts(database, ids)
+    expect(getHotPosts(database, 20, null, asOf)).toEqual([])
+    expect(database.query('SELECT score,reply_count,activity_count FROM post_hot WHERE post_id=1').get())
+      .toEqual({ score: 0, reply_count: 0, activity_count: 0 })
+  }
+  database.run("DELETE FROM post_hashtags WHERE post_id=2")
+  rebuildHotPosts(database)
+  const publicScores = getHotPosts(database, 20, null, asOf)
+  expect(publicScores).toEqual(baseline)
+  post(1, 10, '2026-08-03 10:00:00')
+  database.run(`INSERT INTO post_hashtags VALUES(10,'private');
+    INSERT INTO poll_votes VALUES(10,1,'2026-08-03 13:00:00'),(10,2,'2026-08-03 13:00:00');`)
+  for (const ids of [[10], undefined]) {
+    rebuildHotPosts(database, ids)
+    expect(getHotPosts(database, 20, null, asOf)).toEqual(publicScores)
+    expect(database.query('SELECT score,reply_count,activity_count FROM post_hot WHERE post_id=10').get())
+      .toEqual({ score: 0, reply_count: 0, activity_count: 0 })
+  }
+})

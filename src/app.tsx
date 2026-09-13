@@ -635,13 +635,14 @@ app.get('/health', async c => {
   }
 })
 app.get('/dump.zip', async c => {
+  await databaseService().call('maintenance.publicArchive', { path: publicArchivePath, now: new Date().toISOString() })
   const archive = Bun.file(publicArchivePath)
   if (!await archive.exists()) return c.text('Archive is not available yet', 404)
   return new Response(archive, {
     headers: {
       'content-type': 'application/zip',
       'content-disposition': 'attachment; filename="dump.zip"',
-      'cache-control': 'public, max-age=3600, must-revalidate',
+      'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
     },
   })
