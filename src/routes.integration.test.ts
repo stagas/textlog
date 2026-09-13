@@ -2984,3 +2984,43 @@ test('a nested navigation challenge gates every subsequent page for the resolved
   expect(challengePage.status).toBe(200)
   expect(await challengePage.text()).toContain('It looks like you might be a bot')
 })
+
+test('anonymous quizzes show memory totals and unlock replies only for the answering IP', async () => {
+  const author = database.query(`INSERT INTO users(handle,email,password,bio,handle_chosen_at)
+    VALUES('anonymous_quiz_author','anonymous-quiz@example.com','!','',CURRENT_TIMESTAMP) RETURNING id`)
+    .get() as { id: number }
+  const quiz = database.query(`INSERT INTO posts(user_id,body)
+    VALUES(?,'Capital? #quiz\nRome\n> Athens\n\nAthens is the capital.') RETURNING id`)
+    .get(author.id) as { id: number }
+  const wrong = database.query(`INSERT INTO poll_options(post_id,position,label)
+    VALUES(?,0,'Rome') RETURNING id`).get(quiz.id) as { id: number }
+  database.query(`INSERT INTO poll_options(post_id,position,label) VALUES(?,1,'Athens')`).run(quiz.id)
+  database.query(`INSERT INTO posts(user_id,parent_id,body) VALUES(?,?,'Anonymous quiz unlocked reply')`)
+    .run(author.id, quiz.id)
+  const ip = '203.0.113.98'
+  const before = await request(`/post/${quiz.id}`, { ip })
+  const beforeHtml = await before.text()
+  expect(beforeHtml).not.toContain('quiz-mark-correct')
+  expect(beforeHtml).not.toContain('Anonymous quiz unlocked reply')
+  const answered = await request(`/post/${quiz.id}/poll`, {
+    method: 'POST', ip, form: { option: String(wrong.id), from: `/post/${quiz.id}` },
+  })
+  expect(answered.status).toBe(303)
+  expect(answered.headers.get('location')).toBe(`/post/${quiz.id}#post-${quiz.id}`)
+  const revealed = await request(`/post/${quiz.id}`, { ip })
+  const html = await revealed.text()
+  expect(html).toContain('quiz-mark-correct')
+  expect(html).toContain('quiz-mark-incorrect')
+  expect(html).toContain('Athens is the capital.')
+  expect(html).toContain('1 answered')
+  expect(html).toContain('100%')
+  expect(html).toContain('Anonymous quiz unlocked reply')
+  expect(revealed.headers.get('cache-control')).toBe('private, no-store')
+  const otherHtml = await (await request(`/post/${quiz.id}`, { ip: '203.0.113.99' })).text()
+  expect(otherHtml).not.toContain('quiz-mark-correct')
+  expect(otherHtml).not.toContain('Anonymous quiz unlocked reply')
+  await request(`/post/${quiz.id}/poll`, { method: 'POST', ip, form: { option: String(wrong.id) } })
+  expect(await (await request(`/post/${quiz.id}`, { ip })).text()).toContain('1 answered')
+  expect(database.query('SELECT count(*) count FROM poll_votes WHERE post_id=?').get(quiz.id))
+    .toEqual({ count: 0 })
+})

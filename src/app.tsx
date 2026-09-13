@@ -1,3 +1,4 @@
+import { hasAnonymousQuizTotals } from './anonymous-quiz'
 import { applyHtmlCachePolicy, campaignAttribution, canonicalizeCrawlerLinks, crawlerCanonicalRedirect,
   exploreWelcomeCelebration, exploreWelcomeCookie, GLOBAL_REQUEST_BODY_LIMIT, isCrawlerRequest, isSameOriginRequest,
   limitedFormData, pwaStandaloneCookie, RequestBodyError, requiresSameOrigin, safeLocalPath,
@@ -471,6 +472,7 @@ app.use('*', async (c, next) => {
   await next()
   if (!c.res.headers.get('content-type')?.includes('text/html')) return
   applyHtmlCachePolicy(c.req.raw, c.res)
+  if (hasAnonymousQuizTotals()) c.res.headers.set('cache-control', 'private, no-store')
 })
 app.use('*', async (c, next) => {
   await next()

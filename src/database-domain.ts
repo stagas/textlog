@@ -50,7 +50,7 @@ import { loadPersonalizedFeed, PERSONALIZED_FEED_SNAPSHOT_VERSION, personalizedU
 import { voteInPoll } from './polls'
 import { mutedThreadForViewer } from './post-mute'
 import { loadBioReferenceData, loadThreadReplies } from './posts'
-import { enrichPosts, rewireVisibleAncestorGaps } from './posts'
+import { enrichPosts, rewireVisibleAncestorGaps, withAnonymousQuizGates } from './posts'
 import { visibleTagFollowerCounts, visibleUserProfileStats } from './posts'
 import { createPost, isThreadLocked, updatePost } from './posts'
 import { archivePrivacyIsCurrent, createPublicArchive, publicArchiveIsCurrent } from './public-archive'
@@ -1840,8 +1840,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return (response ? await serialized(response) : null) as DatabaseDomainOutput<K>
     }
     case 'posts.threadReplies': {
-      const { parentId, viewerId } = input as DatabaseDomainInput<'posts.threadReplies'>
-      return loadThreadReplies(database, parentId, viewerId) as DatabaseDomainOutput<K>
+      const { parentId, viewerId, answeredQuizIds } = input as DatabaseDomainInput<'posts.threadReplies'>
+      return withAnonymousQuizGates(viewerId, answeredQuizIds, () => loadThreadReplies(database, parentId, viewerId)) as DatabaseDomainOutput<K>
     }
     case 'profiles.bioReferences': {
       const { bio, profileId, viewerId } = input as DatabaseDomainInput<'profiles.bioReferences'>
@@ -1853,7 +1853,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return result as DatabaseDomainOutput<K>
     }
     case 'posts.detail': {
-      const { id, viewerId } = input as DatabaseDomainInput<'posts.detail'>
+      const { id, viewerId, answeredQuizIds } = input as DatabaseDomainInput<'posts.detail'>
       if (!canReadPrivatePost(database, id, viewerId)) {
         const exists = database.query('SELECT 1 FROM posts WHERE id=?').get(id)
         return { status: exists ? 'private' : 'not_found' } as DatabaseDomainOutput<K>
@@ -1883,7 +1883,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         SELECT p.id,p.parent_id,ancestors.depth+1 FROM posts p JOIN ancestors ON p.id=ancestors.parent_id
       ) SELECT id FROM ancestors ORDER BY depth DESC LIMIT 1`).get(id) as { id: number } | null
         : null
-      const post = enrichPosts(database, [found], viewerId)[0]
+      const post = withAnonymousQuizGates(viewerId, answeredQuizIds, () => enrichPosts(database, [found], viewerId)[0])
       if (post.hidden_by_reply_gate) return { status: 'not_found' } as DatabaseDomainOutput<K>
       if (viewerId >= 0) {
         post.viewer_bookmarked = !!database.query('SELECT 1 FROM post_bookmarks WHERE user_id=? AND post_id=?')

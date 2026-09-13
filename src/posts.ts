@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { canReadPrivatePost, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
@@ -15,6 +16,12 @@ import { loadPolls, parsePoll, syncPoll } from './polls'
 import { insertRateLimitedPost } from './post-rate-limit'
 import type { BioReferenceData, LinkPreview, ParentPost, PostView, UserProfileStats } from './types'
 import { postReferenceIds } from './utils'
+
+const anonymousQuizGateContext = new AsyncLocalStorage<Set<number>>()
+
+export function withAnonymousQuizGates<T>(viewerId: number, quizIds: number[] | undefined, callback: () => T): T {
+  return anonymousQuizGateContext.run(new Set(viewerId < 0 ? quizIds : []), callback)
+}
 
 function moderatorViewer(database: Database, viewerId: number) {
   if (viewerId < 0) return false
@@ -35,7 +42,7 @@ function hiddenReplyGateState(database: Database, postIds: number[], viewerId: n
     UNION SELECT parent.id,parent.parent_id,parent.body FROM posts parent JOIN ancestors ON parent.id=ancestors.parent_id
   ) SELECT DISTINCT id,body FROM ancestors`).all(...postIds) as Array<{ id: number; body: string }>
   const quizIds = supportsPollVotes
-    ? ancestorRows.filter(row => parsePoll(row.body)?.kind === 'quiz').map(row => row.id)
+    ? ancestorRows.filter(row => parsePoll(row.body)?.kind === 'quiz' && !anonymousQuizGateContext.getStore()?.has(row.id)).map(row => row.id)
     : []
   const quizGate = quizIds.length
     ? `UNION ALL SELECT ancestors.start_id,ancestors.id root_id,ancestors.user_id root_user_id,

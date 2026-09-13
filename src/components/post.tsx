@@ -1,3 +1,4 @@
+import { anonymousQuizAnswers, anonymousQuizTotals } from '../anonymous-quiz'
 import {
   containsAsciiArt,
   containsSpoilerTag,
@@ -52,6 +53,18 @@ function ContentWarning({ p, body, controlId, showImmediately = false, children 
 }
 
 function Poll({ p, returnPath }: { p: PostView | NonNullable<PostView['parent']>; returnPath?: string }) {
+  if (!p.poll) return null
+  if (p.poll.kind === 'quiz') {
+    const totals = anonymousQuizTotals(p.id)
+    const options = p.poll.options.map(option => ({ ...option, votes: option.votes + (totals?.get(option.id) || 0) }))
+    p = { ...p, poll: { ...p.poll, options, totalVotes: options.reduce((sum, option) => sum + option.votes, 0) } }
+  }
+  if (!p.poll) return null
+  const anonymousOption = p.poll.kind === 'quiz' ? anonymousQuizAnswers()?.get(p.id) : undefined
+  if (anonymousOption !== undefined && p.poll.options.some(option => option.id === anonymousOption)) {
+    p = { ...p, poll: { ...p.poll, viewerVoted: true,
+      options: p.poll.options.map(option => ({ ...option, selected: option.id === anonymousOption })) } }
+  }
   if (!p.poll) return null
   const kind = p.poll.kind || 'poll'
   const showResults = p.poll.expired || p.poll.viewerVoted

@@ -1,3 +1,4 @@
+import { anonymousQuizAnswers, answerAnonymousQuiz, hasAnonymousQuizTotals } from '../anonymous-quiz'
 import { executePostCode } from '../code-execution'
 import {
   AnonymousCompose,
@@ -113,7 +114,8 @@ export function registerPostsRoutes(app: Hono) {
       if (!/^\d{1,15}$/.test(rawQuery)) return c.json({ results: [] }, 400)
       const id = Number(rawQuery)
       if (!Number.isSafeInteger(id) || id < 1) return c.json({ results: [] }, 400)
-      const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
+      const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1,
+      answeredQuizIds: [...(anonymousQuizAnswers()?.keys() || [])] })
       if (detail.status !== 'ready' || detail.post.deleted_at) {
         return c.json({ results: [] }, 200, { 'Cache-Control': 'no-store' })
       }
@@ -285,7 +287,8 @@ export function registerPostsRoutes(app: Hono) {
     const postPageCacheKey = `${user?.id ?? 'anonymous'}\0${locationMapProvider(c.req.header('user-agent') || '')}\0${
       appearanceRequestVariant(c.req.raw)
     }\0${requestUrl.pathname}${requestUrl.search}`
-    const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1 })
+    const detail = await databaseService().call('posts.detail', { id, viewerId: user?.id ?? -1,
+      answeredQuizIds: [...(anonymousQuizAnswers()?.keys() || [])] })
     if (detail.status === 'not_found') return c.text('Not found', 404)
     if (detail.status === 'private') return page(
       <Layout user={user || null} title="(private message)">
@@ -298,7 +301,7 @@ export function registerPostsRoutes(app: Hono) {
         </div>
       </Layout>,
     )
-    const cached = user ? null : cachedAnonymousPostPage(postPageCacheKey)
+    const cached = user || hasAnonymousQuizTotals() ? null : cachedAnonymousPostPage(postPageCacheKey)
     if (cached) {
       if (c.req.query('hn') !== undefined) cached.headers.append('set-cookie', campaignAttributionCookie('hn'))
       return cached
@@ -322,6 +325,7 @@ export function registerPostsRoutes(app: Hono) {
     const replies = await databaseService().call('posts.threadReplies', {
       parentId: post.id,
       viewerId: user?.id ?? -1,
+      answeredQuizIds: [...(anonymousQuizAnswers()?.keys() || [])],
     })
     if (c.req.header('X-Textlog-Feed-Expansion') === '1') {
       const fetchedReturnPath = (() => {
@@ -372,7 +376,8 @@ export function registerPostsRoutes(app: Hono) {
       <PublicThread post={post} replies={replies} social={social} returnPath={returnPath} topHref={topHref}
         flatHref={flatHref} treeHref={treeHref} flat={flat} replyTo={replyTo} />,
     )
-    const response = await materializeAnonymousPostPage(postPageCacheKey, rendered)
+    const response = hasAnonymousQuizTotals() ? rendered
+      : await materializeAnonymousPostPage(postPageCacheKey, rendered)
     if (c.req.query('hn') !== undefined) response.headers.append('set-cookie', campaignAttributionCookie('hn'))
     return response
   })
@@ -591,7 +596,15 @@ export function registerPostsRoutes(app: Hono) {
     const optionId = Number(f.option)
     if (!Number.isInteger(optionId) || optionId < 1) return c.text('Invalid poll option', 400)
     if (!user) {
-      return redirect('/enter?next=' + encodeURIComponent('/pending-poll'), pendingPollCookie(postId, optionId))
+      const detail = await databaseService().call('posts.detail', { id: postId, viewerId: -1 })
+      if (detail.status !== 'ready') return c.text('Not found', 404)
+      if (detail.post.poll?.kind !== 'quiz') {
+        return redirect('/enter?next=' + encodeURIComponent('/pending-poll'), pendingPollCookie(postId, optionId))
+      }
+      if (!detail.post.poll.options.some(option => option.id === optionId)) return c.text('Not found', 404)
+      if (!answerAnonymousQuiz(c.req.raw, postId, optionId)) return c.text('Unable to identify this request', 400)
+      const target = new URL(f.from ? safeNext(f.from) : `/post/${postId}`, 'http://textlog.local')
+      return redirect(`${target.pathname}${target.search}#post-${postId}`)
     }
     const result = await databaseService().call('posts.votePoll', { postId, optionId, userId: user.id })
     if (result === 'not_found') return c.text('Not found', 404)

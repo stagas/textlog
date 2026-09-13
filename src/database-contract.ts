@@ -293,8 +293,8 @@ export type DatabaseDomainOperations = {
   'seo.sitemapIndex': { input: { requestUrl: string; appUrl?: string | null }; output: SerializedDomainResponse }
   'seo.sitemapSection': { input: { requestUrl: string; file: string; appUrl?: string | null };
     output: SerializedDomainResponse | null }
-  'posts.threadReplies': { input: { parentId: number; viewerId: number }; output: PostView[] }
-  'posts.detail': { input: { id: number; viewerId: number };
+  'posts.threadReplies': { input: { parentId: number; viewerId: number; answeredQuizIds?: number[] }; output: PostView[] }
+  'posts.detail': { input: { id: number; viewerId: number; answeredQuizIds?: number[] };
     output: { status: 'not_found' } | { status: 'private' } | { status: 'ready'; post: PostView; conversationRootId: number | null } }
   'posts.editData': { input: { id: number; userId: number; moderator?: boolean };
     output: { status: 'not_found' } | { status: 'forbidden' } | { status: 'ready'; post: PostView;

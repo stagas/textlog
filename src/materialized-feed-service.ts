@@ -1,3 +1,4 @@
+import { hasAnonymousQuizTotals } from './anonymous-quiz'
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
 import { locationMapProvider } from './locations'
 import { activeRequest, appearanceRequestVariant } from './theme'
@@ -112,6 +113,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
 {
   // Feed profiling is used to diagnose materialization itself. Keep the cache active for those explicit development
   // modes; ordinary hot-reload development still bypasses it so direct fixture/database edits remain visible.
+  if (hasAnonymousQuizTotals()) return await render()
   const profilingMaterialization = Bun.env.FEED_QUERY_METRICS === 'true'
     || Bun.env.REACT_RENDER_METRICS === 'true'
   // One-shot scroll state must never be stored in shared materialized HTML.

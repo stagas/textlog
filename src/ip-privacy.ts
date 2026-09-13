@@ -6,7 +6,7 @@ function rotationDay(at: Date) {
   return at.toISOString().slice(0, 10)
 }
 
-export function ipPseudonym(address: string, purpose: 'http-log' | 'visitor-count', at = new Date(),
+export function ipPseudonym(address: string, purpose: 'http-log' | 'visitor-count' | 'quiz-reveal', at = new Date(),
   secret = Bun.env.IP_PSEUDONYM_SECRET || ephemeralSecret)
 {
   if (!address || address === '-') return '-'
