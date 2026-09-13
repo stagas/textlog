@@ -286,7 +286,7 @@ async function warmRecentFeedTab(visitor: RecentFeedVisitor, kind: 'latest' | 'n
         await rpcMaterializedFeedPage(visitor.request, kind, visitor.user.id, async () => {
           const feed = kind === 'new'
             ? await backgroundDatabaseCall('feeds.newPage', { viewerId: visitor.user.id, page: 1,
-              pageSize: visitor.pageSize })
+              pageSize: visitor.pageSize, markRead: false })
             : await backgroundDatabaseCall('feeds.hotPage', { viewerId: visitor.user.id, page: 1,
               pageSize: visitor.pageSize })
           return page(kind === 'new'
