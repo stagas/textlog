@@ -3448,9 +3448,9 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
   expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="download-data"'))
-  expect(html.indexOf('id="invite-friends"')).toBeLessThan(html.indexOf('class="profile-presence-section"'))
+  expect(html.indexOf('id="invite-friends"')).toBeLessThan(html.indexOf('class="profile-presence account-share-panel"'))
   expect(html).toContain(
-    '<hr class="account-settings-separator"/><div class="account-danger-zone" id="invite-friends">',
+    '<hr class="account-settings-separator"/><div class="account-share-panels"><div class="account-danger-zone account-share-panel" id="invite-friends">',
   )
   expect(html).toContain('Handles must be 2–24 characters')
   expect(html).toContain('You can change your handle up to two times per month.')

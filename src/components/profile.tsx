@@ -90,8 +90,11 @@ export function Profile(
   const presenceCode = (imageUrl: string) =>
     `<a href="${profileUrl}" target="_blank" rel="noopener noreferrer"><img src="${imageUrl}" alt="Follow @${profile.handle} on textlog" height="32"></a>`
   const presence = (
-    <section className="profile-presence" aria-labelledby="profile-presence-heading">
-      <h2 id="profile-presence-heading">Share your presence</h2>
+    <section className="profile-presence account-share-panel" aria-labelledby="profile-presence-heading">
+      <div className="account-share-panel-heading">
+        <h2 id="profile-presence-heading">Share your presence</h2>
+        <span>Paste this into your site to help people find and follow you on textlog.</span>
+      </div>
       <div className="profile-presence-content">
         {presenceThemes.map(theme => (
           <input className="profile-presence-tab-input visually-hidden" type="radio" name="presence-theme"
@@ -107,7 +110,6 @@ export function Profile(
             <a className="profile-presence-preview" href={profileUrl} target="_blank" rel="noopener noreferrer">
               <img src={theme.imageUrl} alt={`Follow @${profile.handle} on textlog`} height="32" />
             </a>
-            <p>Paste this into your site to help people find and follow you on textlog.</p>
             <div className="magic-link-output profile-presence-code">
               <output className="form-control magic-link-value api-key-output" tabIndex={0}
                 aria-label={theme.name === 'dark'
@@ -212,17 +214,19 @@ export function Profile(
                   </div>
                 </form>
                 <hr className="account-settings-separator" />
-                <div className="account-danger-zone" id="invite-friends">
-                  <div>
-                    <strong>Invite friends</strong>
-                    <span>Send friends a personal invitation and magic link to join textlog.</span>
+                <div className="account-share-panels">
+                  <div className="account-danger-zone account-share-panel" id="invite-friends">
+                    <div>
+                      <strong>Invite friends</strong>
+                      <span>Send friends a personal invitation and magic link to join textlog.</span>
+                    </div>
+                    <a className="button" href={`/account/edit/invite${fromQuery}`}>
+                      <span className="emoji" aria-hidden="true">👋</span> invite friends
+                    </a>
+                    <InviteShare />
                   </div>
-                  <a className="button" href={`/account/edit/invite${fromQuery}`}>
-                    <span className="emoji" aria-hidden="true">👋</span> invite friends
-                  </a>
-                  <InviteShare />
+                  {presence}
                 </div>
-                <div className="profile-presence-section">{presence}</div>
                 <div className="account-danger-zone" id="appearance">
                   <div>
                     <strong>Appearance</strong>
