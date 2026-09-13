@@ -3036,7 +3036,7 @@ body.corners-round a.button {
   white-space: nowrap;
 }
 
-:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) {
+:is(.posttop, .parent-quote-top, .activity-follow-main) > .reference-menu:has(> .post-mood) {
   display: inline-flex !important;
   align-items: baseline;
   flex-wrap: nowrap;
@@ -3046,7 +3046,7 @@ body.corners-round a.button {
   white-space: nowrap;
 }
 
-:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) > .reference-menu-trigger {
+:is(.posttop, .parent-quote-top, .activity-follow-main) > .reference-menu:has(> .post-mood) > .reference-menu-trigger {
   display: inline-block;
   flex: 1 1 auto;
   min-width: 0;
@@ -3058,7 +3058,7 @@ body.corners-round a.button {
   white-space: nowrap;
 }
 
-:is(.posttop, .parent-quote-top) > .reference-menu:has(> .post-mood) > .post-mood {
+:is(.posttop, .parent-quote-top, .activity-follow-main) > .reference-menu:has(> .post-mood) > .post-mood {
   flex: 0 0 auto;
 }
 
@@ -3077,7 +3077,7 @@ body.corners-round a.button {
   transform: translateX(25%) scale(2);
 }
 
-:is(.posttop, .parent-quote-top) > .reference-menu:has(> :is(.reference-menu-trigger, .post-mood):hover),
+:is(.posttop, .parent-quote-top, .activity-follow-main) > .reference-menu:has(> :is(.reference-menu-trigger, .post-mood):hover),
 .preview-context-target:has(> .post-mood:hover) {
   z-index: 22;
 }
@@ -8041,6 +8041,7 @@ a.post-context:hover,
 }
 
 .activity-follow-main .activity-context {
+  margin-left: 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

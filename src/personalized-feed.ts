@@ -370,6 +370,11 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
   }))
   const targetStats = visibleUserProfileStats(database, [...targets.values()], user.id)
   const relevantIds = [...new Set([...timeline.map(row => row.actor_id), ...targets.values()])]
+  const supportsMood = !!database.query('SELECT 1 FROM pragma_table_info(\'users\') WHERE name=\'mood\'').get()
+  const moods = supportsMood && relevantIds.length
+    ? new Map((database.query(`SELECT id,mood FROM users WHERE id IN (${relevantIds.map(() => '?').join(',')})`)
+      .all(...relevantIds) as Array<{ id: number; mood: string }>).map(row => [row.id, row.mood]))
+    : new Map<number, string>()
   const followerIds = relevantIds.length
     ? new Set((database.query(`SELECT follower_id FROM follows
     WHERE following_id=? AND follower_id IN (${relevantIds.map(() => '?').join(',')})`)
@@ -393,6 +398,8 @@ export function loadPersonalizedFeed(database: Database, user: User, page: numbe
       .map(post => [post.id, post]),
   )
   const resultTimeline = timeline.map(row => ({ ...row, renderedPost: row.id ? enriched.get(row.id) : undefined,
+    actor_mood: moods.get(row.actor_id) || '',
+    target_mood: row.target_handle ? moods.get(targets.get(row.target_handle)!) || '' : '',
     actorProfileStats: actorStats.get(row.actor_id), actorFollowsViewer: followerIds.has(row.actor_id),
     actorBioReferences: bioReferences.get(row.actor_id),
     targetProfileStats: row.target_handle ? targetStats.get(targets.get(row.target_handle)!) : undefined,

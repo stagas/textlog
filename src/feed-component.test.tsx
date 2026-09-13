@@ -739,6 +739,8 @@ test('for-you does not put hide actions on follow activity', () => {
     ...postActivity(12, 4, 'carol'),
     activity_kind: 'user_follow' as const,
     event_key: 'user-follow:12',
+    actor_mood: '🌞',
+    target_mood: '🤸',
     target_handle: 'dave',
     target_bio: '',
     renderedPost: undefined,
@@ -751,7 +753,8 @@ test('for-you does not put hide actions on follow activity', () => {
 
   expect(html).not.toContain('for-you-hide-input for-you-hide-4')
   expect(html).not.toContain(':has(.for-you-hide-4:checked) .for-you-author-4')
-  expect(html).toContain('>@dave</a>')
+  expect(html).toContain('>@carol</a><span class="post-mood">🌞</span>')
+  expect(html).toContain('>@dave</a><span class="post-mood">🤸</span>')
   expect(html).not.toContain('>@dave.</a>')
   expect(html).toContain('<span class="activity-follow-full-stop">.</span>')
 })
@@ -843,16 +846,19 @@ test('a followed-you event offers to follow back', () => {
     target_is_viewer: true,
     targeted_to_viewer: true,
     actor_bio: 'Carol builds things',
+    actor_mood: '🌞',
     following: false,
     actorFollowsViewer: true,
     renderedPost: undefined,
   }
   const html = renderToStaticMarkup(<Feed
-    user={{ id: 1, handle: 'reader', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
+    user={{ id: 1, handle: 'reader', mood: '🤸', email: 'reader@example.com', bio: '', handle_chosen_at: '2026-08-19 09:00:00' }}
     data={{ timeline: [followActivity], page: 1, totalPages: 1, toMeCount: 1, forYouCount: 0, forYouUnread: false,
       toMeUnread: true }}
   />)
 
+  expect(html).toContain('>@carol</a><span class="post-mood">🌞</span>')
+  expect(html).toContain('followed <span class="post-context-author">you<span class="post-mood">🤸</span></span>:')
   expect(html).toContain('>follow back</button>')
   expect(html).toContain('href="/u/carol?from=%2Fmy-feed%23a-IEy7ZWXnSxMC"')
   expect(html).not.toContain('reference-menu-popover')

@@ -139,17 +139,20 @@ export function Feed(
         }`} key={row.event_key} id={anchor}>
           <div className="activity-follow-content">
             <MetaRow className="activity-follow-main" unread={!!row.unread}>
-              <UserReference handle={row.actor_handle} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
+              <UserReference handle={row.actor_handle} mood={row.actor_mood} bio={row.actor_bio} noteCount={row.actorProfileStats?.notes || 0}
                 stats={row.actorProfileStats} following={!!row.following} followsViewer={row.actorFollowsViewer}
                 user={user} href={`/u/${row.actor_handle}${fromQuery}`} navigationQuery={fromQuery}
                 referenceData={row.actorBioReferences}
                 showPopover={row.activity_kind !== 'signup' && !row.target_is_viewer} />
-              <span className="activity-context">
-                {row.activity_kind === 'signup' ? 'signed up.' : row.target_is_viewer ? 'followed you:' : 'followed'}
+              <span className="activity-context post-context">
+                {row.activity_kind === 'signup' ? 'signed up.' : row.target_is_viewer
+                  ? <>followed <span className="post-context-author">you{user.mood
+                    && <span className="post-mood">{user.mood}</span>}</span>:</>
+                  : 'followed'}
               </span>
               {!row.target_is_viewer && row.activity_kind === 'user_follow'
                 ? (
-                  <UserReference handle={row.target_handle!} bio={row.target_bio || ''} noteCount={row.posts || 0}
+                  <UserReference handle={row.target_handle!} mood={row.target_mood} bio={row.target_bio || ''} noteCount={row.posts || 0}
                     stats={row.targetProfileStats} following={!!row.following} user={user}
                     followsViewer={row.targetFollowsViewer} href={`/u/${row.target_handle}${fromQuery}`}
                     navigationQuery={fromQuery} referenceData={row.targetBioReferences} showPopover={false} />
