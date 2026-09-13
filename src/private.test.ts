@@ -24,6 +24,24 @@ test('private branches require a signed-in author or mention and enforce every a
   db.close()
 })
 
+test('a private reply includes its parent author throughout the branch without an explicit mention', () => {
+  const db = new Database(':memory:')
+  db.run(`CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,parent_id INTEGER);
+    CREATE TABLE post_hashtags(post_id INTEGER,tag TEXT);
+    CREATE TABLE post_mentions(post_id INTEGER,user_id INTEGER);
+    INSERT INTO posts VALUES(1,9,NULL),(2,2,1),(3,2,2),(4,9,3),(5,2,NULL);
+    INSERT INTO post_hashtags VALUES(2,'private'),(5,'private');`)
+  for (const id of [2, 3, 4]) {
+    expect(canReadPrivatePost(db, id, 9)).toBe(true)
+    expect(canReadPrivatePost(db, id, 2)).toBe(true)
+    expect(canReadPrivatePost(db, id, 99)).toBe(false)
+    expect(canReadPrivatePost(db, id)).toBe(false)
+  }
+  expect(canReadPrivatePost(db, 5, 9)).toBe(false)
+  expect(db.query('SELECT * FROM post_mentions').all()).toEqual([])
+  db.close()
+})
+
 test('private follow and block actions are inert and legacy relationships are removed', async () => {
   const { runMigrations } = await import('./migrations')
   const { executeDatabaseDomain } = await import('./database-domain')

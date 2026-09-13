@@ -9,7 +9,7 @@ export function isPrivateThread(postId: string | number = 'p.id') {
     ) SELECT id FROM private_ancestors))`
 }
 
-// Every private ancestor is a separate gate; mentions in a branch grant access to that branch.
+// Each private ancestor is a gate for its author, the parent author, and mentions in its branch.
 export function privatePostVisible(viewerId: number | string, postId: string | number = 'p.id') {
   if (typeof viewerId === 'number' && viewerId < 0) return `NOT ${isPrivateThread(postId)}`
   return `(NOT EXISTS (SELECT 1 FROM post_hashtags WHERE tag='private') OR NOT EXISTS (WITH RECURSIVE ancestors(id,user_id,parent_id) AS (
@@ -18,6 +18,9 @@ export function privatePostVisible(viewerId: number | string, postId: string | n
       JOIN ancestors child ON parent.id=child.parent_id
   ) SELECT 1 FROM ancestors root JOIN post_hashtags tag ON tag.post_id=root.id
     WHERE tag.tag='private' AND NOT (${viewerId}>=0 AND (root.user_id=${viewerId} OR EXISTS (
+      SELECT 1 FROM posts private_parent WHERE private_parent.id=root.parent_id
+        AND private_parent.user_id=${viewerId}
+    ) OR EXISTS (
       WITH RECURSIVE branch(id) AS (
         SELECT root.id UNION ALL SELECT child.id FROM posts child JOIN branch ON child.parent_id=branch.id
       ) SELECT 1 FROM branch JOIN post_mentions mention ON mention.post_id=branch.id
