@@ -256,7 +256,7 @@ export function Layout({
         {onThreadedPage && (
           <>
             <script src="/feed-reply.js?v=25" defer />
-            {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=54" defer />}
+            {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=55" defer />}
           </>
         )}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=4" defer />}

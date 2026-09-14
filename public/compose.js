@@ -543,6 +543,16 @@ import emojiKeywords from 'emojilib'
     navigationObserver.observe(header, { childList: true })
     window.addEventListener('resize', measure, { passive: true })
     measure()
+    const restoreScroll = () => {
+      measure()
+      previousScroll = Math.max(0, window.scrollY)
+      hidden = Math.min(height, Math.max(0, previousScroll - start))
+      paint()
+    }
+    window.addEventListener('pageshow', restoreScroll)
+    window.addEventListener('hashchange', restoreScroll)
+    window.addEventListener('popstate', () => requestAnimationFrame(restoreScroll))
+    window.addEventListener('textlog:feed-scroll-restored', restoreScroll)
     embeddedComposer.addEventListener('focusin', reveal)
     window.addEventListener('scroll', () => {
       if (scheduled) return
@@ -553,6 +563,10 @@ import emojiKeywords from 'emojilib'
         const delta = scroll - previousScroll
         previousScroll = scroll
         if (scroll <= start) hidden = 0
+        // An instant jump has no intervening scroll frames to slide the form in.
+        else if (Math.abs(delta) > window.innerHeight / 2) {
+          hidden = Math.min(height, scroll - start)
+        }
         else hidden = Math.max(0, Math.min(height, hidden + delta * 0.5))
         paint()
       })

@@ -342,6 +342,7 @@
       if (push) history.pushState({ feed: true, preserveScroll }, '',
         resolved.pathname + resolved.search + resolved.hash)
       scrollTo({ top: preservedScrollTop, behavior: 'instant' })
+      window.dispatchEvent(new Event('textlog:feed-scroll-restored'))
       void restore()
     }
     catch (error) {
