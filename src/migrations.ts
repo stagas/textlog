@@ -1,4 +1,5 @@
 import type { Database } from 'bun:sqlite'
+import { baselineSchema, baselineVersion } from './database-schema'
 import { instance } from '../instance.config'
 import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHashtag, normalizeHashtagSpelling,
   pascalCaseHashtagDisplayName, pluralHashtag, postContentFlags, singularHashtag } from './content'
@@ -5243,10 +5244,11 @@ function isBusyError(error: unknown) {
     || sqlite.errno === 517
 }
 
-function runMigrationWhenWriterIsAvailable(database: Database, migration: Migration) {
+function runMigrationWhenWriterIsAvailable(database: Database, migration: Migration,
+  shouldApply: () => boolean = () => true) {
   const migrate = database.transaction(() => {
     // Another green instance may have completed this migration while this one was waiting for the writer lock.
-    if (databaseVersion(database) >= migration.version) return false
+    if (databaseVersion(database) >= migration.version || !shouldApply()) return false
     migration.up(database)
     database.run(`PRAGMA user_version=${migration.version}`)
     return true
@@ -5270,12 +5272,28 @@ function runMigrationWhenWriterIsAvailable(database: Database, migration: Migrat
   }
 }
 
-export function runMigrations(database: Database, onMigration?: (migration: Migration) => void) {
+export function runMigrations(database: Database, onMigration?: (migration: Migration) => void,
+  options: { useBaseline?: boolean } = {}) {
   const current = databaseVersion(database)
   if (current > latestMigrationVersion) {
     throw new Error(`Database version ${current} is newer than supported version ${latestMigrationVersion}`)
   }
-  const pending = migrations.filter(migration => migration.version > current)
+  if (options.useBaseline !== false && current === 0) {
+    const baseline: Migration = {
+      version: baselineVersion,
+      name: 'schema_baseline',
+      up(database) {
+        database.run(baselineSchema)
+      },
+    }
+    // Check under the writer lock so concurrent initializers cannot both create the schema.
+    const applied = runMigrationWhenWriterIsAvailable(database, baseline, () =>
+      databaseVersion(database) === 0 && !database.query(
+        "SELECT 1 FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' LIMIT 1",
+      ).get())
+    if (applied) onMigration?.(baseline)
+  }
+  const pending = migrations.filter(migration => migration.version > databaseVersion(database))
   const configuredDelay = Number(Bun.env.MIGRATION_DELAY_MS ?? 50)
   const migrationDelayMs = Bun.env.NODE_ENV === 'test' || !Number.isFinite(configuredDelay)
     ? 0

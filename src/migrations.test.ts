@@ -4,6 +4,7 @@ import { extractHashtags } from './content'
 import { executeDatabaseDomain } from './database-domain'
 import { databaseVersion, latestMigrationVersion, migrations, normalizeInternalPostPreviews,
   runMigrations } from './migrations'
+import { baselineVersion } from './database-schema'
 import { sessionHash } from './sessions'
 
 describe('database migrations', () => {
@@ -218,13 +219,40 @@ describe('database migrations', () => {
     })
   })
 
+  test('baseline matches the historical schema and seed data', () => {
+    const baseline = new Database(':memory:')
+    const historical = new Database(':memory:')
+    baseline.run('PRAGMA foreign_keys=ON')
+    historical.run('PRAGMA foreign_keys=ON')
+    runMigrations(baseline)
+    runMigrations(historical, undefined, { useBaseline: false })
+    const schema = (database: Database) => database.query(
+      "SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name",
+    ).all()
+    expect(schema(baseline)).toEqual(schema(historical))
+    const tables = historical.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+      .all() as { name: string }[]
+    const shadowTables = new Set((historical.query('PRAGMA table_list').all() as { name: string; type: string }[])
+      .filter(table => table.type === 'shadow').map(table => table.name))
+    for (const { name } of tables) {
+      if (shadowTables.has(name)) continue
+      const rows = (database: Database) => (database.query(`SELECT * FROM "${name}"`).all() as
+        Record<string, unknown>[]).map(row => Object.fromEntries(Object.entries(row)
+          .filter(([key]) => key !== 'created_at' && key !== 'refreshed_at')))
+      expect(rows(baseline)).toEqual(rows(historical))
+    }
+    baseline.close()
+    historical.close()
+  })
+
   test('builds the current schema from an empty database and is idempotent', () => {
     const database = new Database(':memory:')
     database.run('PRAGMA foreign_keys=ON')
     const applied: number[] = []
 
     expect(runMigrations(database, migration => applied.push(migration.version))).toBe(latestMigrationVersion)
-    expect(applied).toEqual(migrations.map(migration => migration.version))
+    expect(applied).toEqual([baselineVersion, ...migrations.filter(migration => migration.version > baselineVersion)
+      .map(migration => migration.version)])
     expect((database.query('PRAGMA table_info(sessions)').all() as { name: string }[]).map(column => column.name))
       .toContain('token_hash')
     expect((database.query('PRAGMA table_info(sessions)').all() as { name: string }[]).map(column => column.name))
