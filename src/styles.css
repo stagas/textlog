@@ -1367,7 +1367,10 @@ nav form {
 .feed-compose-header {
   position: sticky;
   z-index: 40;
-  top: calc(-1 * var(--compose-hidden, 0px));
+  top: 0;
+  transform: translate3d(0, calc(-1 * var(--compose-hidden, 0px)), 0);
+  will-change: transform;
+  overflow-anchor: none;
   background: var(--bg);
 }
 

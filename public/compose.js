@@ -514,20 +514,35 @@ import emojiKeywords from 'emojilib'
       return tabs.getBoundingClientRect().top - header.getBoundingClientRect().top
     }
     let height = hiddenHeight()
+    let start = 0
     let hidden = 0
     let previousScroll = Math.max(0, window.scrollY)
     let scheduled = false
-    const paint = () => header.style.setProperty('--compose-hidden', `${hidden}px`)
+    let paintedHidden
+    const paint = () => {
+      if (hidden === paintedHidden) return
+      paintedHidden = hidden
+      header.style.setProperty('--compose-hidden', `${hidden}px`)
+    }
     const reveal = () => {
       hidden = 0
       paint()
     }
-    const observer = new ResizeObserver(() => {
+    const measure = () => {
+      if (!header.isConnected) return
       height = hiddenHeight()
+      start = header.previousElementSibling.getBoundingClientRect().top + window.scrollY
       hidden = Math.min(hidden, height)
       paint()
-    })
+    }
+    const observer = new ResizeObserver(measure)
     observer.observe(header)
+    observer.observe(document.querySelector('main'))
+    // Feed navigation replaces the tabs and moves this header into the new feed.
+    const navigationObserver = new MutationObserver(measure)
+    navigationObserver.observe(header, { childList: true })
+    window.addEventListener('resize', measure, { passive: true })
+    measure()
     embeddedComposer.addEventListener('focusin', reveal)
     window.addEventListener('scroll', () => {
       if (scheduled) return
@@ -537,8 +552,6 @@ import emojiKeywords from 'emojilib'
         const scroll = Math.max(0, window.scrollY)
         const delta = scroll - previousScroll
         previousScroll = scroll
-        const sentinel = header.previousElementSibling
-        const start = sentinel.getBoundingClientRect().top + scroll
         if (scroll <= start) hidden = 0
         else hidden = Math.max(0, Math.min(height, hidden + delta * 0.5))
         paint()
