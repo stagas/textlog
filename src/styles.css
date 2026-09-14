@@ -3,6 +3,7 @@
   --ink: #20231f;
   --muted: #8a9085;
   --tab-hover: #a2a79e;
+  --tab-highlight-height: 2px;
   --soft: #d9dbd4;
   --accent: #749668;
   --accent-dark: #55734a;
@@ -1668,11 +1669,11 @@ body.corners-round a.button {
 .feed-tab-highlight {
   position: absolute;
   right: 0;
-  bottom: -1px;
+  bottom: 0;
   left: 0;
   display: block;
   width: 100%;
-  height: 2.5px;
+  height: var(--tab-highlight-height);
   color: var(--accent);
   fill: currentColor;
   pointer-events: none;
@@ -4953,7 +4954,7 @@ form.report-panel {
   color: var(--muted);
   cursor: pointer;
   user-select: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: var(--tab-highlight-height) solid transparent;
 }
 
 .posting-help-tabs label:hover { color: var(--tab-hover); }
@@ -5652,10 +5653,6 @@ form.report-panel {
 
 .profile-tabs {
   padding-top: 0;
-}
-
-.profile-tabs .feed-tab-highlight {
-  height: 2.5px;
 }
 
 .profile-page-tabs {
