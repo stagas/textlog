@@ -16,6 +16,7 @@ function feedResponse(c: Context, format: SyndicationFormat, appUrl: string | nu
   feedPath?: string
   posts: import('../types').ApiPost[]
   omitAuthorInTitles?: boolean
+  quoteReplyParents?: boolean
 }) {
   const origin = apiOrigin(c.req.url, appUrl)
   return syndicationResponse(format, {
@@ -90,6 +91,7 @@ export function registerSyndicationRoutes(app: Hono, configuredService?: Databas
       feedPath,
       posts: loaded.posts,
       omitAuthorInTitles: true,
+      quoteReplyParents: true,
     })
   }
   const tag = async (c: Context, requestedTag: string, format: SyndicationFormat, feedPath?: string) => {

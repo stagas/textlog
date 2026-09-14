@@ -165,9 +165,40 @@ describe('RSS and Atom feeds', () => {
     expect(tag).toContain('hello &amp; &lt;friends&gt; #notes')
     expect(tag).not.toContain('a reply')
     const bot = await (await app.request('https://textlog.cc/u/Bob.atom')).text()
-    expect(bot).not.toContain('a reply')
+    expect(bot).toContain('<title>a reply</title>')
     expect(alias.status).toBe(301)
     expect(alias.headers.get('location')).toBe('/u/Alice.rss')
+  })
+
+  test('quotes the immediate parent above replies in user RSS and Atom feeds', async () => {
+    const app = fixture('**original**\n\nsecond line')
+    const database = (app as any).database as Database
+    database.run(`INSERT INTO posts VALUES
+      (5,2,2,'nested reply','2026-08-03 12:00:00',NULL)`)
+    for (const format of ['rss', 'atom']) {
+      for (const path of [`/u/Bob.${format}`, `/api/v1/users/Bob/posts.${format}`]) {
+        const feed = await (await app.request(`https://textlog.cc${path}`)).text()
+        expect(feed).toContain('&lt;blockquote&gt;\n&lt;p&gt;&lt;strong&gt;original&lt;/strong&gt;&lt;/p&gt;\n'
+          + '&lt;p&gt;second line&lt;/p&gt;\n&lt;p&gt;&lt;a href=&quot;https://textlog.cc/post/1&quot;&gt;'
+          + 'Original post&lt;/a&gt;&lt;/p&gt;\n&lt;/blockquote&gt;\n&lt;p&gt;a reply&lt;/p&gt;')
+        expect(feed).toContain('&lt;blockquote&gt;\n&lt;p&gt;a reply&lt;/p&gt;\n'
+          + '&lt;p&gt;&lt;a href=&quot;https://textlog.cc/post/2&quot;&gt;Original post&lt;/a&gt;&lt;/p&gt;\n&lt;/blockquote&gt;\n'
+          + '&lt;p&gt;nested reply&lt;/p&gt;')
+        expect(feed).toContain('<title>a reply</title>')
+      }
+    }
+  })
+
+  test('omits unavailable parent quotes while retaining user replies', async () => {
+    const app = fixture()
+    const database = (app as any).database as Database
+    database.run("UPDATE posts SET deleted_at='2026-08-03 12:00:00' WHERE id=1")
+    for (const format of ['rss', 'atom']) {
+      const feed = await (await app.request(`https://textlog.cc/u/Bob.${format}`)).text()
+      expect(feed).toContain('<title>a reply</title>')
+      expect(feed).not.toContain('hello')
+      expect(feed).not.toContain('&lt;blockquote&gt;')
+    }
   })
 
   test('exposes the same feed formats on API collection URLs', async () => {
@@ -217,7 +248,7 @@ describe('RSS and Atom feeds', () => {
     }
   })
 
-  test('keeps user syndication aligned with the top-level API post collection', async () => {
+  test('keeps user syndication aligned with the API collection including replies', async () => {
     const app = fixture()
     const database = (app as any).database as Database
     const syndication = await executeDatabaseDomain(database, 'syndication.load', {
@@ -231,7 +262,6 @@ describe('RSS and Atom feeds', () => {
       limit: 20,
       before: null,
       handle: 'Bob',
-      topLevelOnly: true,
     })
     const feed = await (await app.request('https://textlog.cc/api/v1/users/Bob/posts.atom')).text()
 
@@ -241,8 +271,8 @@ describe('RSS and Atom feeds', () => {
       const apiPosts = (api.value as { data: Array<{ id: number }> }).data
       expect(syndication.posts.map(post => post.id)).toEqual(apiPosts.map(post => post.id))
     }
-    expect(feed).not.toContain('a reply')
-    expect(feed).not.toContain('https://textlog.cc/post/2')
+    expect(feed).toContain('<title>a reply</title>')
+    expect(feed).toContain('https://textlog.cc/post/2')
   })
 
   test('passes ordinary user and hashtag pages through to their HTML routes', async () => {

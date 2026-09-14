@@ -12,6 +12,7 @@ export type SyndicationFeed = {
   feedUrl: string
   posts: ApiPost[]
   omitAuthorInTitles?: boolean
+  quoteReplyParents?: boolean
   activities?: SyndicationActivity[]
   postTitlePrefixes?: Record<number, string>
 }
@@ -67,10 +68,18 @@ function feedContent(feed: SyndicationFeed, body: string) {
   })
 }
 
+function postContent(feed: SyndicationFeed, post: ApiPost) {
+  const body = feed.quoteReplyParents && post.parent
+    ? `${post.parent.body.split(/\r?\n/).map(line => `> ${line}`).join('\n')}\n>\n`
+      + `> [Original post](${post.parent.url})\n\n${post.body}`
+    : post.body
+  return feedContent(feed, body)
+}
+
 function atom(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
     title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`, url: post.url,
-    created_at: post.created_at, author: post.author, content: feedContent(feed, post.body), permalink: true })
+    created_at: post.created_at, author: post.author, content: postContent(feed, post), permalink: true })
   )
   const allEntries = [...postEntries,
     ...(feed.activities || []).map(activity => ({ ...activity, content: `<p>${activity.title}</p>`,
@@ -102,7 +111,7 @@ ${entries}${entries ? '\n' : ''}</feed>
 function rss(feed: SyndicationFeed) {
   const postEntries = feed.posts.map(post => ({ id: post.url,
     title: `${feed.postTitlePrefixes?.[post.id] || ''}${itemTitle(post, !!feed.omitAuthorInTitles)}`, url: post.url,
-    created_at: post.created_at, author: post.author, content: feedContent(feed, post.body), permalink: true })
+    created_at: post.created_at, author: post.author, content: postContent(feed, post), permalink: true })
   )
   const allEntries = [...postEntries,
     ...(feed.activities || []).map(activity => ({ ...activity, content: `<p>${activity.title}</p>`,
