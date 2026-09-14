@@ -4192,6 +4192,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const stats = visibleUserProfileStats(database, people.map(person => person.id), viewerId)
       const profileStats = Object.fromEntries(stats) as import('./types').ExploreData['profileStats']
       const result = {
+        hasPostedNote: viewerId > 0 && !!database.query(
+          'SELECT 1 FROM posts WHERE user_id=? AND parent_id IS NULL LIMIT 1',
+        ).get(viewerId),
         people: attachPeopleStats(database, people, viewerId),
         tags: attachTagStats(database,
           trendingTags(database, viewerId, EXPLORE_TAG_PAGE_SIZE, undefined, (tagsPage - 1) * EXPLORE_TAG_PAGE_SIZE),

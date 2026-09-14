@@ -397,7 +397,7 @@ header {
   border-bottom: 1px solid var(--soft);
 }
 
-body:not(.write-page):has(#main-content .write-compose:not(.edit-write-compose)) > header {
+body:not(.write-page):has(#main-content > .write-compose:not(.edit-write-compose)) > header {
   border-bottom: 0;
 }
 
@@ -1370,7 +1370,6 @@ nav form {
   z-index: 40;
   top: 0;
   transform: translate3d(0, calc(-1 * var(--compose-hidden, 0px)), 0);
-  transition: transform 80ms linear;
   will-change: transform;
   overflow-anchor: none;
   background: var(--bg);
@@ -1386,9 +1385,9 @@ nav form {
   overflow-anchor: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .feed-compose-header {
-    transition: none;
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  .feed-compose-header.is-latched {
+    transition: transform 80ms linear;
   }
 }
 
@@ -7197,7 +7196,15 @@ form.report-panel {
 }
 
 .welcome-actions {
+  display: flex;
   justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  font-size: var(--font-size-12);
+}
+
+.welcome-panel .write-compose {
+  text-align: left;
 }
 
 .welcome-settings {

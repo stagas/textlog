@@ -176,6 +176,7 @@ export type SearchResultsData = {
 }
 export type BookmarksData = { posts: PostView[]; total: number; totalPages: number; highlights: string[] }
 export type ExploreData = {
+  hasPostedNote: boolean
   people: PersonView[]
   tags: TagView[]
   peopleTotal: number

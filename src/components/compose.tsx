@@ -124,7 +124,7 @@ export function ComposePreview({ user, body, executionOutput, location, backPath
 
 export function WriteForm(
   { user, error, body = '', returnPath = '/', suggestionSearch, draftId, autoFocus = false, embedded = false,
-    standalone = false, showBack = false }: {
+    standalone = false, showBack = false, placeholder: fixedPlaceholder }: {
       user: User
       error?: string
       body?: string
@@ -135,13 +135,16 @@ export function WriteForm(
       embedded?: boolean
       standalone?: boolean
       showBack?: boolean
+      placeholder?: string
     },
 ) {
   if (!canPublishPosts(user)) return null
   const shouldAutoFocus = (autoFocus || embedded) && !isMobileRequest(activeRequest())
   const storageKey = `textlog:compose:${user.id}:write`
-  const placeholder = randomComposePlaceholder(user.handle)
-  const typewriterPlaceholders = JSON.stringify(composePlaceholders(user.handle))
+  const placeholder = fixedPlaceholder ?? randomComposePlaceholder(user.handle)
+  const typewriterPlaceholders = fixedPlaceholder === undefined
+    ? JSON.stringify(composePlaceholders(user.handle))
+    : undefined
   const helpId = embedded ? 'embedded-posting-help' : 'write-posting-help'
   const moreActions = (
     <>
@@ -189,14 +192,14 @@ export function WriteForm(
               data-auto-focus={shouldAutoFocus ? '' : undefined} data-compose-storage-key={storageKey}
               data-line-limit={POST_MAX_LINES} style={{ '--compose-max-lines': POST_MAX_LINES } as React.CSSProperties}
               accessKey={embedded ? 'w' : undefined} defaultValue={body}
-              placeholder={embedded ? placeholder : undefined} aria-label={`What’s on your mind, @${user.handle}?`}
+              placeholder={fixedPlaceholder ?? (embedded ? placeholder : undefined)} aria-label={`What’s on your mind, @${user.handle}?`}
               autoComplete="off" inputMode="text" enterkeyhint="enter" />
             <PostingSuggestionResults search={suggestionSearch} />
             {controls}
           </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=42" data-typewriter-placeholders={typewriterPlaceholders} defer />
+      <script src="/compose.js?v=44" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }
@@ -252,7 +255,7 @@ export function AnonymousWriteForm({ returnPath = '/', error, body = '' }: {
           </div>
         </form>
       </Panel>
-      <script src="/compose.js?v=42" data-typewriter-placeholders={typewriterPlaceholders} defer />
+      <script src="/compose.js?v=44" data-typewriter-placeholders={typewriterPlaceholders} defer />
     </>
   )
 }

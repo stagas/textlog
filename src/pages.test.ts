@@ -1060,6 +1060,7 @@ test('explore renders tag toggles above a full-width people section', () => {
       people: [],
       peopleTotal: 9,
       tagsTotal: 25,
+      hasPostedNote: false,
       profileStats: {},
     },
   }))
@@ -1087,6 +1088,24 @@ test('explore renders tag toggles above a full-width people section', () => {
   expect(html.lastIndexOf('aria-label="People pagination"')).toBeGreaterThan(html.indexOf('class="people"'))
 })
 
+test('onboarding replaces the composer with a browse notes link in the subtext after posting a note', () => {
+  const renderWelcome = (hasPostedNote: boolean) => renderToStaticMarkup(React.createElement(Explore, {
+    user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '', email_verified_at: '2026-01-01',
+      handle_chosen_at: '2026-01-01' },
+    welcome: true,
+    data: { people: [], tags: [], peopleTotal: 0, tagsTotal: 0, profileStats: {}, hasPostedNote },
+  }))
+  const before = renderWelcome(false)
+  const after = renderWelcome(true)
+
+  expect(before).toContain('placeholder="Say hello, @reader!"')
+  expect(before).toContain('action="/post"')
+  expect(after).not.toContain('action="/post"')
+  expect(after).not.toContain('Say hello, @reader!')
+  expect(after).toContain('Follow a few people or hashtags below, or <a href="/">browse notes</a>.</p>')
+  expect(after).not.toContain('welcome-browse-button')
+})
+
 test('explore renders a person mood next to their username', () => {
   const html = renderToStaticMarkup(React.createElement(Explore, {
     user: null,
@@ -1095,6 +1114,7 @@ test('explore renders a person mood next to their username', () => {
       people: [{ id: 2, handle: 'writer', mood: '🌞', email: '', bio: '', posts: 1 }],
       peopleTotal: 1,
       tagsTotal: 0,
+      hasPostedNote: false,
       profileStats: {},
     },
   }))

@@ -543,6 +543,7 @@ import emojiKeywords from 'emojilib'
     })
     let paintedHidden
     const paint = () => {
+      header.classList.toggle('is-latched', window.scrollY > start + height)
       if (hidden === paintedHidden) return
       paintedHidden = hidden
       header.style.setProperty('--compose-hidden', `${hidden}px`)
@@ -589,7 +590,14 @@ import emojiKeywords from 'emojilib'
         const scroll = Math.max(0, window.scrollY)
         const delta = scroll - previousScroll
         previousScroll = scroll
-        if (scroll <= start) hidden = 0
+        if (scroll <= start + height) {
+          // Keep a revealed composer in place on the way back up, then let
+          // normal document scrolling take over without snapping it closed.
+          const naturalHidden = Math.max(0, scroll - start)
+          hidden = delta > 0
+            ? Math.min(naturalHidden, hidden + delta)
+            : Math.min(hidden, naturalHidden)
+        }
         // An instant jump has no intervening scroll frames to slide the form in.
         else if (feedAutoscrolling) {
           hidden = Math.min(hidden, scroll - start)
@@ -597,7 +605,10 @@ import emojiKeywords from 'emojilib'
         else if (Math.abs(delta) > window.innerHeight / 2) {
           hidden = Math.min(height, scroll - start)
         }
-        else hidden = Math.max(0, Math.min(height, hidden + delta * 0.5))
+        else {
+          const latchedDelta = scroll - Math.max(start + height, scroll - delta)
+          hidden = Math.max(0, Math.min(height, hidden + latchedDelta * 0.5))
+        }
         paint()
       })
     }, { passive: true })

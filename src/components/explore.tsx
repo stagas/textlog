@@ -3,11 +3,11 @@ import { EXPLORE_TAG_PAGE_SIZE } from '../pagination'
 import type { ExploreData, User } from '../types'
 import { displayBio, linkify } from '../utils'
 import { Layout } from './layout'
-import { ActionPair, Pagination, paginationHeadingClass, TagChips } from './page-shared'
+import { WriteForm } from './compose'
+import { Pagination, paginationHeadingClass, TagChips } from './page-shared'
 import { Panel } from './panel'
 import { BioReferenceForms, UserReference } from './post'
 import { SearchForm } from './search'
-import { writeHref } from './write-link'
 
 const PEOPLE_PAGE_SIZE = 8
 
@@ -42,10 +42,18 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           </form>
           <p className="eyebrow">welcome to {appName()}</p>
           <h1>Make this place yours.</h1>
-          <p>Follow a few people or hashtags below, or start with a note of your own.</p>
-          <ActionPair className="welcome-actions"
-            primary={<a className="button" href={writeHref()}>write your first note →</a>}
-            secondary={<a href="/">browse notes</a>} />
+          <p>{data.hasPostedNote
+            ? <>Follow a few people or hashtags below, or <a href="/">browse notes</a>.</>
+            : 'Follow a few people or hashtags below, or start with a note of your own.'}</p>
+          {!data.hasPostedNote && (
+              <>
+                <WriteForm user={user} returnPath={explorePath()} embedded standalone
+                  placeholder={`Say hello, @${user.handle}!`} />
+                <div className="welcome-actions">
+                  <span className="action-separator">or</span> <a href="/">browse notes</a>
+                </div>
+              </>
+          )}
           <nav className="welcome-settings" aria-label="Set up your account">
             <span>
               <a className="button" href="/account/edit/notifications">enable notifications</a>
