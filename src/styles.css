@@ -3131,7 +3131,7 @@ body.corners-round a.button {
   border-bottom: 0;
 }
 
-.post-body a:not(.remote-link-popover):not(.reference-menu-popover a):not(.post-hit-area):not(.parent-hit-area),
+.post-body a:not(.remote-link-popover):not(.reference-menu-popover a):not(.post-hit-area):not(.parent-hit-area):not(:is(.posttop, .parent-quote-top, .postfoot) a),
 .post-body > .reference-menu > a.reference-menu-trigger {
   padding-bottom: 1px;
   border-bottom: var(--hairline) solid var(--link-border);
