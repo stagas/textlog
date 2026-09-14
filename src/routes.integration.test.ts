@@ -3043,7 +3043,14 @@ test('anonymous quizzes show memory totals and unlock replies only for the answe
 })
 
 test('account photo uploads, rejects invalid images, and removes stored photos', async () => {
-  const cookie = await signup('photo_user', 'photo-user@example.test', 'unused', 'photo-signup')
+  const ip = '203.0.113.210'
+  const user = database.query(`INSERT INTO users(handle,email,password,email_verified_at,handle_chosen_at)
+    VALUES('photo_user','photo-user@example.test','!',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) RETURNING id`)
+    .get() as { id: number }
+  const session = 'profile-photo-test-session'
+  const now = Date.now()
+  insertSession(database, session, user.id, now + SESSION_LIFETIME_MS, now, 'Profile photo test')
+  const cookie = `textlog=${session}`
   const submit = (photo?: Blob, remove = false) => {
     const body = new FormData()
     body.set('handle', 'photo_user')
@@ -3053,18 +3060,18 @@ test('account photo uploads, rejects invalid images, and removes stored photos',
     if (photo) body.set('photo', photo, 'photo.png')
     if (remove) body.set('removePhoto', '1')
     return fetch(`${origin}/account/edit`, {
-      method: 'POST', headers: { cookie, origin }, body, redirect: 'manual',
+      method: 'POST', headers: { cookie, origin, 'x-forwarded-for': ip }, body, redirect: 'manual',
     })
   }
   const png = new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' })
   expect((await submit(png)).status).toBe(303)
   const photo = database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get() as { photo_key: string }
   expect(photo.photo_key).toStartWith('profiles/')
-  expect((await request(`/uploads/${photo.photo_key}`)).status).toBe(200)
-  expect(await (await request('/u/photo_user')).text()).toContain(photo.photo_key)
+  expect((await request(`/uploads/${photo.photo_key}`, { ip })).status).toBe(200)
+  expect(await (await request('/u/photo_user', { ip })).text()).toContain(photo.photo_key)
   expect((await submit(new Blob(['invalid'], { type: 'image/png' }))).status).toBe(400)
   expect(database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get()).toEqual(photo)
   expect((await submit(undefined, true)).status).toBe(303)
   expect(database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get()).toEqual({ photo_key: null })
-  expect((await request(`/uploads/${photo.photo_key}`)).status).toBe(404)
+  expect((await request(`/uploads/${photo.photo_key}`, { ip })).status).toBe(404)
 })
