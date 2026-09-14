@@ -519,8 +519,6 @@ import emojiKeywords from 'emojilib'
     })
   }
 
-  const initialEditorRow = document.querySelector('.embedded-write-compose .compose-editor-row')
-  const initialEditorRowHeight = initialEditorRow?.getBoundingClientRect().height
   textareas.forEach(textarea => {
     const saved = storedValue(textarea)
     if (!textarea.value && saved) textarea.value = saved
@@ -532,31 +530,17 @@ import emojiKeywords from 'emojilib'
   const feedTabs = document.querySelector('[data-feed-view] #feed-tabs')
   let revealEmbeddedComposer
   if (embeddedComposer && feedTabs && 'ResizeObserver' in window) {
-    const originalComposerHeight = embeddedComposer.getBoundingClientRect().height
-    const originalFooter = embeddedComposer.querySelector('.composefoot')
-    const originalFooterHeight = originalFooter?.getBoundingClientRect().height
-    const originalInset = Number.parseFloat(getComputedStyle(embeddedComposer.querySelector('.compose-editor-row')).getPropertyValue('--compose-controls-inset'))
-    let fullFooterExtra = Math.max(0, (originalFooterHeight || originalInset) - originalInset)
     const header = document.createElement('div')
     header.className = 'feed-compose-header'
-    if (initialEditorRowHeight) header.style.setProperty('--compose-expanded-row-height', `${initialEditorRowHeight}px`)
-    if (originalFooterHeight) header.style.setProperty('--compose-full-footer-height', `${originalFooterHeight}px`)
     feedTabs.before(header)
     header.append(embeddedComposer, feedTabs)
-    const initialHeightLoss = Math.max(0, originalComposerHeight - embeddedComposer.getBoundingClientRect().height)
-    if (initialHeightLoss && originalFooterHeight) {
-      header.style.setProperty('--compose-full-footer-height', `${originalFooterHeight + initialHeightLoss}px`)
-      fullFooterExtra += initialHeightLoss
-    }
     const hiddenHeight = () => {
       const tabs = header.querySelector('.feed-tabs-scroll')
       return tabs.getBoundingClientRect().top - header.getBoundingClientRect().top
     }
     let height = hiddenHeight()
     const editor = embeddedComposer.querySelector('textarea[name="body"]')
-    const fullEditorHeight = editor.getBoundingClientRect().height
     let fullHeight = height
-    let compactEnabled = false
     let start = 0
     let hidden = 0
     let previousScroll = Math.max(0, window.scrollY)
@@ -585,13 +569,6 @@ import emojiKeywords from 'emojilib'
     })
     let paintedHidden
     const paint = () => {
-      if (window.scrollY >= start + fullHeight) compactEnabled = true
-      if (window.scrollY <= start) compactEnabled = false
-      const compact = compactEnabled
-        ? Math.max(0, Math.min(1, (window.scrollY - start) / fullHeight))
-        : 0
-      header.style.setProperty('--compose-compact', String(compact))
-      header.classList.toggle('is-compacting', compact > 0)
       header.classList.toggle('is-latched', window.scrollY > start + fullHeight)
       if (hidden === paintedHidden) return
       paintedHidden = hidden
@@ -618,25 +595,7 @@ import emojiKeywords from 'emojilib'
     const measure = () => {
       if (!header.isConnected) return
       height = hiddenHeight()
-      const editorHeight = editor.getBoundingClientRect().height
-      const compact = Number(header.style.getPropertyValue('--compose-compact')) || 0
-      const reservedSpace = Math.max(0, fullEditorHeight - editorHeight) + compact * fullFooterExtra
-      header.style.setProperty('--compose-editor-height', `${editorHeight}px`)
-      // Opening help must not move the latch point and expand the editor again.
-      if (!embeddedComposer.querySelector('.posting-help-toggle:checked')) {
-        fullHeight = height + reservedSpace
-      }
-      // Keep the feed's document position unchanged as the editor compacts.
-      header.style.setProperty('--compose-reserved-space', `${reservedSpace}px`)
-      const controls = embeddedComposer.querySelector('.compose-controls-row .form-actions')
-      if (controls) header.style.setProperty('--compose-compact-controls', `${controls.getBoundingClientRect().width}px`)
-      const controlsRow = embeddedComposer.querySelector('.compose-controls-row')
-      if (controlsRow) {
-        const editorStyles = getComputedStyle(editor)
-        const bottom = Math.max(0, Number.parseFloat(editorStyles.paddingBottom)
-          + (Number.parseFloat(editorStyles.lineHeight) - controlsRow.getBoundingClientRect().height) / 2)
-        header.style.setProperty('--compose-centered-controls-bottom', `${bottom}px`)
-      }
+      if (!embeddedComposer.querySelector('.posting-help-toggle:checked')) fullHeight = height
       start = header.previousElementSibling.getBoundingClientRect().top + window.scrollY
       hidden = Math.min(hidden, height)
       paint()
@@ -664,7 +623,9 @@ import emojiKeywords from 'emojilib'
     window.addEventListener('hashchange', restoreScroll)
     window.addEventListener('popstate', () => requestAnimationFrame(restoreScroll))
     window.addEventListener('textlog:feed-scroll-restored', restoreScroll)
-    embeddedComposer.addEventListener('focusin', reveal)
+    embeddedComposer.addEventListener('focusin', () => {
+      if (window.matchMedia('(max-width: 600px)').matches) reveal()
+    })
     window.addEventListener('scroll', () => {
       if (feedAutoscrolling) scheduleFeedAutoscrollEnd()
       if (scheduled) return
@@ -687,7 +648,9 @@ import emojiKeywords from 'emojilib'
         }
         else {
           const latchedDelta = scroll - Math.max(start + fullHeight, scroll - delta)
-          hidden = Math.max(0, Math.min(height, hidden + latchedDelta * 0.5))
+          if (latchedDelta > 0 || window.matchMedia('(max-width: 600px)').matches) {
+            hidden = Math.max(0, Math.min(height, hidden + latchedDelta * 0.5))
+          }
         }
         paint()
       })
