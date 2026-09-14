@@ -519,6 +519,8 @@ import emojiKeywords from 'emojilib'
     })
   }
 
+  const initialEditorRow = document.querySelector('.embedded-write-compose .compose-editor-row')
+  const initialEditorRowHeight = initialEditorRow?.getBoundingClientRect().height
   textareas.forEach(textarea => {
     const saved = storedValue(textarea)
     if (!textarea.value && saved) textarea.value = saved
@@ -530,10 +532,22 @@ import emojiKeywords from 'emojilib'
   const feedTabs = document.querySelector('[data-feed-view] #feed-tabs')
   let revealEmbeddedComposer
   if (embeddedComposer && feedTabs && 'ResizeObserver' in window) {
+    const originalComposerHeight = embeddedComposer.getBoundingClientRect().height
+    const originalFooter = embeddedComposer.querySelector('.composefoot')
+    const originalFooterHeight = originalFooter?.getBoundingClientRect().height
+    const originalInset = Number.parseFloat(getComputedStyle(embeddedComposer.querySelector('.compose-editor-row')).getPropertyValue('--compose-controls-inset'))
+    let fullFooterExtra = Math.max(0, (originalFooterHeight || originalInset) - originalInset)
     const header = document.createElement('div')
     header.className = 'feed-compose-header'
+    if (initialEditorRowHeight) header.style.setProperty('--compose-expanded-row-height', `${initialEditorRowHeight}px`)
+    if (originalFooterHeight) header.style.setProperty('--compose-full-footer-height', `${originalFooterHeight}px`)
     feedTabs.before(header)
     header.append(embeddedComposer, feedTabs)
+    const initialHeightLoss = Math.max(0, originalComposerHeight - embeddedComposer.getBoundingClientRect().height)
+    if (initialHeightLoss && originalFooterHeight) {
+      header.style.setProperty('--compose-full-footer-height', `${originalFooterHeight + initialHeightLoss}px`)
+      fullFooterExtra += initialHeightLoss
+    }
     const hiddenHeight = () => {
       const tabs = header.querySelector('.feed-tabs-scroll')
       return tabs.getBoundingClientRect().top - header.getBoundingClientRect().top
@@ -577,6 +591,7 @@ import emojiKeywords from 'emojilib'
         ? Math.max(0, Math.min(1, (window.scrollY - start) / fullHeight))
         : 0
       header.style.setProperty('--compose-compact', String(compact))
+      header.classList.toggle('is-compacting', compact > 0)
       header.classList.toggle('is-latched', window.scrollY > start + fullHeight)
       if (hidden === paintedHidden) return
       paintedHidden = hidden
@@ -603,8 +618,10 @@ import emojiKeywords from 'emojilib'
     const measure = () => {
       if (!header.isConnected) return
       height = hiddenHeight()
-      const reservedSpace = Math.max(0, fullEditorHeight - editor.getBoundingClientRect().height)
-      header.style.setProperty('--compose-editor-height', `${editor.getBoundingClientRect().height}px`)
+      const editorHeight = editor.getBoundingClientRect().height
+      const compact = Number(header.style.getPropertyValue('--compose-compact')) || 0
+      const reservedSpace = Math.max(0, fullEditorHeight - editorHeight) + compact * fullFooterExtra
+      header.style.setProperty('--compose-editor-height', `${editorHeight}px`)
       // Opening help must not move the latch point and expand the editor again.
       if (!embeddedComposer.querySelector('.posting-help-toggle:checked')) {
         fullHeight = height + reservedSpace
