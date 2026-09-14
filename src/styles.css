@@ -9270,3 +9270,10 @@ body:has(.logs-page) main {
 .infinite-feed-sentinel {
   height: 1px;
 }
+
+.infinite-feed-sentinel.infinite-feed-loading {
+  height: auto;
+  border-top: 1px solid var(--soft);
+  padding: 3rem 0;
+  text-align: center;
+}

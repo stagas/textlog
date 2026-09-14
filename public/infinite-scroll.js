@@ -214,6 +214,20 @@
     loading = true
     chunkController = new AbortController()
     observer.unobserve(sentinel)
+    const spinner = document.createElement('span')
+    spinner.className = 'feed-tab-loading'
+    sentinel.classList.add('infinite-feed-loading')
+    sentinel.removeAttribute('aria-hidden')
+    sentinel.setAttribute('role', 'status')
+    sentinel.setAttribute('aria-label', 'Loading more notes')
+    sentinel.append(spinner)
+    let frame = 0
+    const renderSpinner = () => {
+      spinner.textContent = spinnerFrames[frame]
+      frame = (frame + 1) % spinnerFrames.length
+    }
+    renderSpinner()
+    const spinnerTimer = setInterval(renderSpinner, 80)
     try {
       const url = new URL(location.href)
       url.searchParams.set('_feed_chunk', sentinel.dataset.feedNext)
@@ -242,6 +256,12 @@
       return null
     }
     finally {
+      clearInterval(spinnerTimer)
+      spinner.remove()
+      sentinel.classList.remove('infinite-feed-loading')
+      sentinel.setAttribute('aria-hidden', 'true')
+      sentinel.removeAttribute('role')
+      sentinel.removeAttribute('aria-label')
       loading = false
       chunkController = null
     }
