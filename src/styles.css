@@ -5309,8 +5309,14 @@ form.report-panel {
 }
 
 .feed-compose-header.is-compacting .embedded-write-compose textarea.form-control {
-  min-height: calc((1 - var(--compose-compact, 0)) * (3lh + var(--space-4) + var(--compose-controls-inset)) + var(--compose-compact, 0) * (1lh + 2 * var(--space-4)));
+  min-height: calc((1 - var(--compose-compact, 0)) * (3lh + var(--space-4) + var(--compose-controls-inset)) + var(--compose-compact, 0) * (var(--compose-compact-lines, 1) * 1lh + 2 * var(--space-4)));
   max-height: calc(var(--compose-max-lines) * 1lh + (1 - var(--compose-compact, 0)) * (var(--space-4) + var(--compose-controls-inset)) + var(--compose-compact, 0) * (2 * var(--space-4)));
+}
+
+@media (max-width: 600px) {
+  .feed-compose-header {
+    --compose-compact-lines: 2;
+  }
 }
 
 .feed-compose-header.is-compacting .embedded-write-compose .compose-editor-row {
@@ -5352,7 +5358,7 @@ form.report-panel {
 }
 
 .feed-compose-header.is-compacting .embedded-write-compose:has(.compose-character-count:not([hidden])) textarea.form-control {
-  min-height: calc((1 - var(--compose-compact, 0)) * 3lh + var(--compose-compact, 0) * 1lh + var(--space-4) + var(--compose-controls-inset));
+  min-height: calc((1 - var(--compose-compact, 0)) * 3lh + var(--compose-compact, 0) * var(--compose-compact-lines, 1) * 1lh + var(--space-4) + var(--compose-controls-inset));
   max-height: calc(var(--compose-max-lines) * 1lh + var(--space-4) + var(--compose-controls-inset));
 }
 
