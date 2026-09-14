@@ -669,6 +669,13 @@ import emojiKeywords from 'emojilib'
     const textarea = event.target.querySelector(textareaSelector)
     if (!textarea || event.submitter?.getAttribute('name') === 'action') return
 
+    if (!textarea.value.trim()) {
+      event.preventDefault()
+      textarea.setCustomValidity('The note cannot be empty.')
+      textarea.reportValidity()
+      return
+    }
+
     if (!update(textarea)) {
       clearStoredValue(textarea)
       return
