@@ -459,7 +459,7 @@ app.use('*', async (c, next) => {
   await next()
   const embeddable = c.req.path.startsWith('/embed/')
   const scriptsEnabled = (Boolean(currentUser(c.req.raw)) && !c.req.path.startsWith('/account'))
-    || c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
+    || c.req.path === '/account/edit' || c.req.path === '/account/edit/notifications' || c.req.path === '/admin/logs'
     || ['/@', '/my-feed', '/hot', '/any', '/new', '/all'].includes(c.req.path)
     || new URL(c.req.url).searchParams.has('from')
   for (const [name, value] of Object.entries(

@@ -3051,6 +3051,15 @@ test('account photo uploads, rejects invalid images, and removes stored photos',
   const now = Date.now()
   insertSession(database, session, user.id, now + SESSION_LIFETIME_MS, now, 'Profile photo test')
   const cookie = `textlog=${session}`
+  const editor = await request('/account/edit', { cookie, ip })
+  expect(editor.status).toBe(200)
+  const policy = editor.headers.get('content-security-policy') || ''
+  expect(policy).toContain("script-src 'self'")
+  expect(policy).not.toContain("script-src 'none'")
+  expect(await editor.text()).toContain('/profile-photo.js?v=4')
+  const script = await request('/profile-photo.js?v=4', { ip })
+  expect(script.status).toBe(200)
+  expect(await script.text()).toContain('readAsDataURL')
   const submit = (photo?: Blob, remove = false) => {
     const body = new FormData()
     body.set('handle', 'photo_user')

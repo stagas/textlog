@@ -389,6 +389,11 @@ export function registerAccountRoutes(app: Hono) {
       get: (_, key) => typeof key === 'string' ? stringField(data, key) : undefined,
     })
     const returnPath = f.from ? safeNext(f.from) : undefined
+    if (f.removePhoto === '1') {
+      const removed = await databaseService().call('account.removePhoto', { userId: user.id })
+      await deleteImagesAfterCommit(removed.imageKeys)
+      return redirect('/account/edit' + (returnPath ? '?from=' + encodeURIComponent(returnPath) : ''))
+    }
     // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
     // Treat an entirely blank submission as an empty bio, though.
     const submittedBio = normalizeBioBody(f.bio || '')
@@ -436,7 +441,7 @@ export function registerAccountRoutes(app: Hono) {
         )
       }
     }
-    let photoKey: string | null | undefined = f.removePhoto === '1' ? null : undefined
+    let photoKey: string | undefined
     const photo = data.get('photo')
     if (photo instanceof File && photo.size) {
       try {

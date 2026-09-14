@@ -179,6 +179,7 @@ export function Profile(
                   <FormMessage error={error} />
                   <div className="profile-photo-field">
                     <span>photo</span>
+                    <div className="profile-photo-picker-row">
                     <label className="profile-photo-upload" htmlFor="profile-photo-input">
                       {profile.photo_key
                         ? <img src={getImageUrl(profile.photo_key)} alt="Current profile photo" />
@@ -188,12 +189,13 @@ export function Profile(
                             <path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" />
                           </svg>}
                     </label>
+                    {profile.photo_key && <button className="profile-edit-link profile-photo-remove" type="submit" name="removePhoto" value="1" formNoValidate>remove</button>}
+                    </div>
                     <input id="profile-photo-input" type="file" name="photo" aria-label="Upload profile photo"
                       accept="image/jpeg,image/png,image/webp,image/gif" />
                     <noscript><span className="form-hint">Your selected photo will appear after saving.</span></noscript>
                     <span className="form-hint">JPEG, PNG, WebP, or GIF, up to 10 MB.</span>
                   </div>
-                  {profile.photo_key && <label><input type="checkbox" name="removePhoto" value="1" /> remove photo</label>}
                   <div className="profile-identity-fields">
                     <label className="profile-handle-field">
                       handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}

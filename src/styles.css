@@ -9314,8 +9314,9 @@ body:has(.logs-page) main {
 .profile-hover-actions { display: flex; align-items: center; gap: 12px; }
 .reference-popover-actions.profile-hover-actions { display: flex; align-items: center; gap: 12px; }
 
-.profile-photo-upload {
+.bio-form .profile-photo-upload {
   position: relative;
+  gap: 0;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -9348,4 +9349,11 @@ body:has(.logs-page) main {
   border-color: var(--accent);
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+
+.profile-photo-picker-row { display: flex; align-items: center; gap: var(--space-4); }
+.bio-form .profile-photo-remove { width: fit-content; }
+.profile-photo-field > span:first-child {
+  color: var(--muted);
+  font-size: var(--font-size-11);
 }

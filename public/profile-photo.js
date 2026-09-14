@@ -28,8 +28,6 @@
       preview.src = reader.result
       if (original) original.style.display = 'none'
       picker.insertBefore(preview, input)
-      const remove = input.form?.querySelector('input[name="removePhoto"]')
-      if (remove) remove.checked = false
     })
     reader.readAsDataURL(file)
   })

@@ -1059,6 +1059,16 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       })()
       return null as DatabaseDomainOutput<K>
     }
+    case 'account.removePhoto': {
+      const { userId } = input as DatabaseDomainInput<'account.removePhoto'>
+      const imageKeys = database.transaction(() => {
+        const photo = database.query('SELECT photo_key FROM users WHERE id=?').get(userId) as { photo_key: string | null } | null
+        database.query('UPDATE users SET photo_key=NULL WHERE id=?').run(userId)
+        cacheDb.query('DELETE FROM materialized_feed_pages_v2').run()
+        return photo?.photo_key ? [photo.photo_key] : []
+      })()
+      return { imageKeys } as DatabaseDomainOutput<K>
+    }
     case 'account.updateProfile': {
       const { userId, handle, mood, bio, timezone, photoKey } = input as DatabaseDomainInput<'account.updateProfile'>
       try {

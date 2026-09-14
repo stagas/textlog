@@ -246,11 +246,11 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1672" />
+        <link rel="stylesheet" href="/styles.css?v=1676" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         <script src="/keyboard.js?v=3" defer />
-        {requestUrl.pathname === '/account/edit' && <script src="/profile-photo.js?v=3" defer />}
+        {requestUrl.pathname === '/account/edit' && <script src="/profile-photo.js?v=4" defer />}
         {requestUrl.searchParams.has('from') && <script src="/contextual-back.js?v=2" defer />}
         {onThreadedPage && <script src="/thread-hover-scroll.js?v=32" defer />}
         {(onFeedPage || onTagPage || onProfilePage) && <script src="/thread-expansion.js?v=4" defer />}
