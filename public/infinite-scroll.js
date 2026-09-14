@@ -367,7 +367,9 @@
       if (push) history.pushState({ feed: true, preserveScroll }, '',
         resolved.pathname + resolved.search + resolved.hash)
       if (!smoothScroll) scrollTo({ top: preservedScrollTop, behavior: 'instant' })
-      window.dispatchEvent(new Event('textlog:feed-scroll-restored'))
+      window.dispatchEvent(new CustomEvent('textlog:feed-scroll-restored', {
+        detail: { preserveComposer: smoothScroll },
+      }))
       void restore()
     }
     catch (error) {

@@ -158,7 +158,7 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
 })
 
 test('feed pagination uses the partial feed navigation enhancement', async () => {
-  const response = await request('/infinite-scroll.js?v=59')
+  const response = await request('/infinite-scroll.js?v=60')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
