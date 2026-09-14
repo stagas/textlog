@@ -234,12 +234,12 @@ describe('in-memory stylesheet', () => {
 
   test('retains separators between multiple projected roots in the first personalized conversation', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.feed-tabs + .for-you-item > .feed-thread:first-child,')
+    expect(css).toContain(':is(.feed-tabs, .feed-compose-header) + .for-you-item > .feed-thread:first-child,')
     expect(css).toContain('.feed-read-action + .for-you-item > .feed-thread:first-child {')
     expect(css).toContain(
-      ':is(.feed-tabs, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread:first-child {',
+      ':is(.feed-tabs, .feed-compose-header, .feed-read-action) + .infinite-feed-chunk > .for-you-item:first-child > .feed-thread:first-child {',
     )
-    expect(css).not.toContain('.feed-tabs + .for-you-item > .feed-thread,')
+    expect(css).not.toContain(':is(.feed-tabs, .feed-compose-header) + .for-you-item > .feed-thread,')
     expect(css).not.toContain(
       '.infinite-feed-chunk > .for-you-item:first-child > .feed-thread {',
     )
@@ -298,7 +298,7 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('.profile:has(\n  .profile-bio :is(.reference-menu, .remote-link-menu)'
       + ':is(:hover, :focus-within),\n  .profile-bio .mobile-popover-toggle:checked\n) {\n'
       + '  position: relative;\n  z-index: 50;\n}')
-    expect(css).toContain('.feed-tabs+.activity-group > .activity-follow:first-child,')
+    expect(css).toContain(':is(.feed-tabs, .feed-compose-header)+.activity-group > .activity-follow:first-child,')
     expect(css).toContain('.feed-read-action+.activity-group > .activity-follow:first-child {\n  border-top: 0;')
   })
 
