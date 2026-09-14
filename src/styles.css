@@ -1379,6 +1379,12 @@ nav form {
   position: static;
 }
 
+/* Expanding the sticky composer should push posts down rather than anchor them
+   by scrolling the document and hiding the composer again. */
+[data-feed-view]:has(> .feed-compose-header) {
+  overflow-anchor: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .feed-compose-header {
     transition: none;
