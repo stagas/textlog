@@ -320,6 +320,13 @@
       loading = false
       const preservedScrollTop = preserveScroll ? scrollY : 0
       currentView.querySelector('.feed-inline-reply-compose')?._layoutCleanup?.()
+      const composeHeader = currentView.querySelector('.feed-compose-header')
+      const incomingTabs = incomingView.querySelector('#feed-tabs')
+      if (composeHeader && incomingTabs) {
+        composeHeader.querySelector('#feed-tabs').remove()
+        incomingTabs.before(composeHeader)
+        composeHeader.append(incomingTabs)
+      }
       currentView.replaceWith(incomingView)
       pendingLiveTabs.delete(activeLiveTab())
       syncLiveCountsFromDocument()

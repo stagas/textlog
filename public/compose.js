@@ -502,8 +502,54 @@ import emojiKeywords from 'emojilib'
     validateExistingPostReferences(textarea)
     startPlaceholderTypewriter(textarea)
   })
+  const embeddedComposer = document.querySelector('.embedded-write-compose')
+  const feedTabs = document.querySelector('[data-feed-view] #feed-tabs')
+  if (embeddedComposer && feedTabs && 'ResizeObserver' in window) {
+    const header = document.createElement('div')
+    header.className = 'feed-compose-header'
+    feedTabs.before(header)
+    header.append(embeddedComposer, feedTabs)
+    const hiddenHeight = () => {
+      const tabs = header.querySelector('.feed-tabs-scroll')
+      return tabs.getBoundingClientRect().top - header.getBoundingClientRect().top
+    }
+    let height = hiddenHeight()
+    let hidden = 0
+    let previousScroll = Math.max(0, window.scrollY)
+    let scheduled = false
+    const paint = () => header.style.setProperty('--compose-hidden', `${hidden}px`)
+    const reveal = () => {
+      hidden = 0
+      paint()
+    }
+    const observer = new ResizeObserver(() => {
+      height = hiddenHeight()
+      hidden = Math.min(hidden, height)
+      paint()
+    })
+    observer.observe(header)
+    embeddedComposer.addEventListener('focusin', reveal)
+    window.addEventListener('scroll', () => {
+      if (scheduled) return
+      scheduled = true
+      requestAnimationFrame(() => {
+        scheduled = false
+        const scroll = Math.max(0, window.scrollY)
+        const delta = scroll - previousScroll
+        previousScroll = scroll
+        const sentinel = header.previousElementSibling
+        const start = sentinel.getBoundingClientRect().top + scroll
+        if (scroll <= start) hidden = 0
+        else hidden = Math.max(0, Math.min(height, hidden + delta * 0.5))
+        paint()
+      })
+    }, { passive: true })
+    paint()
+  }
+
   document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
 
+  let cancelWriteFocus
   document.addEventListener('click', event => {
     if (!(event.target instanceof Element)) return
 
@@ -514,10 +560,31 @@ import emojiKeywords from 'emojilib'
     if (!(textarea instanceof HTMLTextAreaElement)) return
 
     event.preventDefault()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    cancelWriteFocus?.()
     const mobileTopAction = writeAction.matches('.feed-tabs-top')
       && window.matchMedia('(max-width: 600px)').matches
-    if (!mobileTopAction) textarea.focus({ preventScroll: true })
+    if (!mobileTopAction) {
+      let timer
+      const cleanup = () => {
+        clearTimeout(timer)
+        window.removeEventListener('scroll', scheduleFocus)
+        window.removeEventListener('scrollend', finish)
+        cancelWriteFocus = undefined
+      }
+      const finish = () => {
+        cleanup()
+        if (window.scrollY <= 1) textarea.focus({ preventScroll: true })
+      }
+      const scheduleFocus = () => {
+        clearTimeout(timer)
+        timer = setTimeout(finish, 150)
+      }
+      cancelWriteFocus = cleanup
+      window.addEventListener('scroll', scheduleFocus, { passive: true })
+      window.addEventListener('scrollend', finish)
+      scheduleFocus()
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   })
 
   if ('ResizeObserver' in window) {

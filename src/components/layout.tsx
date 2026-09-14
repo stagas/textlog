@@ -246,7 +246,7 @@ export function Layout({
           </>
         )}
         {mobile && <link href="https://fonts.cdnfonts.com/css/dejavu-sans-mono" rel="stylesheet" />}
-        <link rel="stylesheet" href="/styles.css?v=1642" />
+        <link rel="stylesheet" href="/styles.css?v=1644" />
         {user && !requestUrl.pathname.startsWith('/account')
           && <script src="/reference-follow.js?v=7" defer />}
         <script src="/keyboard.js?v=3" defer />
@@ -256,7 +256,7 @@ export function Layout({
         {onThreadedPage && (
           <>
             <script src="/feed-reply.js?v=25" defer />
-            {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=53" defer />}
+            {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=54" defer />}
           </>
         )}
         {onProgressivePaginationPage && <script src="/progressive-pagination.js?v=4" defer />}

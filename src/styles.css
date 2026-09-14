@@ -1364,6 +1364,17 @@ nav form {
   view-timeline-axis: block;
 }
 
+.feed-compose-header {
+  position: sticky;
+  z-index: 40;
+  top: calc(-1 * var(--compose-hidden, 0px));
+  background: var(--bg);
+}
+
+.feed-compose-header > #feed-tabs {
+  position: static;
+}
+
 .feed-tabs-scroll::-webkit-scrollbar {
   display: none;
 }
