@@ -298,6 +298,11 @@
     currentView.setAttribute('aria-busy', 'true')
     startNavigationSpinner(tab, href)
     const spinnerStartedAt = performance.now()
+    const smoothScroll = !preserveScroll && !!tab?.closest('.feed-tabs')
+    if (smoothScroll) {
+      window.dispatchEvent(new Event('textlog:feed-autoscroll'))
+      scrollTo({ top: 0, behavior: 'smooth' })
+    }
     try {
       const response = await fetch(href, {
         headers: {
@@ -341,10 +346,7 @@
       resolved.hash = ''
       if (push) history.pushState({ feed: true, preserveScroll }, '',
         resolved.pathname + resolved.search + resolved.hash)
-      scrollTo({
-        top: preservedScrollTop,
-        behavior: !preserveScroll && tab?.closest('.feed-tabs') ? 'smooth' : 'instant',
-      })
+      if (!smoothScroll) scrollTo({ top: preservedScrollTop, behavior: 'instant' })
       window.dispatchEvent(new Event('textlog:feed-scroll-restored'))
       void restore()
     }

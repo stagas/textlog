@@ -518,6 +518,28 @@ import emojiKeywords from 'emojilib'
     let hidden = 0
     let previousScroll = Math.max(0, window.scrollY)
     let scheduled = false
+    let feedAutoscrolling = false
+    let feedAutoscrollTimer
+    const endFeedAutoscroll = () => {
+      feedAutoscrolling = false
+      clearTimeout(feedAutoscrollTimer)
+    }
+    const scheduleFeedAutoscrollEnd = () => {
+      clearTimeout(feedAutoscrollTimer)
+      feedAutoscrollTimer = setTimeout(endFeedAutoscroll, 150)
+    }
+    window.addEventListener('textlog:feed-autoscroll', () => {
+      feedAutoscrolling = true
+      scheduleFeedAutoscrollEnd()
+    })
+    window.addEventListener('scrollend', endFeedAutoscroll)
+    window.addEventListener('wheel', endFeedAutoscroll, { passive: true })
+    window.addEventListener('touchmove', endFeedAutoscroll, { passive: true })
+    window.addEventListener('keydown', event => {
+      if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) {
+        endFeedAutoscroll()
+      }
+    })
     let paintedHidden
     const paint = () => {
       if (hidden === paintedHidden) return
@@ -555,6 +577,7 @@ import emojiKeywords from 'emojilib'
     window.addEventListener('textlog:feed-scroll-restored', restoreScroll)
     embeddedComposer.addEventListener('focusin', reveal)
     window.addEventListener('scroll', () => {
+      if (feedAutoscrolling) scheduleFeedAutoscrollEnd()
       if (scheduled) return
       scheduled = true
       requestAnimationFrame(() => {
@@ -564,7 +587,7 @@ import emojiKeywords from 'emojilib'
         previousScroll = scroll
         if (scroll <= start) hidden = 0
         // An instant jump has no intervening scroll frames to slide the form in.
-        else if (Math.abs(delta) > window.innerHeight / 2) {
+        else if (feedAutoscrolling || Math.abs(delta) > window.innerHeight / 2) {
           hidden = Math.min(height, scroll - start)
         }
         else hidden = Math.max(0, Math.min(height, hidden + delta * 0.5))
