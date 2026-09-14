@@ -229,7 +229,9 @@ export function visibleUserProfileStats(database: Database, userIds: number[], v
     `AND ($viewer < 0 OR NOT EXISTS
     (SELECT 1 FROM blocks b WHERE (b.blocker_id=$viewer AND b.blocked_id=${connectedId})
       OR (b.blocker_id=${connectedId} AND b.blocked_id=$viewer)))`
-  const rows = database.query(`SELECT u.id,
+  const photoColumn = database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='photo_key'").get()
+    ? 'u.photo_key photoKey,' : ''
+  const rows = database.query(`SELECT u.id,${photoColumn}
     (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.parent_id IS NULL AND p.deleted_at IS NULL) notes,
     (SELECT count(*) FROM posts p WHERE p.user_id=u.id AND p.parent_id IS NOT NULL AND p.deleted_at IS NULL) replies,
     (SELECT count(*) FROM follows f WHERE f.following_id=u.id ${connectionVisibility('f.follower_id')}) followers,

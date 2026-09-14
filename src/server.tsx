@@ -103,6 +103,7 @@ const databaseIndependentPaths = new Set([
   '/feed-reply.js',
   '/progressive-pagination.js',
   '/compose.js',
+  '/profile-photo.js',
   '/contextual-back.js',
   '/reference-follow.js',
   '/thread-hover-scroll.js',

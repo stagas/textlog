@@ -167,6 +167,7 @@ const publicScriptPaths = [
   '/feed-reply.js',
   '/progressive-pagination.js',
   '/compose.js',
+  '/profile-photo.js',
   '/contextual-back.js',
   '/reference-follow.js',
   '/thread-hover-scroll.js',
@@ -378,10 +379,10 @@ if (Bun.env.NODE_ENV === 'production') {
   archiveTimer.unref()
 }
 
-app.use('*', bodyLimit({
-  maxSize: GLOBAL_REQUEST_BODY_LIMIT,
+app.use('*', (c, next) => bodyLimit({
+  maxSize: c.req.path === '/account/edit' ? 10 * 1024 * 1024 + GLOBAL_REQUEST_BODY_LIMIT : GLOBAL_REQUEST_BODY_LIMIT,
   onError: c => clientErrorPage(c.req.raw, 413),
-}))
+})(c, next))
 
 app.use('*', async (c, next) => {
   await next()

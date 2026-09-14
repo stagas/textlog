@@ -127,7 +127,7 @@ export type DatabaseDomainOperations = {
     output: boolean }
   'account.changePassword': { input: { userId: number; passwordHash: string; currentSessionHash: string | null };
     output: null }
-  'account.updateProfile': { input: { userId: number; handle: string; mood: string; bio: string; timezone: string };
+  'account.updateProfile': { input: { userId: number; handle: string; mood: string; bio: string; timezone: string; photoKey?: string | null };
     output: { status: 'ready' | 'unavailable' | 'change-limit' } }
   'account.answerMoodPrompt': { input: { userId: number; mood: string | null }; output: null }
   'account.popularTags': {

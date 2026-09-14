@@ -39,6 +39,7 @@ export type PollView = {
 }
 
 export type UserProfileStats = {
+  photoKey?: string | null
   notes: number
   replies: number
   followers: number
@@ -233,6 +234,7 @@ export type PersonalizedFeedData = {
 }
 
 export type ProfileRow = {
+  photo_key?: string | null
   id: number
   handle: string
   email: string
@@ -362,7 +364,7 @@ export type TagView = {
   viewerFollowing?: boolean
   followerCount?: number
 }
-export type User = { id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
+export type User = { photo_key?: string | null; id: number; handle: string; email: string; bio: string; suspended_at?: string | null;
   mood?: string; mood_prompt_dismissed_at?: string | null; tag_prompt_completed_at?: string | null;
   people_prompt_completed_at?: string | null; email_verified_at?: string | null; activity_read_at?: string | null;
   handle_chosen_at?: string | null; timezone?: string | null; show_link_previews?: number; recap_emails?: number;

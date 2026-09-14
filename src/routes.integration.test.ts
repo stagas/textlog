@@ -3041,3 +3041,30 @@ test('anonymous quizzes show memory totals and unlock replies only for the answe
   expect(database.query('SELECT count(*) count FROM poll_votes WHERE post_id=?').get(quiz.id))
     .toEqual({ count: 0 })
 })
+
+test('account photo uploads, rejects invalid images, and removes stored photos', async () => {
+  const cookie = await signup('photo_user', 'photo-user@example.test', 'unused', 'photo-signup')
+  const submit = (photo?: Blob, remove = false) => {
+    const body = new FormData()
+    body.set('handle', 'photo_user')
+    body.set('bio', '')
+    body.set('mood', '')
+    body.set('timezone', 'UTC')
+    if (photo) body.set('photo', photo, 'photo.png')
+    if (remove) body.set('removePhoto', '1')
+    return fetch(`${origin}/account/edit`, {
+      method: 'POST', headers: { cookie, origin }, body, redirect: 'manual',
+    })
+  }
+  const png = new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' })
+  expect((await submit(png)).status).toBe(303)
+  const photo = database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get() as { photo_key: string }
+  expect(photo.photo_key).toStartWith('profiles/')
+  expect((await request(`/uploads/${photo.photo_key}`)).status).toBe(200)
+  expect(await (await request('/u/photo_user')).text()).toContain(photo.photo_key)
+  expect((await submit(new Blob(['invalid'], { type: 'image/png' }))).status).toBe(400)
+  expect(database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get()).toEqual(photo)
+  expect((await submit(undefined, true)).status).toBe(303)
+  expect(database.query("SELECT photo_key FROM users WHERE handle='photo_user'").get()).toEqual({ photo_key: null })
+  expect((await request(`/uploads/${photo.photo_key}`)).status).toBe(404)
+})

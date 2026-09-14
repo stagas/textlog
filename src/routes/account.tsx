@@ -33,13 +33,15 @@ import { emailChangeForToken, issueEmailChangeAuthorization } from '../email-cha
 import { confirmEmailToken, findEmailToken } from '../email-verification'
 import { isDevelopment } from '../environment'
 import {
+  limitedFormData,
+  stringField,
   clearSessionCookie,
   exploreWelcomeCookie,
   notificationDevice,
   notificationDeviceCookie,
   notificationUserAgent,
 } from '../http'
-import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
+import { createImageKey, uploadImage, validateImageData, imageDimensions, MAX_IMAGE_BYTES, deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { deleteBioLinkPreviewImages, deleteLinkPreviewImages, discoverLinkPreviews } from '../link-preview'
 import { moderateText, moderationMessage } from '../moderation'
 import { PAGE_SIZE } from '../pagination'
@@ -382,7 +384,10 @@ export function registerAccountRoutes(app: Hono) {
   app.post('/account/edit', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
-    const f = await form(c.req.raw)
+    const data = await limitedFormData(c.req.raw, MAX_IMAGE_BYTES + 64 * 1024)
+    const f = new Proxy({} as Record<string, string>, {
+      get: (_, key) => typeof key === 'string' ? stringField(data, key) : undefined,
+    })
     const returnPath = f.from ? safeNext(f.from) : undefined
     // Preserve whitespace because spaces and line breaks can be meaningful in ASCII art.
     // Treat an entirely blank submission as an empty bio, though.
@@ -431,14 +436,43 @@ export function registerAccountRoutes(app: Hono) {
         )
       }
     }
-    const updated = await databaseService().call('account.updateProfile', {
-      userId: user.id,
-      handle,
-      mood: submittedMood,
-      bio,
-      timezone: submittedTimezone,
-    })
+    let photoKey: string | null | undefined = f.removePhoto === '1' ? null : undefined
+    const photo = data.get('photo')
+    if (photo instanceof File && photo.size) {
+      try {
+        const bytes = new Uint8Array(await photo.arrayBuffer())
+        const type = validateImageData(bytes, photo.type)
+        imageDimensions(bytes, type)
+        photoKey = createImageKey(type, 'profiles')
+        try {
+          await uploadImage(photoKey, bytes, type)
+        } catch {
+          throw new Error('Could not upload photo. Please try again.')
+        }
+      }
+      catch (error) {
+        return page(<Profile user={user} profile={user} posts={[]} following={false} bio={bio}
+          editHandle={submittedHandle} editMood={submittedMood} editing returnPath={returnPath}
+          error={error instanceof Error ? error.message : 'Could not upload photo.'} />, 400)
+      }
+    }
+    let updated
+    try {
+      updated = await databaseService().call('account.updateProfile', {
+        userId: user.id,
+        handle,
+        mood: submittedMood,
+        bio,
+        timezone: submittedTimezone,
+        photoKey,
+      })
+    }
+    catch (error) {
+      if (photoKey) await deleteImagesAfterCommit([photoKey])
+      throw error
+    }
     if (updated.status !== 'ready') {
+      if (photoKey) await deleteImagesAfterCommit([photoKey])
       const error = updated.status === 'change-limit'
         ? 'You can change your handle up to two times per month. Try again next month.'
         : 'That username is unavailable.'
@@ -447,6 +481,9 @@ export function registerAccountRoutes(app: Hono) {
           editHandle={submittedHandle} editMood={submittedMood} editing error={error} returnPath={returnPath} />,
         400,
       )
+    }
+    if (photoKey !== undefined && user.photo_key && user.photo_key !== photoKey) {
+      await deleteImagesAfterCommit([user.photo_key])
     }
     const previews = await discoverLinkPreviews(bio)
     const newKeys = previews.flatMap(preview => 'imageKey' in preview && preview.imageKey ? [preview.imageKey] : [])

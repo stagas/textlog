@@ -677,7 +677,7 @@ function sessionUser(database: Database, token: string | null): User | null {
     : 'NULL people_prompt_completed_at'
   const user = database.query(`SELECT u.id,u.handle,u.email,u.bio,${moodColumn},u.suspended_at,u.email_verified_at,
       u.handle_chosen_at,u.show_link_previews,u.show_moderated_content,u.hide_people_follow_activity,
-      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.new_message_sound,u.timezone,
+      u.hide_hashtag_follow_activity,u.show_note_streak,u.show_timestamps,u.new_message_sound,u.photo_key,u.timezone,
       ${moodPromptColumn},${tagPromptColumn},
       ${peoplePromptColumn}
     FROM sessions s JOIN users u ON u.id=s.user_id
@@ -1060,10 +1060,11 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       return null as DatabaseDomainOutput<K>
     }
     case 'account.updateProfile': {
-      const { userId, handle, mood, bio, timezone } = input as DatabaseDomainInput<'account.updateProfile'>
+      const { userId, handle, mood, bio, timezone, photoKey } = input as DatabaseDomainInput<'account.updateProfile'>
       try {
         database.transaction(() => {
           updateProfileHandle(database, userId, handle, bio)
+          if (photoKey !== undefined) database.query('UPDATE users SET photo_key=? WHERE id=?').run(photoKey, userId)
           database.query('UPDATE users SET mood=?,timezone=? WHERE id=?').run(mood, timezone, userId)
           cacheDb.query('DELETE FROM materialized_feed_pages_v2 WHERE viewer_id=?').run(userId)
         })()
@@ -1245,6 +1246,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
             .all(userId) as { image_url: string }[]).map(row => row.image_url).filter(isImageKey))
           database.query('DELETE FROM user_bio_link_previews WHERE user_id=?').run(userId)
         }
+        const photo = database.query('SELECT photo_key FROM users WHERE id=?').get(userId) as { photo_key: string | null } | null
+        if (photo?.photo_key) imageKeys.push(photo.photo_key)
+        database.query('UPDATE users SET photo_key=NULL WHERE id=?').run(userId)
         database.query('UPDATE users SET deletion_reason=?,deleted_handle=handle WHERE id=?').run(reason, userId)
         anonymizeUser(database, userId)
       })()
@@ -2009,7 +2013,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         ? 'mood'
         : '\'\' mood'
       const profile = database.query(
-        `SELECT id,handle,email,bio,${moodColumn},created_at,suspended_at,deleted_at,show_note_streak,timezone
+        `SELECT id,handle,email,bio,photo_key,${moodColumn},created_at,suspended_at,deleted_at,show_note_streak,timezone
           FROM users WHERE id=? AND deleted_at IS NULL`,
       ).get(profileId) as import('./types').ProfileRow | null
       if (!profile) return null as DatabaseDomainOutput<K>

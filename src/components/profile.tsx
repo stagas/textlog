@@ -1,3 +1,4 @@
+import { getImageUrl } from '../image-storage'
 import { Fragment } from 'preact/compat'
 import { BIO_MAX, BIO_MAX_LINES } from '../bio-body'
 import { extractAuthoredHashtags, extractMentions, normalizeHashtagSpelling } from '../content'
@@ -137,6 +138,8 @@ export function Profile(
         editing={editing} returnPath={returnPath} controlsInTitle
       >
         <div className="profile-content">
+          {!editing && profile.photo_key && <img className="profile-photo profile-photo-page" src={getImageUrl(profile.photo_key)} alt="" />}
+          <div className="profile-details">
           <div className={`profile-title-row${
             !editing && user?.id !== profile.id
               ? ' profile-title-row-actions'
@@ -171,9 +174,26 @@ export function Profile(
           {user?.id === profile.id && editing
             ? (
               <>
-                <form className="bio-form" method="post" action="/account/edit">
+                <form className="bio-form" method="post" action="/account/edit" encType="multipart/form-data">
                   {returnPath && <input type="hidden" name="from" value={returnPath} />}
                   <FormMessage error={error} />
+                  <div className="profile-photo-field">
+                    <span>photo</span>
+                    <label className="profile-photo-upload" htmlFor="profile-photo-input">
+                      {profile.photo_key
+                        ? <img src={getImageUrl(profile.photo_key)} alt="Current profile photo" />
+                        : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                            aria-hidden="true">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2" />
+                          </svg>}
+                    </label>
+                    <input id="profile-photo-input" type="file" name="photo" aria-label="Upload profile photo"
+                      accept="image/jpeg,image/png,image/webp,image/gif" />
+                    <noscript><span className="form-hint">Your selected photo will appear after saving.</span></noscript>
+                    <span className="form-hint">JPEG, PNG, WebP, or GIF, up to 10 MB.</span>
+                  </div>
+                  {profile.photo_key && <label><input type="checkbox" name="removePhoto" value="1" /> remove photo</label>}
                   <div className="profile-identity-fields">
                     <label className="profile-handle-field">
                       handle<input name="handle" aria-describedby="profile-handle-help" defaultValue={editHandle}
@@ -302,6 +322,7 @@ export function Profile(
                       + encodeURIComponent(reference.value)} />
                 </Fragment>
               ))}
+          </div>
           {!editing && noteStreak}
         </div>
       </ProfileHeader>

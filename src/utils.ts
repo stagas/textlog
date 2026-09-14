@@ -10,6 +10,7 @@ import { sessionCookieName } from './brand'
 import { pendingFollowHref } from './components/auth-links'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, normalizeHashtagSpelling, type PostContentFlags,
   splitSpoilerBody } from './content'
+import { getImageUrl } from './image-storage'
 import { locationDestination } from './locations'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
@@ -184,6 +185,9 @@ function userForSession(token: string | null, database: Database): User | null {
             | 'hide_hashtag_follow_activity' | 'show_note_streak' | 'show_timestamps' | 'timezone'>
         | null
       if (preferences) Object.assign(user, preferences)
+      if (database.query("SELECT 1 FROM pragma_table_info('users') WHERE name='photo_key'").get()) {
+        Object.assign(user, database.query('SELECT photo_key FROM users WHERE id=?').get(user.id))
+      }
     }
     catch {}
   }
@@ -703,6 +707,8 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
   const following = isUser ? !!referencePopover.mentionFollowing?.[key] : !!referencePopover.hashtagFollowing?.[key]
   const followsViewer = isUser && !!referencePopover.mentionFollowsViewer?.[key]
   const ownUser = isUser && key === referencePopover.currentHandle?.toLowerCase()
+  const photoKey = isUser ? referencePopover.mentionProfileStats?.[key]?.photoKey : undefined
+  const photo = photoKey ? `<span class="profile-photo-slot"><img class="profile-photo profile-photo-hover" src="${esc(getImageUrl(photoKey))}" alt="" loading="lazy"></span>` : ''
   const action = ownUser ? '' : referencePopover.signedIn
     ? `<span class="reference-popover-actions"><span class="follow-action">${
       followsViewer ? '<span class="follows-you">follows you</span>' : ''
@@ -721,7 +727,7 @@ function renderedReference(token: string, mentionBios: Record<string, string>,
     + `<span class="mobile-reference-destination"><a class="button" href="${href}">${
       isUser ? 'profile' : 'notes'
     }</a></span>`
-    + action
+    + (photo ? (action ? action.replace('<span class="reference-popover-actions">', '<span class="reference-popover-actions profile-hover-actions">').replace(/<\/span>$/, `${photo}</span>`) : `<span class="reference-popover-actions profile-hover-actions">${photo}</span>`) : action)
     + (isUser && (mentionBios[key]?.trim() || ownUser)
       ? `<span class="reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${
         mentionBios[key]?.trim() ? '' : ' bio-empty'

@@ -1,3 +1,4 @@
+import { getImageUrl } from '../image-storage'
 import { anonymousQuizAnswers, anonymousQuizTotals } from '../anonymous-quiz'
 import {
   containsAsciiArt,
@@ -285,6 +286,9 @@ export function UserReference(
   const bioMentionProfileStats = referenceData?.mentionProfileStats || {}
   const bioMentionNoteCounts = referenceData?.mentionNoteCounts || {}
   const bioFormPrefix = `handle-${handle.toLowerCase()}-bio`
+  const photo = stats?.photoKey
+    ? <span className="profile-photo-slot"><img className="profile-photo profile-photo-hover" src={getImageUrl(stats.photoKey)} alt="" loading="lazy" /></span>
+    : null
   return (
     <span className="reference-menu">
       {showPopover && <input className="mobile-popover-toggle" type="checkbox" aria-label="Toggle reference details" />}
@@ -299,7 +303,7 @@ export function UserReference(
           </span>
           {showFollowAction && !ownUser && (user
             ? (
-              <span className="reference-popover-actions">
+              <span className={`reference-popover-actions${photo ? ' profile-hover-actions' : ''}`}>
                 <form method="post" action={'/follow/' + handle}>
                   {followReturnPath && <input type="hidden" name="from" value={followReturnPath} />}
                   {!!followsViewer && <span className="follows-you">follows you</span>}
@@ -307,16 +311,19 @@ export function UserReference(
                     {following ? 'unfollow' : followsViewer ? 'follow back' : 'follow'}
                   </button>
                 </form>
+                {photo}
                 {extraAction}
               </span>
             )
             : (
-              <span className="reference-popover-actions">
+              <span className={`reference-popover-actions${photo ? ' profile-hover-actions' : ''}`}>
                 <a className="button" href={pendingFollowHref('user', handle, followReturnPath)} rel="nofollow">
                   follow
                 </a>
+                {photo}
               </span>
             ))}
+          {photo && (!showFollowAction || ownUser) && <span className="reference-popover-actions profile-hover-actions">{photo}</span>}
           {(bio?.trim() || ownUser) && (
             <span
               className={`reference-popover-bio${ownUser ? ' reference-popover-bio-own' : ''}${

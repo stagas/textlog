@@ -5229,6 +5229,10 @@ export const migrations: Migration[] = [
       }
     },
   },
+  { version: 229, name: 'profile_photos', up(database) {
+    if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+    addColumn(database, 'users', 'photo_key', 'TEXT')
+  } },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
