@@ -625,6 +625,18 @@ import emojiKeywords from 'emojilib'
     window.addEventListener('textlog:feed-scroll-restored', restoreScroll)
     embeddedComposer.addEventListener('focusin', () => {
       if (window.matchMedia('(max-width: 600px)').matches) reveal()
+      else if (hidden > 0) revealEmbeddedComposer()
+    })
+    editor.addEventListener('input', () => {
+      if (hidden > 0 && !window.matchMedia('(max-width: 600px)').matches) revealEmbeddedComposer()
+    })
+    document.addEventListener('keydown', event => {
+      if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === 'w'
+        && !window.matchMedia('(max-width: 600px)').matches) {
+        event.preventDefault()
+        revealEmbeddedComposer()
+        editor.focus({ preventScroll: true })
+      }
     })
     window.addEventListener('scroll', () => {
       if (feedAutoscrolling) scheduleFeedAutoscrollEnd()
