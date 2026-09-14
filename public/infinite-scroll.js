@@ -341,7 +341,10 @@
       resolved.hash = ''
       if (push) history.pushState({ feed: true, preserveScroll }, '',
         resolved.pathname + resolved.search + resolved.hash)
-      scrollTo({ top: preservedScrollTop, behavior: 'instant' })
+      scrollTo({
+        top: preservedScrollTop,
+        behavior: !preserveScroll && tab?.closest('.feed-tabs') ? 'smooth' : 'instant',
+      })
       window.dispatchEvent(new Event('textlog:feed-scroll-restored'))
       void restore()
     }
