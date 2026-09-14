@@ -5874,6 +5874,7 @@ form.report-panel {
 
 .profile-owner-actions {
   display: flex;
+  margin-left: auto;
   align-items: center;
   gap: var(--space-4);
 }
