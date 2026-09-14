@@ -93,12 +93,13 @@ import emojiKeywords from 'emojilib'
 
     const value = textarea.value
     const classes = highlightRanges(value, postReferenceAvailability.get(textarea))
+    const classNames = classes.map(names => [...names].sort().join(' '))
     const fragment = document.createDocumentFragment()
     let start = 0
     while (start < value.length) {
-      const className = [...classes[start]].sort().join(' ')
+      const className = classNames[start]
       let end = start + 1
-      while (end < value.length && [...classes[end]].sort().join(' ') === className) end++
+      while (end < value.length && classNames[end] === className) end++
       const text = value.slice(start, end)
       if (classes[start].has('compose-emoji')) {
         const surroundingClasses = [...classes[start]].filter(name => name !== 'compose-emoji').join(' ')
@@ -368,8 +369,17 @@ import emojiKeywords from 'emojilib'
     }, 120)
   }
 
-  const update = textarea => {
-    updateHighlight(textarea)
+  const editorUpdates = new WeakMap()
+  const lineMeasurement = document.createElement('div')
+  Object.assign(lineMeasurement.style, {
+    position: 'fixed', left: '0', top: '0', visibility: 'hidden', pointerEvents: 'none',
+    contain: 'layout style paint', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+    padding: '0', margin: '0', border: '0',
+  })
+  document.body.append(lineMeasurement)
+  const update = (textarea, highlight = true) => {
+    const previous = editorUpdates.get(textarea)
+    if (highlight && (!previous || previous.value !== textarea.value)) updateHighlight(textarea)
     const counter = textarea.closest('.compose-editor-row')?.querySelector('.compose-character-count')
     const characterLimit = Number(textarea.dataset.characterLimit)
     const lineLimit = Number(textarea.dataset.lineLimit)
@@ -378,12 +388,26 @@ import emojiKeywords from 'emojilib'
     const characters = textarea.value.length
     const styles = getComputedStyle(textarea)
     const lineHeight = Number.parseFloat(styles.lineHeight)
-    const padding = Number.parseFloat(styles.paddingTop) + Number.parseFloat(styles.paddingBottom)
     const logicalLines = textarea.value.split('\n').length
+    // Measure text independently of the editor's minimum height. Otherwise
+    // multiline styling can resize it and repeatedly toggle itself on and off.
+    const width = Math.max(1, textarea.clientWidth - Number.parseFloat(styles.paddingLeft) - Number.parseFloat(styles.paddingRight))
+    const key = `${width}|${styles.font}|${styles.lineHeight}|${styles.letterSpacing}`
+    let textHeight = previous?.textHeight
+    if (!previous || previous.value !== textarea.value || previous.key !== key) {
+      Object.assign(lineMeasurement.style, {
+        width: `${width}px`, font: styles.font, lineHeight: styles.lineHeight,
+        letterSpacing: styles.letterSpacing,
+      })
+      lineMeasurement.textContent = `${textarea.value}\u200b`
+      textHeight = lineMeasurement.getBoundingClientRect().height
+      editorUpdates.set(textarea, { value: textarea.value, key, textHeight })
+    }
     const renderedLines = Number.isFinite(lineHeight) && lineHeight > 0
-      ? Math.ceil((textarea.scrollHeight - padding - 0.5) / lineHeight)
+      ? Math.max(1, Math.round(textHeight / lineHeight))
       : logicalLines
     const lines = Math.max(logicalLines, renderedLines)
+    textarea.closest('.embedded-write-compose')?.classList.toggle('compose-multiline', lines >= 2)
     const showCharacters = characters >= characterLimit - 10
     const showLines = lines >= lineLimit - 1
     const signals = []
@@ -515,6 +539,10 @@ import emojiKeywords from 'emojilib'
       return tabs.getBoundingClientRect().top - header.getBoundingClientRect().top
     }
     let height = hiddenHeight()
+    const editor = embeddedComposer.querySelector('textarea[name="body"]')
+    const fullEditorHeight = editor.getBoundingClientRect().height
+    let fullHeight = height
+    let compactEnabled = false
     let start = 0
     let hidden = 0
     let previousScroll = Math.max(0, window.scrollY)
@@ -543,7 +571,13 @@ import emojiKeywords from 'emojilib'
     })
     let paintedHidden
     const paint = () => {
-      header.classList.toggle('is-latched', window.scrollY > start + height)
+      if (window.scrollY >= start + fullHeight) compactEnabled = true
+      if (window.scrollY <= start) compactEnabled = false
+      const compact = compactEnabled
+        ? Math.max(0, Math.min(1, (window.scrollY - start) / fullHeight))
+        : 0
+      header.style.setProperty('--compose-compact', String(compact))
+      header.classList.toggle('is-latched', window.scrollY > start + fullHeight)
       if (hidden === paintedHidden) return
       paintedHidden = hidden
       header.style.setProperty('--compose-hidden', `${hidden}px`)
@@ -552,16 +586,49 @@ import emojiKeywords from 'emojilib'
       hidden = 0
       paint()
     }
-    revealEmbeddedComposer = reveal
+    let writeRevealTimer
+    const finishWriteReveal = () => {
+      clearTimeout(writeRevealTimer)
+      header.classList.remove('is-write-revealing')
+    }
+    header.addEventListener('transitionend', event => {
+      if (event.target === header && event.propertyName === 'transform') finishWriteReveal()
+    })
+    revealEmbeddedComposer = () => {
+      clearTimeout(writeRevealTimer)
+      header.classList.add('is-write-revealing')
+      reveal()
+      writeRevealTimer = setTimeout(finishWriteReveal, 300)
+    }
     const measure = () => {
       if (!header.isConnected) return
       height = hiddenHeight()
+      const reservedSpace = Math.max(0, fullEditorHeight - editor.getBoundingClientRect().height)
+      header.style.setProperty('--compose-editor-height', `${editor.getBoundingClientRect().height}px`)
+      // Opening help must not move the latch point and expand the editor again.
+      if (!embeddedComposer.querySelector('.posting-help-toggle:checked')) {
+        fullHeight = height + reservedSpace
+      }
+      // Keep the feed's document position unchanged as the editor compacts.
+      header.style.setProperty('--compose-reserved-space', `${reservedSpace}px`)
+      const controls = embeddedComposer.querySelector('.compose-controls-row .form-actions')
+      if (controls) header.style.setProperty('--compose-compact-controls', `${controls.getBoundingClientRect().width}px`)
+      const controlsRow = embeddedComposer.querySelector('.compose-controls-row')
+      if (controlsRow) {
+        const editorStyles = getComputedStyle(editor)
+        const bottom = Math.max(0, Number.parseFloat(editorStyles.paddingBottom)
+          + (Number.parseFloat(editorStyles.lineHeight) - controlsRow.getBoundingClientRect().height) / 2)
+        header.style.setProperty('--compose-centered-controls-bottom', `${bottom}px`)
+      }
       start = header.previousElementSibling.getBoundingClientRect().top + window.scrollY
       hidden = Math.min(hidden, height)
       paint()
     }
     const observer = new ResizeObserver(measure)
     observer.observe(header)
+    observer.observe(editor)
+    const observedControls = embeddedComposer.querySelector('.compose-controls-row')
+    if (observedControls) observer.observe(observedControls)
     observer.observe(document.querySelector('main'))
     // Feed navigation replaces the tabs and moves this header into the new feed.
     const navigationObserver = new MutationObserver(measure)
@@ -590,23 +657,19 @@ import emojiKeywords from 'emojilib'
         const scroll = Math.max(0, window.scrollY)
         const delta = scroll - previousScroll
         previousScroll = scroll
-        if (scroll <= start + height) {
+        if (scroll <= start + fullHeight) {
           // Keep a revealed composer in place on the way back up, then let
           // normal document scrolling take over without snapping it closed.
-          const naturalHidden = Math.max(0, scroll - start)
+          const naturalHidden = Math.min(height, Math.max(0, scroll - start))
           hidden = delta > 0
             ? Math.min(naturalHidden, hidden + delta)
             : Math.min(hidden, naturalHidden)
         }
-        // An instant jump has no intervening scroll frames to slide the form in.
         else if (feedAutoscrolling) {
           hidden = Math.min(hidden, scroll - start)
         }
-        else if (Math.abs(delta) > window.innerHeight / 2) {
-          hidden = Math.min(height, scroll - start)
-        }
         else {
-          const latchedDelta = scroll - Math.max(start + height, scroll - delta)
+          const latchedDelta = scroll - Math.max(start + fullHeight, scroll - delta)
           hidden = Math.max(0, Math.min(height, hidden + latchedDelta * 0.5))
         }
         paint()
@@ -660,8 +723,25 @@ import emojiKeywords from 'emojilib'
     window.scrollTo({ top: 0, behavior: 'smooth' })
   })
 
+  const pendingEditorUpdates = new WeakMap()
+  const scheduleEditorUpdate = (textarea, highlight = false) => {
+    let pending = pendingEditorUpdates.get(textarea)
+    if (!pending) {
+      pending = {}
+      pendingEditorUpdates.set(textarea, pending)
+    }
+    if (highlight && !pending.frame) {
+      pending.frame = requestAnimationFrame(() => {
+        pending.frame = undefined
+        updateHighlight(textarea)
+      })
+    }
+    clearTimeout(pending.timer)
+    pending.timer = setTimeout(() => update(textarea, false), 120)
+  }
+
   if ('ResizeObserver' in window) {
-    const observer = new ResizeObserver(entries => entries.forEach(entry => update(entry.target)))
+    const observer = new ResizeObserver(entries => entries.forEach(entry => scheduleEditorUpdate(entry.target)))
     textareas.forEach(textarea => observer.observe(textarea))
   }
 
@@ -669,7 +749,7 @@ import emojiKeywords from 'emojilib'
     if (event.target instanceof HTMLTextAreaElement && event.target.matches(textareaSelector)) {
       event.target.setCustomValidity('')
       storeValue(event.target)
-      update(event.target)
+      scheduleEditorUpdate(event.target, true)
       updateAutocomplete(event.target)
     }
   })

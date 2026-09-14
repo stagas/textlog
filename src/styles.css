@@ -1369,6 +1369,7 @@ nav form {
   position: sticky;
   z-index: 40;
   top: 0;
+  margin-bottom: var(--compose-reserved-space, 0px);
   transform: translate3d(0, calc(-1 * var(--compose-hidden, 0px)), 0);
   will-change: transform;
   overflow-anchor: none;
@@ -1388,6 +1389,12 @@ nav form {
 @media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
   .feed-compose-header.is-latched {
     transition: transform 80ms linear;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .feed-compose-header.is-write-revealing {
+    transition: transform 220ms ease-out;
   }
 }
 
@@ -5299,6 +5306,53 @@ form.report-panel {
 
 .compose-highlight-wrap {
   position: relative;
+}
+
+.feed-compose-header .embedded-write-compose textarea.form-control {
+  min-height: calc((1 - var(--compose-compact, 0)) * (3lh + var(--space-4) + var(--compose-controls-inset)) + var(--compose-compact, 0) * (1lh + 2 * var(--space-4)));
+  max-height: calc(var(--compose-max-lines) * 1lh + (1 - var(--compose-compact, 0)) * (var(--space-4) + var(--compose-controls-inset)) + var(--compose-compact, 0) * (2 * var(--space-4)));
+}
+
+.feed-compose-header .embedded-write-compose :is(textarea.form-control, .compose-highlight) {
+  padding-top: var(--space-4);
+  padding-bottom: calc((1 - var(--compose-compact, 0)) * var(--compose-controls-inset) + var(--compose-compact, 0) * var(--space-4));
+  padding-right: calc(var(--gutter) + var(--compose-compact, 0) * var(--compose-compact-controls, 12ch));
+}
+
+.feed-compose-header .embedded-write-compose .composefoot {
+  --compose-footer-inset: calc((1 - var(--compose-compact, 0)) * var(--compose-controls-inset) + var(--compose-compact, 0) * var(--compose-editor-height, var(--compose-controls-inset)));
+  --compose-controls-bottom: calc((1 - var(--compose-compact, 0)) * var(--space-4) + var(--compose-compact, 0) * var(--compose-centered-controls-bottom, var(--space-3)));
+  min-height: var(--compose-footer-inset);
+  margin-top: calc(-1 * var(--compose-footer-inset));
+  padding-top: 0;
+  padding-bottom: var(--compose-controls-bottom);
+  grid-template-rows: calc(var(--compose-footer-inset) - var(--compose-controls-bottom));
+  align-content: start;
+}
+
+.feed-compose-header .embedded-write-compose .compose-controls-row {
+  align-self: end;
+}
+
+.feed-compose-header .embedded-write-compose .compose-controls-row .button {
+  padding-block: calc((1 - var(--compose-compact, 0)) * var(--space-3) + var(--compose-compact, 0) * var(--space-2));
+}
+
+.feed-compose-header .embedded-write-compose.compose-multiline .compose-controls-row .button {
+  padding-block: var(--space-3);
+}
+
+.feed-compose-header .embedded-write-compose.compose-multiline .composefoot {
+  --compose-controls-bottom: var(--space-4);
+}
+
+.feed-compose-header .embedded-write-compose:has(.compose-character-count:not([hidden])) textarea.form-control {
+  min-height: calc((1 - var(--compose-compact, 0)) * 3lh + var(--compose-compact, 0) * 1lh + var(--space-4) + var(--compose-controls-inset));
+  max-height: calc(var(--compose-max-lines) * 1lh + var(--space-4) + var(--compose-controls-inset));
+}
+
+.feed-compose-header .embedded-write-compose:has(.compose-character-count:not([hidden])) :is(textarea.form-control, .compose-highlight) {
+  padding-bottom: var(--compose-controls-inset);
 }
 
 :is(.write-compose, .reply-compose) :is(.compose-highlight, textarea.compose-highlight-textarea) {
