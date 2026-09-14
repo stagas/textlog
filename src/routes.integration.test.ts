@@ -158,7 +158,7 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
 })
 
 test('feed pagination uses the partial feed navigation enhancement', async () => {
-  const response = await request('/infinite-scroll.js?v=55')
+  const response = await request('/infinite-scroll.js?v=59')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -223,7 +223,7 @@ test('tag feeds include the complete shared thread enhancement contract', async 
   expect(html).toContain('/thread-hover-scroll.js?v=32')
   expect(html).toContain('/thread-expansion.js?v=4')
   expect(html).toContain('/feed-reply.js?v=25')
-  expect(html).toContain('/infinite-scroll.js?v=55')
+  expect(html).toMatch(/<script src="\/infinite-scroll\.js\?v=\d+" defer=""><\/script>/)
   expect(html).toContain('id="inline-reply-template"')
   expect(html).toContain('data-feed-view="true"')
 })
@@ -244,7 +244,7 @@ test('profile tabs include the shared progressive feed navigation contract', asy
       expect(html).toContain('/thread-hover-scroll.js?v=32')
       expect(html).toContain('/thread-expansion.js?v=4')
       expect(html).toContain('/feed-reply.js?v=25')
-      expect(html).toContain('/infinite-scroll.js?v=55')
+      expect(html).toMatch(/<script src="\/infinite-scroll\.js\?v=\d+" defer=""><\/script>/)
       expect(html).toContain('id="inline-reply-template"')
       expect(html).toContain('data-feed-view="true"')
       expect(html).toContain('data-profile-tabs-view="true"')
