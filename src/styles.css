@@ -8426,6 +8426,34 @@ a.post-context:hover,
   left: anchor(left);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .post-page-thread .remote-link-menu {
+    anchor-scope: --thread-link-preview;
+  }
+
+  .post-page-thread .remote-link-menu > a:not(.remote-link-popover) {
+    anchor-name: --thread-link-preview;
+  }
+
+  .post-page-thread .remote-link-menu:is(:hover, :focus-within) > .remote-link-popover {
+    position: fixed;
+    position-anchor: --thread-link-preview;
+    top: anchor(bottom);
+    left: clamp(var(--gutter), anchor(left),
+      calc(100vw - var(--gutter) - min(var(--preview-width, 382px), calc(100vw - 2 * var(--gutter)))));
+  }
+
+  .post-page-thread > .reply-branch .reference-menu:is(:hover, :focus-within)
+    > .reference-menu-popover {
+    position-try-fallbacks: flip-inline;
+  }
+
+  .post-page-thread .remote-link-menu:is(:hover, :focus-within) > .internal-post-popover {
+    left: anchor(left);
+    position-try-fallbacks: flip-inline;
+  }
+}
+
 .post-page-thread > .reply-branch::-webkit-scrollbar {
   display: none;
 }
