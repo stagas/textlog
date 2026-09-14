@@ -504,6 +504,7 @@ import emojiKeywords from 'emojilib'
   })
   const embeddedComposer = document.querySelector('.embedded-write-compose')
   const feedTabs = document.querySelector('[data-feed-view] #feed-tabs')
+  let revealEmbeddedComposer
   if (embeddedComposer && feedTabs && 'ResizeObserver' in window) {
     const header = document.createElement('div')
     header.className = 'feed-compose-header'
@@ -550,6 +551,7 @@ import emojiKeywords from 'emojilib'
       hidden = 0
       paint()
     }
+    revealEmbeddedComposer = reveal
     const measure = () => {
       if (!header.isConnected) return
       height = hiddenHeight()
@@ -611,6 +613,11 @@ import emojiKeywords from 'emojilib'
 
     event.preventDefault()
     cancelWriteFocus?.()
+    if (writeAction.matches('.mobile-write-action a')) {
+      revealEmbeddedComposer?.()
+      textarea.focus({ preventScroll: true })
+      return
+    }
     const mobileTopAction = writeAction.matches('.feed-tabs-top')
       && window.matchMedia('(max-width: 600px)').matches
     if (!mobileTopAction) {
