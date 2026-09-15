@@ -99,7 +99,22 @@ app.use('*', async (c, next) => {
 })
 
 app.use('*', async (c, next) => {
-  return withAppearance(c.req.raw, next)
+  const request = c.req.raw
+  const cookie = request.headers.get('cookie') || ''
+  if (!/(?:^|;\s*)appearance_experiment=/.test(cookie)) return withAppearance(request, next)
+
+  const retiredNames = new Set([
+    'appearance_experiment', 'appearance', 'font', 'sans-serif-font', 'primary-font', 'corners',
+  ])
+  const headers = new Headers(request.headers)
+  headers.set('cookie', cookie.split(';').map(value => value.trim()).filter(value => {
+    const separator = value.indexOf('=')
+    return separator < 0 || !retiredNames.has(value.slice(0, separator))
+  }).join('; '))
+  await withAppearance(new Request(request, { headers }), next)
+  for (const name of retiredNames) {
+    c.header('set-cookie', `${name}=; Max-Age=0; HttpOnly; Path=/; SameSite=Lax`, { append: true })
+  }
 })
 app.use('*', (c, next) => {
   const user = currentUser(c.req.raw)

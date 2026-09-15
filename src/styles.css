@@ -69,7 +69,7 @@
   --font-size-32: 2rem;
   --form-action-font-size: var(--font-size-12);
   --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", emoji;
-  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-monospace: monospace;
   --font-sans-serif: ui-sans-serif, system-ui, -apple-system, sans-serif, var(--font-emoji);
   --font-primary: var(--font-monospace);
   font: var(--font-size-16)/1.5 var(--font-primary);

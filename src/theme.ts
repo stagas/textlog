@@ -1,7 +1,7 @@
 export const THEME_CHOICES = ['system', 'light', 'dark', 'sepia', 'dracula'] as const
 export const ACCENT_CHOICES = ['theme', 'sage', 'purple', 'cyan', 'pink', 'amber', 'blue', 'rust'] as const
 export const FONT_CHOICES = [
-  { value: 'system', label: 'System', family: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' },
+  { value: 'system', label: 'System', family: 'monospace' },
   { value: 'sf-mono', label: 'SF Mono', family: '"SF Mono", SFMono-Regular, monospace' },
   { value: 'menlo', label: 'Menlo', family: 'Menlo, monospace' },
   { value: 'monaco', label: 'Monaco', family: 'Monaco, monospace' },
@@ -344,7 +344,9 @@ export function themeStyles(request: Request) {
   const selectedFont = requestedFont
     ? EMBED_FONT_CHOICES[requestedFont as EmbedFontChoice] || 'system'
     : fontChoice(request)
-  const font = FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
+  const font = selectedFont === 'system' && isMobileRequest(request)
+    ? { ...FONT_CHOICES[0], family: '"DejaVu Sans Mono", monospace' }
+    : FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
   const sansSerifFont = SANS_SERIF_FONT_CHOICES.find(choice => choice.value === sansSerifFontChoice(request))
     || SANS_SERIF_FONT_CHOICES[0]
   const primaryFont = requestedFont ? 'monospace' : primaryFontChoice(request)
@@ -378,3 +380,4 @@ export function themeLogoSvg(request: Request, selected: Appearance = appearance
   }" d="${drawing}"/></svg>`
 }
 import { AsyncLocalStorage } from 'node:async_hooks'
+import { isMobileRequest } from './user-agent'

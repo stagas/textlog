@@ -318,6 +318,20 @@ test('install guide is tailored to the mobile browser', async () => {
   expect(await chrome.text()).toContain('Install and create shortcut')
 })
 
+test('retired appearance experiments immediately restore the settled desktop defaults', async () => {
+  const response = await request('/about', {
+    acceptHtml: true,
+    cookie: 'appearance_experiment=old; appearance=dracula.pink; font=dejavu-sans-mono; primary-font=sans-serif; corners=round',
+  })
+  const html = await response.text()
+
+  expect(html).toContain('/favicon-theme.svg?v=system.theme')
+  expect(html).toContain('--font-monospace:monospace')
+  expect(html).not.toContain('corners-round')
+  expect(response.headers.get('set-cookie')).toContain('appearance_experiment=; Max-Age=0')
+  expect(response.headers.get('set-cookie')).toContain('font=; Max-Age=0')
+})
+
 test('/?reddit counts each IP once', async () => {
   const attributed = await request('/?reddit', { ip: '203.0.113.80' })
   expect(attributed.status).toBe(303)
