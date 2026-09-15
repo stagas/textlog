@@ -1,4 +1,3 @@
-import { appearanceExperimentToken } from '../appearance-experiment'
 import { AUTH_LIMITS, authRateLimitMessage, loginSubnet } from '../auth-rate-limit'
 import { sessionCookieName } from '../brand'
 import { Auth, ChooseHandle, ForgotPassword, MagicLinkSent, PasswordLogin, ResetPassword } from '../components/pages'
@@ -436,13 +435,6 @@ export function registerAuthRoutes(app: Hono) {
     }
     const campaign = campaignAttribution(c.req.raw)
     if (campaign) await databaseService().call('stats.recordCampaignSignup', { campaign, userId: user.id })
-    const experimentToken = appearanceExperimentToken(c.req.raw)
-    if (experimentToken) {
-      await databaseService().call('stats.recordAppearanceExperimentConversion', {
-        token: experimentToken,
-        userId: user.id,
-      })
-    }
     void sendPushForSignup(user.id, handle).catch(error => logError('signup push failed', error))
     const response = redirect(next, campaign ? campaignAttributionCookie('', 0) : undefined)
     response.headers.append('set-cookie', exploreWelcomeCookie('2'))

@@ -18,7 +18,7 @@ test('embed post paragraphs use their detected writing direction', async () => {
 
 test('embed font short names are optional and invalid values fall back safely', () => {
   const invalid = themeStyles(new Request('https://textlog.cc/theme.css?theme=light&font=not-a-font'))
-  expect(invalid).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(invalid).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace')
 
   const html = renderToStaticMarkup(React.createElement(Embed, {
     posts: [],
@@ -33,7 +33,7 @@ test('embed font short names are optional and invalid values fall back safely', 
 
 test('embed system font uses the full system name', () => {
   const css = themeStyles(new Request('https://textlog.cc/theme.css?font=system'))
-  expect(css).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(css).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace')
 })
 
 test('embed theme can be omitted from the generated stylesheet URL', () => {

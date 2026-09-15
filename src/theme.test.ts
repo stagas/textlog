@@ -112,15 +112,15 @@ test('font preference is validated and emitted by the theme stylesheet', () => {
 
   const invalid = new Request('http://localhost', { headers: { cookie: 'font=bad%7Dbody%7Bdisplay:none' } })
   expect(fontChoice(invalid)).toBe('system')
-  expect(themeStyles(invalid)).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace')
+  expect(themeStyles(invalid)).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace')
   expect(themeStyles(invalid)).not.toContain('display:none')
 })
 
-test('mobile user agents use DejaVu Sans Mono for the system font', () => {
+test('mobile user agents use the same system monospace stack', () => {
   const mobile = new Request('https://textlog.cc', {
     headers: { 'user-agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Mobile Safari/537.36' },
   })
-  expect(themeStyles(mobile)).toContain('--font-monospace:"DejaVu Sans Mono", monospace')
+  expect(themeStyles(mobile)).toContain('--font-monospace:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace')
 
   const custom = new Request('https://textlog.cc', {
     headers: {

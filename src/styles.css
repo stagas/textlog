@@ -69,7 +69,7 @@
   --font-size-32: 2rem;
   --form-action-font-size: var(--font-size-12);
   --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", emoji;
-  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace, var(--font-emoji);
+  --font-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-sans-serif: ui-sans-serif, system-ui, -apple-system, sans-serif, var(--font-emoji);
   --font-primary: var(--font-monospace);
   font: var(--font-size-16)/1.5 var(--font-primary);
@@ -7468,15 +7468,6 @@ form.report-panel {
   font-size: var(--font-size-10);
 }
 
-.appearance-experiment-ranking h2 { margin-bottom: var(--space-4); }
-.appearance-experiment-table-wrap { overflow-x: auto; border: 1px solid var(--soft); }
-.appearance-experiment-table { width: 100%; border-spacing: 0; border-collapse: collapse; font-size: var(--font-size-12); }
-.appearance-experiment-table :is(th, td) { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--soft); }
-.appearance-experiment-table thead th { color: var(--muted); background: var(--panel); font-size: var(--font-size-10); text-transform: uppercase; letter-spacing: .06em; }
-.appearance-experiment-table tbody tr:last-child :is(th, td) { border-bottom: 0; }
-.appearance-experiment-table :is(th, td):first-child { text-align: left; }
-.appearance-experiment-table :is(th, td):not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.appearance-experiment-table tbody tr:hover { background: var(--quote-bg); }
 
 .admin-tabs {
   padding-top: 0;

@@ -1,7 +1,7 @@
 export const THEME_CHOICES = ['system', 'light', 'dark', 'sepia', 'dracula'] as const
 export const ACCENT_CHOICES = ['theme', 'sage', 'purple', 'cyan', 'pink', 'amber', 'blue', 'rust'] as const
 export const FONT_CHOICES = [
-  { value: 'system', label: 'System', family: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' },
+  { value: 'system', label: 'System', family: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' },
   { value: 'sf-mono', label: 'SF Mono', family: '"SF Mono", SFMono-Regular, monospace' },
   { value: 'menlo', label: 'Menlo', family: 'Menlo, monospace' },
   { value: 'monaco', label: 'Monaco', family: 'Monaco, monospace' },
@@ -317,7 +317,7 @@ function rules(name: keyof typeof palettes, accentChoice: AccentChoice) {
     }
   return `:root{color-scheme:${
     dark ? 'dark' : 'light'
-  };--font-emoji:"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", emoji;--font-monospace:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace, var(--font-emoji);--font-sans-serif:ui-sans-serif, system-ui, -apple-system, sans-serif, var(--font-emoji);--font-primary:var(--font-monospace);--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${accentHover};--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--button-muted-bg:${mutedButton.bg};--button-muted-hover-bg:${mutedButton.hover};--button-muted-active-bg:${mutedButton.active};--button-disabled-bg:${semantic.disabledBg};--button-disabled-ink:${semantic.disabledInk};--danger-button-bg:${semantic.dangerBg};--danger-button-hover-bg:${semantic.dangerHover};--danger-button-active-bg:${semantic.dangerActive};--danger-link-hover:${semantic.dangerLinkHover};--report-ink:${semantic.reportInk};--report-hover:${semantic.reportHover};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--quote-surface:${p.quoteSurface};--error-ink:${p.errorInk};--error-bg:${semantic.errorBg};--success-ink:${semantic.successInk};--success-bg:${semantic.successBg};--tag-bg:${p.tagBg};--api-post-ink:${semantic.apiPostInk};--api-post-bg:${semantic.apiPostBg};--api-patch-ink:${semantic.apiPatchInk};--api-patch-bg:${semantic.apiPatchBg};--api-delete-ink:${semantic.apiDeleteInk};--api-delete-bg:${semantic.apiDeleteBg}}`
+  };--font-emoji:"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", emoji;--font-monospace:${FONT_CHOICES[0].family};--font-sans-serif:ui-sans-serif, system-ui, -apple-system, sans-serif, var(--font-emoji);--font-primary:var(--font-monospace);--bg:${p.bg};--ink:${p.ink};--muted:${p.muted};--tab-hover:${semantic.tabHover};--soft:${p.soft};--accent:${accent};--accent-dark:${accentHover};--selection-bg:${accent};--selection-ink:${p.bg};--panel:${p.panel};--pagination-hover-bg:${p.tagBg};--link-border:${p.linkBorder};--button-bg:${button.bg};--button-ink:${p.buttonInk};--button-hover-bg:${button.hover};--button-active-bg:${button.active};--button-muted-bg:${mutedButton.bg};--button-muted-hover-bg:${mutedButton.hover};--button-muted-active-bg:${mutedButton.active};--button-disabled-bg:${semantic.disabledBg};--button-disabled-ink:${semantic.disabledInk};--danger-button-bg:${semantic.dangerBg};--danger-button-hover-bg:${semantic.dangerHover};--danger-button-active-bg:${semantic.dangerActive};--danger-link-hover:${semantic.dangerLinkHover};--report-ink:${semantic.reportInk};--report-hover:${semantic.reportHover};--quote-ink:${p.quoteInk};--quote-bg:${p.quoteBg};--quote-surface:${p.quoteSurface};--error-ink:${p.errorInk};--error-bg:${semantic.errorBg};--success-ink:${semantic.successInk};--success-bg:${semantic.successBg};--tag-bg:${p.tagBg};--api-post-ink:${semantic.apiPostInk};--api-post-bg:${semantic.apiPostBg};--api-patch-ink:${semantic.apiPatchInk};--api-patch-bg:${semantic.apiPatchBg};--api-delete-ink:${semantic.apiDeleteInk};--api-delete-bg:${semantic.apiDeleteBg}}`
 }
 
 function mix(foreground: string, background: string, amount: number) {
@@ -344,16 +344,14 @@ export function themeStyles(request: Request) {
   const selectedFont = requestedFont
     ? EMBED_FONT_CHOICES[requestedFont as EmbedFontChoice] || 'system'
     : fontChoice(request)
-  const font = selectedFont === 'system' && isMobileRequest(request)
-    ? { ...FONT_CHOICES[0], family: '"DejaVu Sans Mono", monospace' }
-    : FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
+  const font = FONT_CHOICES.find(choice => choice.value === selectedFont) || FONT_CHOICES[0]
   const sansSerifFont = SANS_SERIF_FONT_CHOICES.find(choice => choice.value === sansSerifFontChoice(request))
     || SANS_SERIF_FONT_CHOICES[0]
   const primaryFont = requestedFont ? 'monospace' : primaryFontChoice(request)
   const fontSize = FONT_SIZE_CHOICES.find(choice => choice.value === fontSizeChoice(request)) || FONT_SIZE_CHOICES[1]
   const primaryFontSize = primaryFont === 'sans-serif' ? `calc(${fontSize.size} * 1.1)` : fontSize.size
   const fontRule =
-    `:root{--font-monospace:${font.family}, var(--font-emoji);--font-sans-serif:${sansSerifFont.family}, var(--font-emoji);--font-primary:var(--font-${primaryFont});font-family:var(--font-primary);font-size:${primaryFontSize}}html,body{font-family:var(--font-primary)}.emoji{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}`
+    `:root{--font-monospace:${font.family};--font-sans-serif:${sansSerifFont.family}, var(--font-emoji);--font-primary:var(--font-${primaryFont});font-family:var(--font-primary);font-size:${primaryFontSize}}html,body{font-family:var(--font-primary)}.emoji{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}`
   if (selected.theme === 'system') {
     return `${rules('light', selected.accent)}@media(prefers-color-scheme:dark){${
       rules('dark', selected.accent)
@@ -380,4 +378,3 @@ export function themeLogoSvg(request: Request, selected: Appearance = appearance
   }" d="${drawing}"/></svg>`
 }
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { isMobileRequest } from './user-agent'

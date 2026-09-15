@@ -5233,6 +5233,10 @@ export const migrations: Migration[] = [
     if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
     addColumn(database, 'users', 'photo_key', 'TEXT')
   } },
+  { version: 230, name: 'remove_appearance_experiment', up(database) {
+    database.run(`DROP TABLE IF EXISTS appearance_experiment_conversions;
+      DROP TABLE IF EXISTS appearance_experiment_assignments;`)
+  } },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

@@ -1,7 +1,6 @@
 export * from './about'
 export * from './account-management'
 export * from './account-security'
-export * from './admin-appearance-experiment'
 export * from './admin-confirm'
 export * from './admin-dashboard'
 export * from './admin-email'
