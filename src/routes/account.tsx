@@ -10,6 +10,7 @@ import type { Hono } from 'hono'
 import { bioBodyValidationMessage, normalizeBioBody, validBioBody } from '../bio-body'
 import type { PostingSuggestionSearch } from '../components/page-shared'
 import {
+  AccountManagement,
   AccountApiKey,
   AccountApiKeyCreate,
   AccountFeedKeyCreate,
@@ -86,6 +87,13 @@ async function profileSuggestionSearch(fields: Record<string, string>,
 }
 
 export function registerAccountRoutes(app: Hono) {
+  app.get('/account/edit/account', c => {
+    const user = currentUser(c.req.raw)
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/account'))
+    const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
+    return page(<AccountManagement user={user} returnPath={returnPath} />)
+  })
+
   app.get('/account/edit/invite', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/invite'))
@@ -503,9 +511,11 @@ export function registerAccountRoutes(app: Hono) {
     return redirect('/u/' + handle)
   })
 
-  app.get('/account/edit/appearance', c => {
+  app.get('/account/edit/appearance', c => redirect('/account/edit/interface' + new URL(c.req.url).search))
+
+  app.get('/account/edit/interface', c => {
     const user = currentUser(c.req.raw)
-    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/appearance'))
+    if (!user) return redirect('/enter?next=' + encodeURIComponent('/account/edit/interface'))
     const returnPath = c.req.query('from') ? safeNext(c.req.query('from')) : undefined
     const requestedTab = c.req.query('tab')
     const tab = requestedTab === 'font' || requestedTab === 'misc' ? requestedTab : 'theme'
@@ -522,7 +532,7 @@ export function registerAccountRoutes(app: Hono) {
     )
   })
 
-  app.post('/account/edit/appearance', async c => {
+  app.post('/account/edit/interface', async c => {
     const user = currentUser(c.req.raw)
     if (!user) return redirect('/enter')
     const f = await form(c.req.raw)
@@ -580,7 +590,7 @@ export function registerAccountRoutes(app: Hono) {
       })
     }
     await markAppearanceBannerHandled(c.req.raw, user.id)
-    const response = redirect('/account/edit/appearance' + query, appearanceCookie({ theme, accent }))
+    const response = redirect('/account/edit/interface' + query, appearanceCookie({ theme, accent }))
     response.headers.append('set-cookie', fontCookie(selectedFont))
     response.headers.append('set-cookie', sansSerifFontCookie(selectedSansSerif))
     response.headers.append('set-cookie', primaryFontCookie(selectedPrimary))
@@ -592,12 +602,12 @@ export function registerAccountRoutes(app: Hono) {
 
   app.get('/account/edit/theme', c => {
     const from = c.req.query('from')
-    return redirect('/account/edit/appearance?tab=theme' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
+    return redirect('/account/edit/interface?tab=theme' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
   })
 
   app.get('/account/edit/font', c => {
     const from = c.req.query('from')
-    return redirect('/account/edit/appearance?tab=font' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
+    return redirect('/account/edit/interface?tab=font' + (from ? '&from=' + encodeURIComponent(safeNext(from)) : ''))
   })
 
   app.get('/account/security', c => {

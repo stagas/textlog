@@ -14,6 +14,17 @@ import { Post } from './post'
 import { ThreadedFeedChunks } from './threaded-feed'
 import { writeHref } from './write-link'
 
+function AccountSettingsChevron() {
+  return (
+    <span className="account-settings-chevron" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+        strokeLinecap="round" strokeLinejoin="round">
+        <path d="m9 5 7 7-7 7" />
+      </svg>
+    </span>
+  )
+}
+
 export function Profile(
   { user, profile, posts, following, followsViewer = false, bio = profile.bio || '', editHandle = profile.handle,
     editMood = profile.mood || '', editEmail = profile.email, error, editing = false, total = posts.length,
@@ -250,49 +261,46 @@ export function Profile(
                   {presence}
                 </div>
                 <p className="account-share-see-also">see also <a href="/api#embedding">Embedding</a></p>
-                <div className="account-danger-zone" id="appearance">
+                <a className="account-danger-zone account-settings-link" id="interface"
+                  href={`/account/edit/interface${fromQuery}`}>
                   <div>
-                    <strong>Appearance</strong>
+                    <strong>Interface</strong>
                     <span>Choose a theme, fonts, and user interface settings.</span>
                   </div>
-                  <a className="button" href={`/account/edit/appearance${fromQuery}`}>change appearance</a>
-                </div>
-                <div className="account-danger-zone" id="notifications">
+                  <AccountSettingsChevron />
+                </a>
+                <a className="account-danger-zone account-settings-link" id="notifications"
+                  href={`/account/edit/notifications${fromQuery}`}>
                   <div>
                     <strong>Notifications</strong>
                     <span>Choose browser notifications for new notes, replies, mentions, and follows.</span>
                   </div>
-                  <a className="button" href={`/account/edit/notifications${fromQuery}`}>manage notifications</a>
-                </div>
-                <div className="account-danger-zone" id="email-preferences">
+                  <AccountSettingsChevron />
+                </a>
+                <a className="account-danger-zone account-settings-link" id="email-preferences"
+                  href={`/account/email-preferences${fromQuery}`}>
                   <div>
                     <strong>Emails</strong>
                     <span>Choose which emails you&apos;ll receive.</span>
                   </div>
-                  <a className="button" href={`/account/email-preferences${fromQuery}`}>manage emails</a>
-                </div>
-                <div className="account-danger-zone" id="security">
+                  <AccountSettingsChevron />
+                </a>
+                <a className="account-danger-zone account-settings-link" id="security"
+                  href={`/account/security${fromQuery}`}>
                   <div>
                     <strong>Security</strong>
                     <span>Manage your email, feeds, signed-in sessions, create API keys and send magic links.</span>
                   </div>
-                  <a className="button" href={`/account/security${fromQuery}`}>manage security</a>
-                </div>
-                <div className="account-danger-zone" id="download-data">
+                  <AccountSettingsChevron />
+                </a>
+                <a className="account-danger-zone account-settings-link" id="account"
+                  href={`/account/edit/account${fromQuery}`}>
                   <div>
-                    <strong>Download your data</strong>
-                    <span>Export your account, notes, connections, and activity as a JSON file.</span>
+                    <strong>Account</strong>
+                    <span>Download your data or delete your account.</span>
                   </div>
-                  <a className="button" href="/account/export" download>download data</a>
-                </div>
-                <div className="account-danger-zone" id="delete-account">
-                  <span className="danger-zone-label">DANGER ZONE</span>
-                  <div>
-                    <strong>Delete account</strong>
-                    <span>Permanently remove your profile and turn your notes into deleted tombstones.</span>
-                  </div>
-                  <a className="button button-danger" href="/account/delete">delete account</a>
-                </div>
+                  <AccountSettingsChevron />
+                </a>
               </>
             )
             : profile.bio?.trim()

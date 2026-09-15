@@ -21,7 +21,7 @@ const highlights = [
     Full-text search, trending tags, profile and post hovercards, tag aliases and display names, and the dedicated meta
     conversation make it easier to find people and ideas.
   </>],
-  ['05', 'A more personal textlog', '/account/edit/appearance', <>
+  ['05', 'A more personal textlog', '/account/edit/interface', <>
     Moods, pinned notes, bookmarks, streaks, themes, accents, fonts, density, rounded corners, timestamps, and link
     preview controls let the site feel like yours.
   </>],

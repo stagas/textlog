@@ -34,17 +34,17 @@ export function ChangeAppearance(
     },
 ) {
   return (
-    <Layout user={user} title="change appearance">
+    <Layout user={user} title="interface settings">
       <section className="appearance-page">
-        <AccountSettingsHeader title="appearance" returnPath={returnPath} anchor="appearance"
+        <AccountSettingsHeader title="interface" returnPath={returnPath} anchor="interface"
           titleAction={
-            <form method="post" action="/account/edit/appearance" className="appearance-randomize-form">
+            <form method="post" action="/account/edit/interface" className="appearance-randomize-form">
               <input type="hidden" name="randomize" value="yes" />
               {returnPath && <input type="hidden" name="from" value={returnPath} />}
               <button className="profile-edit-link">randomize</button>
             </form>
           } />
-        <form method="post" action="/account/edit/appearance" className="appearance-form">
+        <form method="post" action="/account/edit/interface" className="appearance-form">
           <input type="hidden" name="completeAppearance" value="yes" />
           {returnPath && <input type="hidden" name="from" value={returnPath} />}
           <input className="appearance-tab-input" type="radio" name="tab" value="theme" id="appearance-tab-theme"
@@ -53,7 +53,7 @@ export function ChangeAppearance(
             defaultChecked={tab === 'font'} />
           <input className="appearance-tab-input" type="radio" name="tab" value="misc" id="appearance-tab-misc"
             defaultChecked={tab === 'misc'} />
-          <nav className="appearance-tabs" aria-label="Appearance settings">
+          <nav className="appearance-tabs" aria-label="Interface settings">
             <label htmlFor="appearance-tab-theme">theme</label>
             <label htmlFor="appearance-tab-font">font</label>
             <label htmlFor="appearance-tab-misc">misc</label>

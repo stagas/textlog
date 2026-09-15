@@ -6162,6 +6162,48 @@ form.report-panel {
   flex: none;
 }
 
+.account-settings-link {
+  padding-inline: var(--space-4) var(--space-2);
+  color: inherit;
+  border-bottom: 0;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+#account.account-settings-link {
+  border-bottom: 1px solid var(--soft);
+}
+
+.account-settings-link:hover {
+  background: var(--panel);
+}
+
+.account-settings-link strong {
+  font-size: var(--font-size-14);
+}
+
+.account-settings-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.account-settings-chevron {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--ink) !important;
+  transition: color 120ms ease;
+}
+
+.account-settings-link:is(:hover, :focus-visible) .account-settings-chevron {
+  color: var(--accent) !important;
+}
+
+.account-settings-chevron svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+
 .account-share-panel {
   flex-direction: column;
   margin-bottom: var(--space-4);
@@ -6777,6 +6819,11 @@ form.report-panel {
   .account-danger-zone {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-settings-link {
+    align-items: center;
+    flex-direction: row;
   }
 
   .account-danger-zone .button,

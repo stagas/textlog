@@ -39,7 +39,7 @@ const milestones = [
   {
     marker: '04',
     title: 'Make it feel like yours',
-    path: '/account/edit/appearance',
+    path: '/account/edit/interface',
     copy: () => 'Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.',
   },
   {
@@ -84,7 +84,7 @@ const v2Milestones = [
     'Direct activity in @, followed people and tags in my feed, active conversations in hot, a fresh mix in any, and the full stream in all.'],
   ['04', 'Discovery with more context', '/explore',
     'Search, trending tags, hovercards, tag aliases and display names make people and ideas easier to find.'],
-  ['05', 'A more personal textlog', '/account/edit/appearance',
+  ['05', 'A more personal textlog', '/account/edit/interface',
     'Moods, pinned notes, bookmarks, streaks, themes, accents, fonts, density, corners, timestamps, and preview controls.'],
   ['06', 'Words across boundaries', null,
     'Translation, Unicode hashtags, location cards, audio links, ASCII art, and thoughtful content warnings.'],

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { ConnectionPeople, Pagination, paginationHeadingClass, TagChips } from './components/page-shared'
 import {
   About,
+  AccountManagement,
   AccountApiKeyCreate,
   AccountMagicLink,
   AccountPassword,
@@ -2102,19 +2103,19 @@ test('pages inline the cookie-aware theme and logo', () => {
   expect(html).not.toContain('src="/textlog.svg')
 })
 
-test('appearance is one server-rendered form with CSS tabs and every choice', () => {
+test('interface settings are one server-rendered form with CSS tabs and every choice', () => {
   const html = renderToStaticMarkup(React.createElement(ChangeAppearance, {
     user: { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' },
     selected: { theme: 'sepia', accent: 'amber' },
     selectedFont: 'system',
   }))
   expect(html).toContain(
-    '<p class="eyebrow">account settings</p><div class="account-settings-title-row"><h1>appearance</h1>',
+    '<p class="eyebrow">account settings</p><div class="account-settings-title-row"><h1>interface</h1>',
   )
   expect(html).toContain('class="appearance-randomize-form"')
   expect(html).toContain('name="randomize" value="yes"')
   expect(html).toContain('>randomize</button>')
-  expect(html).toContain('action="/account/edit/appearance"')
+  expect(html).toContain('action="/account/edit/interface"')
   expect(html).toMatch(/name="tab"[^>]*value="theme"[^>]*id="appearance-tab-theme"[^>]*checked=""/)
   expect(html).toContain('for="appearance-tab-theme">theme</label>')
   expect(html).toContain('name="completeAppearance" value="yes"')
@@ -2244,7 +2245,7 @@ test('account settings pages share one consistent heading', () => {
       user,
       selected: { theme: 'system', accent: 'theme' },
       selectedFont: 'system',
-    })), 'appearance'],
+    })), 'interface'],
     [renderToStaticMarkup(React.createElement(NotificationSettings, { user, publicKey: null })), 'notifications'],
     [renderToStaticMarkup(React.createElement(AccountSecurity, { user, sessions: [] })), 'security'],
   ]
@@ -2272,8 +2273,10 @@ test('account settings link to a single email preference page', () => {
     changed: true,
   }))
 
-  expect(subscribed).toContain('class="account-danger-zone" id="email-preferences"')
-  expect(subscribed).toContain('href="/account/email-preferences">manage emails</a>')
+  expect(subscribed).toContain('class="account-danger-zone account-settings-link" id="email-preferences" href="/account/email-preferences"')
+  expect(subscribed).toContain('<span class="account-settings-chevron" aria-hidden="true"><svg')
+  expect(subscribed).toContain('<path d="m9 5 7 7-7 7"></path>')
+  expect(subscribed).not.toContain('manage emails</a>')
   expect(subscribed).toContain('Choose which emails you\'ll receive.')
   expect(preferences).toContain('class="static-page notifications-page"')
   expect(preferences).toContain('<h1>emails</h1>')
@@ -2333,7 +2336,7 @@ test('notification settings are the only account page that loads their client sc
   expect(notifications).not.toContain('name="signups"')
   expect(notifications).toContain('save preferences</button>')
   expect(profile).toContain('href="/account/edit/notifications"')
-  expect(profile).toContain('class="account-danger-zone" id="notifications"')
+  expect(profile).toContain('class="account-danger-zone account-settings-link" id="notifications"')
   expect(profile).not.toContain('src="/notifications.js')
 })
 
@@ -2371,7 +2374,7 @@ test('appearance font tab lists local monospace fonts in their own families', ()
     selectedFont: 'consolas',
     tab: 'font',
   }))
-  expect(html).toContain('action="/account/edit/appearance"')
+  expect(html).toContain('action="/account/edit/interface"')
   expect(html).toMatch(/name="tab"[^>]*value="font"[^>]*id="appearance-tab-font"[^>]*checked=""/)
   expect(html).toContain('name="font" checked="" value="consolas"')
   expect(html).toContain('font-preview-sf-mono')
@@ -3455,19 +3458,21 @@ test('Profile edit offers a data download without rendering notes', () => {
     }],
   }))
 
-  expect(html).toContain('href="/account/export"')
+  expect(html).toContain('href="/account/edit/account?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('action="/account/edit"')
-  expect(html).toContain('download data')
-  expect(html).toContain('<span class="danger-zone-label">DANGER ZONE</span><div><strong>Delete account</strong>')
+  expect(html).toContain('<strong>Account</strong><span>Download your data or delete your account.</span>')
+  expect(html).not.toContain('href="/account/export"')
+  expect(html).not.toContain('class="danger-zone-label"')
   expect(html).toContain('href="/latest?page=2">back</a>')
   expect(html).toContain('type="hidden" name="from" value="/latest?page=2"')
-  expect(html).toContain('href="/account/edit/appearance?from=%2Flatest%3Fpage%3D2"')
-  expect(html).toContain('change appearance')
+  expect(html).toContain('href="/account/edit/interface?from=%2Flatest%3Fpage%3D2"')
+  expect(html).toContain('class="account-danger-zone account-settings-link" id="interface"')
+  expect(html).not.toContain('change appearance')
   expect(html).toContain('<span class="emoji" aria-hidden="true">👋</span> invite friends')
   expect(html.match(/class="invite-share-icon"[^>]*><svg/g)?.length).toBe(6)
   expect(html).toContain('href="/account/security?from=%2Flatest%3Fpage%3D2"')
   expect(html).toContain('href="/account/edit/notifications?from=%2Flatest%3Fpage%3D2"')
-  expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="download-data"'))
+  expect(html.indexOf('id="security"')).toBeLessThan(html.indexOf('id="account"'))
   expect(html.indexOf('id="invite-friends"')).toBeLessThan(html.indexOf('class="profile-presence account-share-panel"'))
   expect(html).toContain(
     '<hr class="account-settings-separator"/><div class="account-share-panels"><div class="account-danger-zone account-share-panel" id="invite-friends">',
@@ -3489,6 +3494,20 @@ test('Profile edit offers a data download without rendering notes', () => {
   expect(html).not.toContain('pattern="[A-Za-z0-9_]{2,24}"')
   expect(html).not.toContain('hidden while editing')
   expect(html).not.toContain('class="profile-user-details"')
+})
+
+test('Account management keeps data export and deletion on a dedicated page', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '' }
+  const html = renderToStaticMarkup(React.createElement(AccountManagement, {
+    user,
+    returnPath: '/latest?page=2',
+  }))
+
+  expect(html).toContain('<h1>account</h1>')
+  expect(html).toContain('href="/account/edit?from=%2Flatest%3Fpage%3D2#account">back</a>')
+  expect(html).toContain('href="/account/export" download>download data</a>')
+  expect(html).toContain('<span class="danger-zone-label">DANGER ZONE</span>')
+  expect(html).toContain('href="/account/delete">delete account</a>')
 })
 
 test('Profile edit always shows timezone choices', () => {

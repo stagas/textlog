@@ -18,7 +18,7 @@ const highlights = [
     {' '}
     keep every conversation connected.
   </>],
-  ['04', 'Make it feel like yours', '/account/edit/appearance',
+  ['04', 'Make it feel like yours', '/account/edit/interface',
     <>Choose your theme, accent, typeface, font size, density, page size, and link-preview preference.</>],
   ['05', 'Stay close, anywhere', null, <>
     <a href="/account/edit/notifications">Notifications</a>, <a href="/account/edit">multiple accounts</a>, and{' '}

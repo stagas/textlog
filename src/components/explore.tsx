@@ -57,7 +57,7 @@ export function Explore({ user, welcome = false, tagsPage = 1, peoplePage = 1, d
           <nav className="welcome-settings" aria-label="Set up your account">
             <span>
               <a className="button" href="/account/edit/notifications">enable notifications</a>
-              <a className="button" href="/account/edit/appearance">customize appearance</a>
+              <a className="button" href="/account/edit/interface">customize interface</a>
             </span>
             <span>
               <a className="button" href="/account/edit/invite">invite friends</a>

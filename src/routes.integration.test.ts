@@ -937,7 +937,7 @@ test('notification banners are hidden from logged-out visitors', async () => {
     expect(html).not.toContain('class="notification-banner"')
     expect(html).not.toContain('support us on open collective')
     expect(html).not.toContain('enable notifications')
-    expect(html).not.toContain('customize appearance')
+    expect(html).not.toContain('customize interface')
   }
 })
 
@@ -1414,7 +1414,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(accountFromLatestHtml).toContain('href="/latest?page=2">back</a>')
   expect(accountFromLatestHtml).toContain('id="email-preferences"')
   expect(accountFromLatestHtml)
-    .toContain('href="/account/email-preferences?from=%2Flatest%3Fpage%3D2">manage emails</a>')
+    .toContain('id="email-preferences" href="/account/email-preferences?from=%2Flatest%3Fpage%3D2"')
   const emailPreferencesWithBack = await request('/account/email-preferences?from=%2Flatest%3Fpage%3D2', {
     cookie: aliceCookie,
   })
@@ -1500,7 +1500,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(enabledDeviceHome).toContain('class="notification-banner"')
   expect(enabledDeviceHome).not.toContain('check the improved notifications')
-  expect(enabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(enabledDeviceHome).toContain('href="/account/edit/interface">customize interface</a>')
   const disabledEndpoint = 'https://push.example/alice-disabled-browser'
   expect((await request('/account/push-subscription', {
     method: 'POST',
@@ -1522,7 +1522,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-disabled-browser',
   })).text()
   expect(disabledDeviceHome).not.toContain('href="/account/edit/notifications">enable notifications</a>')
-  expect(disabledDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(disabledDeviceHome).toContain('href="/account/edit/interface">customize interface</a>')
   const otherBrowserHome = await (await request('/my-feed', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
@@ -1547,12 +1547,12 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-improvements-browser',
   })).text()
   expect(improvementDismissedHome).not.toContain('check the improved notifications')
-  expect(improvementDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(improvementDismissedHome).toContain('href="/account/edit/interface">customize interface</a>')
   const legacyDismissedHome = await (await request('/my-feed', {
     cookie: `${aliceCookie}; notification_banner_dismissed=${alice.id}`,
     userAgent: 'alice-legacy-browser',
   })).text()
-  expect(legacyDismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(legacyDismissedHome).toContain('href="/account/edit/interface">customize interface</a>')
 
   const dismissed = await request('/notifications/banner/dismiss', {
     method: 'POST',
@@ -1565,7 +1565,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-dismissed-browser',
   })).text()
-  expect(dismissedHome).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(dismissedHome).toContain('href="/account/edit/interface">customize interface</a>')
   const dismissedAppearance = await request('/appearance/banner/dismiss', {
     method: 'POST',
     cookie: aliceCookie,
@@ -1621,7 +1621,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     userAgent: 'alice-dismissed-browser',
   })).text()
   expect(donationDismissedHome).not.toContain('class="notification-banner"')
-  const openedAppearance = await request('/account/edit/appearance', {
+  const openedAppearance = await request('/account/edit/interface', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })
@@ -1630,15 +1630,15 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })).text()
-  expect(merelyOpenedDeviceHome).toContain('href="/account/edit/appearance">customize appearance</a>')
-  const savedAppearance = await request('/account/edit/appearance', {
+  expect(merelyOpenedDeviceHome).toContain('href="/account/edit/interface">customize interface</a>')
+  const savedAppearance = await request('/account/edit/interface', {
     method: 'POST',
     cookie: aliceCookie,
     userAgent: 'alice-browser',
     form: { tab: 'theme', theme: 'system', accent: 'theme' },
   })
   expect(savedAppearance.status).toBe(303)
-  const disabledLinkPreviews = await request('/account/edit/appearance', {
+  const disabledLinkPreviews = await request('/account/edit/interface', {
     method: 'POST',
     cookie: aliceCookie,
     userAgent: 'alice-browser',
@@ -1653,14 +1653,14 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   })).text()
   expect(linkPreviewsDisabledHome)
     .toContain('<body class="density-regular link-previews-disabled has-mobile-write-action">')
-  const linkPreviewSettings = await (await request('/account/edit/appearance?tab=misc', {
+  const linkPreviewSettings = await (await request('/account/edit/interface?tab=misc', {
     cookie: aliceCookie,
     userAgent: 'alice-other-browser',
   })).text()
   expect(linkPreviewSettings).toContain('name="showLinkPreviews" value="yes"')
   expect(linkPreviewSettings).not.toContain('name="showLinkPreviews" checked=""')
   expect(linkPreviewSettings).not.toContain('name="showModeratedContent" checked=""')
-  const enabledModeratedContent = await request('/account/edit/appearance', {
+  const enabledModeratedContent = await request('/account/edit/interface', {
     method: 'POST',
     cookie: aliceCookie,
     userAgent: 'alice-browser',
@@ -1669,7 +1669,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(enabledModeratedContent.status).toBe(303)
   expect(database.query('SELECT show_moderated_content FROM users WHERE id=?').get(alice.id))
     .toEqual({ show_moderated_content: 1 })
-  const moderatedContentSettings = await (await request('/account/edit/appearance?tab=misc', {
+  const moderatedContentSettings = await (await request('/account/edit/interface?tab=misc', {
     cookie: aliceCookie,
     userAgent: 'alice-browser',
   })).text()
@@ -1715,7 +1715,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   expect(welcomeExploreHtml).toContain('action="/explore/welcome/dismiss"')
   expect(welcomeExploreHtml).toContain('aria-label="Dismiss welcome"')
   expect(welcomeExploreHtml).toContain('href="/account/edit/notifications">enable notifications</a>')
-  expect(welcomeExploreHtml).toContain('href="/account/edit/appearance">customize appearance</a>')
+  expect(welcomeExploreHtml).toContain('href="/account/edit/interface">customize interface</a>')
   expect(welcomeExploreHtml).toContain('href="/account/edit/invite">invite friends</a>')
   expect(welcomeExploreHtml).toContain('href="/account/password/enable">set up a password</a>')
   expect(welcomeExploreHtml).not.toContain('welcome-celebration')
@@ -2478,7 +2478,7 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
     .run(bob.id)
   database.query(`INSERT INTO hashtag_follows(user_id,tag,created_at)
     VALUES(?,'historical','1970-01-01 00:00:00')`).run(bob.id)
-  const includedHashtagActivity = await request('/account/edit/appearance', {
+  const includedHashtagActivity = await request('/account/edit/interface', {
     method: 'POST',
     cookie: aliceCookie,
     form: { tab: 'misc', pageSize: '20', density: 'regular', includeHashtagFollowActivity: 'yes' },

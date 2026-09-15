@@ -28,7 +28,7 @@ test('recap email renders the launch highlights as a standalone email document',
   expect(html).toContain('/explore"')
   expect(html).toContain('/my-feed"')
   expect(html).toContain('/@"')
-  expect(html).toContain('/account/edit/appearance"')
+  expect(html).toContain('/account/edit/interface"')
   expect(html).toContain('/account/edit/notifications"')
   expect(html).toContain('account/edit/notifications" style="color:#55734a')
   expect(html).toContain('>Notifications</a>')
