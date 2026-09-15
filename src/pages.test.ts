@@ -3323,6 +3323,7 @@ test('Account deletion asks for the configured second factor', () => {
   expect(passwordHtml).toContain('type="password"')
   expect(passwordHtml).toContain('name="password"')
   expect(passwordHtml).toContain('Delete @reader?')
+  expect(passwordHtml).toContain('href="/account/edit/account#delete-account">cancel</a>')
 
   const emailHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, { user }))
   expect(emailHtml).not.toContain('type="password"')
@@ -3344,6 +3345,7 @@ test('Account deletion asks for the configured second factor', () => {
   expect(sentHtml).not.toContain('reader@example.com')
   expect(sentHtml).toContain('@reader</strong> has not been deleted.')
   expect(sentHtml).not.toContain('action="/account/delete"')
+  expect(sentHtml).toContain('href="/account/edit/account#delete-account">back to account</a>')
 
   const developmentHtml = renderToStaticMarkup(React.createElement(ConfirmAccountDelete, {
     user,
