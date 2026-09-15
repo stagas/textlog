@@ -521,9 +521,10 @@ describe('in-memory stylesheet', () => {
 
   test('spaces account security headings, copy, and actions consistently', async () => {
     const css = await Bun.file(new URL('./styles.css', import.meta.url)).text()
-    expect(css).toContain('.security-section {\n  display: grid;\n  gap: var(--space-4);')
-    expect(css).toContain('.security-section > :is(h2, p, form) {\n  margin: 0;')
-    expect(css).toContain('.security-section > .button {\n  justify-self: start;')
+    expect(css).toContain('.security-section {\n  display: flex;\n  flex-wrap: wrap;')
+    expect(css).toContain('.security-section-heading > :is(h2, p) { margin: 0; }')
+    expect(css).toContain('.security-section > .button {\n  flex: none;\n  margin-left: auto;')
+    expect(css).toContain('.security-email-form {\n  grid-template-columns: minmax(0, 1fr) auto;')
   })
 
   test('defines compact and relaxed global density scales', async () => {
