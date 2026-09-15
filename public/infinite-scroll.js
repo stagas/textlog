@@ -318,7 +318,7 @@
     currentView.setAttribute('aria-busy', 'true')
     startNavigationSpinner(tab, href)
     const spinnerStartedAt = performance.now()
-    const smoothScroll = !preserveScroll && !!tab?.closest('.feed-tabs')
+    const smoothScroll = !preserveScroll && !!tab?.closest('.feed-tabs, .pagination')
     if (smoothScroll) {
       window.dispatchEvent(new Event('textlog:feed-autoscroll'))
       scrollTo({ top: 0, behavior: 'smooth' })
@@ -399,8 +399,7 @@
       void navigateFeed(url.href, false, link, true)
       return
     }
-    const pagination = !!link.closest('.pagination')
-    void navigateFeed(url.href, true, link, !link.closest('[data-profile-tabs-view]'), pagination)
+    void navigateFeed(url.href, true, link, !link.closest('[data-profile-tabs-view]'))
   })
 
   document.addEventListener('submit', event => {
@@ -411,7 +410,7 @@
     new FormData(form).forEach((value, name) => url.searchParams.set(name, String(value)))
     url.searchParams.delete('_scroll')
     url.hash = ''
-    void navigateFeed(url.href, true, form, !form.closest('[data-profile-tabs-view]'), true)
+    void navigateFeed(url.href, true, form, !form.closest('[data-profile-tabs-view]'))
   })
 
   addEventListener('popstate', event => {
