@@ -11,7 +11,7 @@ import { deleteImages, deleteImagesAfterCommit } from '../image-storage'
 import { discoverLinkPreviews } from '../link-preview'
 import { logError } from '../log'
 import { moderateText, moderationMessage } from '../moderation'
-import { autotagText } from '../openrouter'
+import { autotagStatus, autotagText } from '../openrouter'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { finalizePublishedPost, persistPostEnrichment } from '../post-publication'
@@ -215,7 +215,9 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     const content = normalizePostBody(text(payload?.body))
     if (!validPostBody(content)) return fail('invalid_body', postBodyValidationMessage(content), 400)
     const result = await autotagText(content)
-    if (!result.ok) return fail('autotag_unavailable', result.message, 503)
+    if (!result.ok) {
+      return fail(result.reason === 'flagged' ? 'flagged' : result.reason, result.message, autotagStatus(result))
+    }
     const enriched = normalizePostBody(result.body)
     if (!validPostBody(enriched)) {
       return fail('autotag_too_large',

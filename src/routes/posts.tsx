@@ -33,7 +33,7 @@ import { logError } from '../log'
 import { markdownPlainText } from '../markdown'
 import { renderPostOg } from '../og'
 import { cachedOgResponse, cacheOgResponse } from '../og-response-cache'
-import { autotagText } from '../openrouter'
+import { autotagStatus, autotagText } from '../openrouter'
 import { pollDisplayBody } from '../polls'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
@@ -427,7 +427,7 @@ export function registerPostsRoutes(app: Hono) {
             : result.ok
             ? undefined
             : result.message} />,
-          result.ok ? 200 : 503,
+          result.ok ? 200 : autotagStatus(result),
         )
       }
       if (!validPostBody(body)) {
@@ -478,7 +478,7 @@ export function registerPostsRoutes(app: Hono) {
           : result.ok
           ? undefined
           : result.message} />,
-        result.ok ? 200 : 503,
+        result.ok ? 200 : autotagStatus(result),
       )
     }
     if (!validPostBody(body)) {
@@ -712,7 +712,7 @@ export function registerPostsRoutes(app: Hono) {
           : result.ok
           ? undefined
           : result.message} />,
-        result.ok ? 200 : 503,
+        result.ok ? 200 : autotagStatus(result),
       )
     }
     if (!validPostBody(body)) {
@@ -863,7 +863,7 @@ export function registerPostsRoutes(app: Hono) {
           ? `The message is too big to autotag within the ${POST_MAX}-character limit. Edit it down and try again.`
           : result.ok
           ? undefined
-          : result.message }, result.ok ? 200 : 503)
+          : result.message }, result.ok ? 200 : autotagStatus(result))
     }
     if (!validPostBody(body)) {
       return renderReplyState({ error: postBodyValidationMessage(body), body, draftId: editingDraftId, returnPath },

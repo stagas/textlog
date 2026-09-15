@@ -6,6 +6,7 @@ describe('OpenRouter autotag', () => {
     let systemPrompt = ''
     const result = await autotagText('A note about Bun and TypeScript', {
       apiKey: 'test',
+      moderate: async () => ({ ok: true }),
       fetch: (async (_url, init) => {
         systemPrompt = JSON.parse(String(init?.body)).messages[0].content
         return Response.json({ choices: [{ message: {
@@ -28,6 +29,7 @@ describe('OpenRouter autotag', () => {
     const models: string[] = []
     const result = await autotagText('A garden note', {
       apiKey: 'test',
+      moderate: async () => ({ ok: true }),
       freeModel: 'example/free',
       paidModel: 'example/paid',
       fetch: (async (_url: string | URL | Request, init?: RequestInit) => {
@@ -45,6 +47,7 @@ describe('OpenRouter autotag', () => {
     let calls = 0
     const result = await autotagText('A note', {
       apiKey: 'test',
+      moderate: async () => ({ ok: true }),
       fetch: async () => {
         calls++
         return new Response('bad request', { status: 400 })
@@ -52,5 +55,38 @@ describe('OpenRouter autotag', () => {
     })
     expect(calls).toBe(1)
     expect(result.ok).toBe(false)
+  })
+
+  test('moderates before contacting OpenRouter and rejects flagged text', async () => {
+    const calls: string[] = []
+    const result = await autotagText('malicious text', {
+      apiKey: 'test',
+      moderate: async input => {
+        calls.push(`moderate:${input}`)
+        return { ok: false, reason: 'flagged', category: 'violence', score: 0.99 }
+      },
+      fetch: async () => {
+        calls.push('openrouter')
+        return Response.json({ choices: [{ message: { content: '#text' } }] })
+      },
+    })
+    expect(calls).toEqual(['moderate:malicious text'])
+    expect(result).toMatchObject({ ok: false, reason: 'flagged' })
+    if (!result.ok) expect(result.message).toBe('This text may violate our content rules. Please revise it and try again.')
+    if (!result.ok) expect(result.message).not.toContain('0.99')
+  })
+
+  test('does not send text to OpenRouter when moderation is unavailable', async () => {
+    let contactedProvider = false
+    const result = await autotagText('A note', {
+      apiKey: 'test',
+      moderate: async () => ({ ok: false, reason: 'unavailable' }),
+      fetch: async () => {
+        contactedProvider = true
+        return Response.json({})
+      },
+    })
+    expect(contactedProvider).toBe(false)
+    expect(result).toMatchObject({ ok: false, reason: 'moderation_unavailable' })
   })
 })

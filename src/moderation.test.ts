@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { isModerationFlagged, moderationMessage, moderationWarning, parseModerationThresholds } from './moderation'
+import { isModerationFlagged, moderateText, moderationMessage, moderationWarning,
+  parseModerationThresholds } from './moderation'
 
 describe('moderation category thresholds', () => {
   test('uses the provider decision when no local thresholds are configured', () => {
@@ -51,5 +52,31 @@ describe('moderation category thresholds', () => {
       categories: { 'self-harm/intent': true },
       category_scores: { 'self-harm/intent': 0.72 },
     }, { 'self-harm/intent': 0.9 })).toEqual({ category: 'self-harm/intent', score: 0.72 })
+  })
+
+  test('can use only the provider flagged decision without exposing category details', async () => {
+    const previousKey = Bun.env.OPENAI_API_KEY
+    const previousDisabled = Bun.env.MODERATION_DISABLED
+    const previousThresholds = Bun.env.MODERATION_CATEGORY_THRESHOLDS
+    const previousFetch = globalThis.fetch
+    Bun.env.OPENAI_API_KEY = 'test'
+    Bun.env.MODERATION_DISABLED = 'false'
+    Bun.env.MODERATION_CATEGORY_THRESHOLDS = 'violence=0.99'
+    globalThis.fetch = (async () => Response.json({ results: [{
+      flagged: true,
+      categories: { violence: true },
+      category_scores: { violence: 0.5 },
+    }] })) as unknown as typeof fetch
+    try {
+      const result = await moderateText('text', { providerFlagOnly: true })
+      expect(result).toEqual({ ok: false, reason: 'flagged' })
+      if (!result.ok) expect(moderationMessage(result)).not.toContain('violence')
+    }
+    finally {
+      Bun.env.OPENAI_API_KEY = previousKey
+      Bun.env.MODERATION_DISABLED = previousDisabled
+      Bun.env.MODERATION_CATEGORY_THRESHOLDS = previousThresholds
+      globalThis.fetch = previousFetch
+    }
   })
 })

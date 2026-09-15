@@ -1,3 +1,5 @@
+import { moderateText, moderationMessage } from './moderation'
+
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const DEFAULT_FREE_MODEL = 'google/gemma-4-26b-a4b-it:free'
 const DEFAULT_PAID_MODEL = 'google/gemma-4-26b-a4b-it'
@@ -10,7 +12,13 @@ type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Re
 
 export type AutotagResult =
   | { ok: true; body: string }
-  | { ok: false; message: string }
+  | { ok: false; reason: 'flagged' | 'moderation_unavailable' | 'autotag_unavailable'; message: string }
+
+type AutotagModeration = (input: string) => ReturnType<typeof moderateText>
+
+export function autotagStatus(result: AutotagResult) {
+  return !result.ok && result.reason === 'flagged' ? 422 : 503
+}
 
 function completionText(payload: OpenRouterCompletion) {
   const content = payload.choices?.[0]?.message?.content
@@ -48,9 +56,20 @@ export async function autotagText(body: string, options: {
   freeModel?: string
   paidModel?: string
   fetch?: Fetcher
+  moderate?: AutotagModeration
 } = {}): Promise<AutotagResult> {
+  const moderation = await (options.moderate || (input => moderateText(input, { providerFlagOnly: true })))(body)
+  if (!moderation.ok) {
+    return {
+      ok: false,
+      reason: moderation.reason === 'flagged' ? 'flagged' : 'moderation_unavailable',
+      message: moderation.reason === 'flagged'
+        ? 'This text may violate our content rules. Please revise it and try again.'
+        : moderationMessage(moderation),
+    }
+  }
   const apiKey = options.apiKey ?? Bun.env.OPENROUTER_API_KEY
-  if (!apiKey) return { ok: false, message: 'Autotag is not configured.' }
+  if (!apiKey) return { ok: false, reason: 'autotag_unavailable', message: 'Autotag is not configured.' }
   const freeModel = options.freeModel || Bun.env.OPENROUTER_FREE_MODEL || DEFAULT_FREE_MODEL
   const paidModel = options.paidModel || Bun.env.OPENROUTER_PAID_MODEL || DEFAULT_PAID_MODEL
   const request = options.fetch || fetch
@@ -59,13 +78,15 @@ export async function autotagText(body: string, options: {
     if (response.status === 429 && paidModel !== freeModel) {
       response = await requestAutotag(body, paidModel, apiKey, request)
     }
-    if (!response.ok) return { ok: false, message: 'Could not autotag right now. Please try again.' }
+    if (!response.ok) {
+      return { ok: false, reason: 'autotag_unavailable', message: 'Could not autotag right now. Please try again.' }
+    }
     const enriched = enrichedText(completionText(await response.json() as OpenRouterCompletion))
     return enriched
       ? { ok: true, body: enriched }
-      : { ok: false, message: 'No useful autotag result was found.' }
+      : { ok: false, reason: 'autotag_unavailable', message: 'No useful autotag result was found.' }
   }
   catch {
-    return { ok: false, message: 'Could not autotag right now. Please try again.' }
+    return { ok: false, reason: 'autotag_unavailable', message: 'Could not autotag right now. Please try again.' }
   }
 }

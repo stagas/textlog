@@ -1,5 +1,5 @@
 type ModerationFailure =
-  | { ok: false; reason: 'flagged'; category: ModerationCategory; score: number }
+  | { ok: false; reason: 'flagged'; category?: ModerationCategory; score?: number }
   | { ok: false; reason: 'rate_limited' | 'unavailable' }
 
 type ModerationResult =
@@ -97,7 +97,7 @@ export function moderationWarning(result: ModerationApiResult, thresholds: Moder
     : undefined
 }
 
-export async function moderateText(input: string): Promise<ModerationResult> {
+export async function moderateText(input: string, options: { providerFlagOnly?: boolean } = {}): Promise<ModerationResult> {
   if (['1', 'true', 'yes'].includes((Bun.env.MODERATION_DISABLED || '').toLowerCase())) {
     return { ok: true }
   }
@@ -134,6 +134,10 @@ export async function moderateText(input: string): Promise<ModerationResult> {
     }
     const data = await response.json() as { results?: ModerationApiResult[] }
     if (!data.results?.length) return { ok: false, reason: 'unavailable' }
+    if (options.providerFlagOnly) {
+      if (typeof data.results[0].flagged !== 'boolean') return { ok: false, reason: 'unavailable' }
+      return data.results[0].flagged ? { ok: false, reason: 'flagged' } : { ok: true }
+    }
     const match = moderationMatch(data.results[0], parseModerationThresholds(Bun.env.MODERATION_CATEGORY_THRESHOLDS))
     if (match === null) return { ok: false, reason: 'unavailable' }
     return match
@@ -149,6 +153,9 @@ export async function moderateText(input: string): Promise<ModerationResult> {
 
 export function moderationMessage(result: ModerationFailure) {
   if (result.reason === 'flagged') {
+    if (result.category === undefined || result.score === undefined) {
+      return 'This text may violate our content rules. Please revise it and try again.'
+    }
     return `This text may violate our content rules (${result.category}: ${
       result.score.toFixed(4)
     }). Please revise it and try again.`
