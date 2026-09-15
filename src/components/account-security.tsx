@@ -15,8 +15,10 @@ function SecuritySection({ title, description, id, children }: {
 }) {
   return (
     <section className="security-section" id={id}>
-      <h2>{title}</h2>
-      {description && <p>{description}</p>}
+      <div className="security-section-heading">
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
       {children}
     </section>
   )
@@ -43,7 +45,8 @@ export function AccountSecurity(
       <div className="security-page">
         <FormMessage error={error} success={success} />
         <SecuritySection title="email" description={maskEmail(user.email)}>
-          <form className="security-form" method="post" action="/account/email/change">
+          <form className={`security-form security-email-form${passwordEnabled ? ' has-password' : ''}`}
+            method="post" action="/account/email/change">
             <label>
               new email
               <input type="email" name="email" required maxLength={254} autoComplete="email" inputMode="email"
@@ -62,7 +65,7 @@ export function AccountSecurity(
         <SecuritySection title="magic link"
           description="Generate a one-time sign-in link to copy to another device. It expires after 15 minutes."
         >
-          <form className="security-form" method="post" action="/account/magic-link">
+          <form className="security-form security-section-action" method="post" action="/account/magic-link">
             <button className="button">generate magic link →</button>
           </form>
         </SecuritySection>
@@ -81,34 +84,32 @@ export function AccountSecurity(
         >
           <a className="button" href={`/account/api-keys/new${fromQuery}`}>generate API key →</a>
           {apiKeys.length > 0 && (
-            <div className="session-list api-key-list">
-              {apiKeys.map(key => (
-                <article key={key.id}>
-                  <div>
-                    <strong>{key.name}</strong>
-                    <span>
-                      {key.last_used_at
-                        ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}`
-                        : 'never used'}
-                      {' · '}
-                      {key.expires_at
-                        ? (
-                          <>
-                            expires{' '}
-                            <time dateTime={new Date(key.expires_at).toISOString()}>
-                              {new Date(key.expires_at).toLocaleDateString('en')}
-                            </time>
-                          </>
-                        )
-                        : 'never expires'}
-                    </span>
-                  </div>
-                  <form method="post" action="/account/api-keys/revoke">
-                    <input type="hidden" name="id" value={key.id} />
-                    <button className="quiet danger">revoke</button>
-                  </form>
-                </article>
-              ))}
+            <div className="sessions-table-wrap">
+              <table className="sessions-table">
+                <thead><tr><th scope="col">name</th><th scope="col">last used</th><th scope="col">expires</th>
+                  <th scope="col"><span className="visually-hidden">actions</span></th></tr></thead>
+                <tbody>
+                  {apiKeys.map(key => (
+                    <tr key={key.id}>
+                      <td data-label="name"><strong>{key.name}</strong></td>
+                      <td data-label="last used">{key.last_used_at
+                        ? <time dateTime={new Date(key.last_used_at).toISOString()}>
+                          {new Date(key.last_used_at).toLocaleDateString('en')}
+                        </time>
+                        : 'never'}</td>
+                      <td data-label="expires">{key.expires_at
+                        ? <time dateTime={new Date(key.expires_at).toISOString()}>
+                          {new Date(key.expires_at).toLocaleDateString('en')}
+                        </time>
+                        : 'never'}</td>
+                      <td className="session-action"><form method="post" action="/account/api-keys/revoke">
+                        <input type="hidden" name="id" value={key.id} />
+                        <button className="quiet danger">revoke</button>
+                      </form></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </SecuritySection>
@@ -117,57 +118,82 @@ export function AccountSecurity(
         >
           <a className="button" href="/account/feed-keys/new">generate feed key →</a>
           {feedKeys.length > 0 && (
-            <div className="session-list api-key-list">
-              {feedKeys.map(key => (
-                <article key={key.id}>
-                  <div>
-                    <strong>{key.name}</strong>
-                    <span>
-                      {key.last_used_at
-                        ? `last used ${new Date(key.last_used_at).toLocaleDateString('en')}`
-                        : 'never used'}
-                      {' · '}
-                      {key.expires_at
-                        ? `expires ${new Date(key.expires_at).toLocaleDateString('en')}`
-                        : 'never expires'}
-                    </span>
-                  </div>
-                  <form method="post" action="/account/feed-keys/revoke">
-                    <input type="hidden" name="id" value={key.id} />
-                    <button className="quiet danger">revoke</button>
-                  </form>
-                </article>
-              ))}
+            <div className="sessions-table-wrap">
+              <table className="sessions-table">
+                <thead><tr><th scope="col">name</th><th scope="col">last used</th><th scope="col">expires</th>
+                  <th scope="col"><span className="visually-hidden">actions</span></th></tr></thead>
+                <tbody>
+                  {feedKeys.map(key => (
+                    <tr key={key.id}>
+                      <td data-label="name"><strong>{key.name}</strong></td>
+                      <td data-label="last used">{key.last_used_at
+                        ? <time dateTime={new Date(key.last_used_at).toISOString()}>
+                          {new Date(key.last_used_at).toLocaleDateString('en')}
+                        </time>
+                        : 'never'}</td>
+                      <td data-label="expires">{key.expires_at
+                        ? <time dateTime={new Date(key.expires_at).toISOString()}>
+                          {new Date(key.expires_at).toLocaleDateString('en')}
+                        </time>
+                        : 'never'}</td>
+                      <td className="session-action"><form method="post" action="/account/feed-keys/revoke">
+                        <input type="hidden" name="id" value={key.id} />
+                        <button className="quiet danger">revoke</button>
+                      </form></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </SecuritySection>
         <SecuritySection id="sessions" title="sessions">
-          <div className="session-list">
-            {sessions.map(session => (
-              <article key={session.token}>
-                <div>
-                  <strong>{session.current ? 'this session' : 'signed-in session'}</strong>
-                  <span>
-                    {session.user_agent || 'Unknown browser'} · expires{' '}
-                    <time dateTime={new Date(session.expires_at).toISOString()}>
-                      {new Date(session.expires_at).toLocaleDateString('en')}
-                    </time>
-                  </span>
-                </div>
-                {!session.current && (
-                  <form method="post" action="/account/sessions/revoke">
-                    <input type="hidden" name="token" value={session.token} />
-                    <button className="quiet danger">revoke</button>
-                  </form>
-                )}
-              </article>
-            ))}
+          <div className="sessions-table-wrap">
+            <table className="sessions-table">
+              <thead>
+                <tr>
+                  <th scope="col">device</th>
+                  <th scope="col">signed in</th>
+                  <th scope="col">expires</th>
+                  <th scope="col"><span className="visually-hidden">actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map(session => (
+                  <tr key={session.token} className={session.current ? 'current-session' : undefined}>
+                    <td data-label="device">
+                      <strong>{session.user_agent || 'Unknown browser'}</strong>
+                      {session.current && <span className="current-session-badge">this session</span>}
+                    </td>
+                    <td data-label="signed in">
+                      <time dateTime={new Date(session.created_at).toISOString()}>
+                        {new Date(session.created_at).toLocaleDateString('en')}
+                      </time>
+                    </td>
+                    <td data-label="expires">
+                      <time dateTime={new Date(session.expires_at).toISOString()}>
+                        {new Date(session.expires_at).toLocaleDateString('en')}
+                      </time>
+                    </td>
+                    <td className="session-action">
+                      {session.current && sessions.length > 1
+                        ? (
+                          <form method="post" action="/account/sessions/revoke-others">
+                            <button className="quiet danger">revoke<br />all other</button>
+                          </form>
+                        )
+                        : !session.current && (
+                        <form method="post" action="/account/sessions/revoke">
+                          <input type="hidden" name="token" value={session.token} />
+                          <button className="quiet danger">revoke</button>
+                        </form>
+                        )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {sessions.length > 1 && (
-            <form method="post" action="/account/sessions/revoke-others">
-              <button className="quiet danger">revoke all other sessions</button>
-            </form>
-          )}
         </SecuritySection>
       </div>
     </Layout>
