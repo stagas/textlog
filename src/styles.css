@@ -6174,8 +6174,8 @@ form.report-panel {
   border-bottom: 1px solid var(--soft);
 }
 
-.account-settings-link:hover {
-  background: var(--panel);
+.account-settings-link:is(:hover, :focus-visible) {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
 
 .account-settings-link strong {
@@ -6197,6 +6197,12 @@ form.report-panel {
 
 .account-settings-link:is(:hover, :focus-visible) .account-settings-chevron {
   color: var(--accent) !important;
+}
+
+@media (hover: none) {
+  .account-settings-link:hover {
+    background: transparent;
+  }
 }
 
 .account-settings-chevron svg {
