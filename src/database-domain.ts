@@ -2828,8 +2828,8 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const row = database.query(`SELECT g.query,g.latitude,g.longitude,g.display_name displayName,
         m.image_key imageKey,m.width imageWidth,m.height imageHeight
         FROM location_geocodes g LEFT JOIN location_map_previews m
-          ON m.cache_key=(printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',g.latitude,g.longitude) || CASE WHEN instr(g.query,'->') > 0 OR instr(g.query,'→') > 0 THEN ':flight:' || g.query ELSE '' END)
-          WHERE g.query=?
+          ON m.cache_key IN ((printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',g.latitude,g.longitude) || CASE WHEN instr(g.query,'->') > 0 OR instr(g.query,'→') > 0 THEN ':flight:' || replace(g.query,'→','->') ELSE '' END), (printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',g.latitude,g.longitude) || CASE WHEN instr(g.query,'->') > 0 OR instr(g.query,'→') > 0 THEN ':flight:' || g.query ELSE '' END))
+          WHERE replace(g.query,'→','->')=replace(?,'→','->')
           ${supportsLanguage ? 'AND g.language=\'en\'' : 'AND 0'}`).get(query) as Omit<
         import('./locations').ResolvedLocation,
         'imageUrl'
@@ -2838,8 +2838,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'location_geocode_misses\'',
       ).get()
       return row && row.imageKey
-        ? { ...row, imageUrl: getImageUrl(row.imageKey) } as DatabaseDomainOutput<K>
-        : supportsMisses && database.query('SELECT 1 FROM location_geocode_misses WHERE query=?').get(query)
+        ? { ...row, query, imageUrl: getImageUrl(row.imageKey) } as DatabaseDomainOutput<K>
+        : supportsMisses && !/(?:->|→)/.test(query)
+          && database.query('SELECT 1 FROM location_geocode_misses WHERE query=?').get(query)
         ? 'miss' as DatabaseDomainOutput<K>
         : null as DatabaseDomainOutput<K>
     }
@@ -2854,7 +2855,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.transaction(() => {
         database.query('DELETE FROM post_locations WHERE post_id=?').run(postId)
         if (!location) {
-          if (query && supportsMisses) {
+          if (query && supportsMisses && !/(?:->|→)/.test(query)) {
             database.query('INSERT OR IGNORE INTO location_geocode_misses(query) VALUES(?)').run(query)
           }
           return
@@ -2894,7 +2895,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         'SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'location_geocode_misses\'',
       ).get()
       if (!location) {
-        if (supportsMisses) database.query('INSERT OR IGNORE INTO location_geocode_misses(query) VALUES(?)').run(query)
+        if (supportsMisses && !/(?:->|→)/.test(query)) {
+          database.query('INSERT OR IGNORE INTO location_geocode_misses(query) VALUES(?)').run(query)
+        }
         return null as DatabaseDomainOutput<K>
       }
       if (supportsMisses) database.query('DELETE FROM location_geocode_misses WHERE query=?').run(query)

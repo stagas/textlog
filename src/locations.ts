@@ -17,15 +17,15 @@ export type ResolvedLocation = LocationMetadata & { imageKey: string; imageUrl: 
 
 export function flyingText(body: string) {
   const visible = withoutMarkdownCode(body)
-  const match = /(?:^|\s)#flying(?:[ \t]+([^\s][^\n]*)|[ \t]*\n(?:[ \t]*\n)*[ \t]*([^\n]+))/i.exec(visible)
-  const query = (match?.[1] || match?.[2] || '').trim()
-  if (!query || query.length > 300 || query.split(/\s*(?:->|→)\s*/).length !== 2) return null
+  const match = /(?:^|\s)#flying\s+(\S+\s+(?:to|->|→)\s+\S+)(?=\s|$)/i.exec(visible)
+  const query = match?.[1] || ''
+  if (!query || query.length > 300) return null
   const index = match!.index + match![0].lastIndexOf(query)
   return { query, index, lastIndex: index + query.length }
 }
 
 export async function resolveAirports(query: string) {
-  const parts = query.split(/\s*(?:->|→)\s*/)
+  const parts = normalizeFlightQuery(query).split(/\s*->\s*/)
   if (parts.length !== 2 || parts.some(part => !part.trim())) return null
   const airports = await Promise.all(parts.map(async part => {
     const code = part.trim().toUpperCase()
@@ -40,14 +40,18 @@ export async function resolveAirports(query: string) {
   return airports[0] && airports[1] ? airports : null
 }
 
+export function normalizeFlightQuery(query: string) {
+  return query.replace(/\s+(?:to|->|→)\s+/gi, ' -> ').replace(/→/g, '->')
+}
+
 export function locationCacheKey(location: LocationMetadata, zoom = LOCATION_ZOOM) {
   return `${zoom}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${location.longitude.toFixed(6)}`
-    + (/(?:->|→)/.test(location.query) ? `:flight:${location.query}` : '')
+    + (/(?:->|→)/.test(location.query) ? `:flight:${normalizeFlightQuery(location.query)}` : '')
 }
 
 export function parseLocationQuery(body: string) {
   const flight = flyingText(body)
-  if (flight) return flight.query
+  if (flight) return normalizeFlightQuery(flight.query)
   const lines = body.split('\n')
   const visible = withoutMarkdownCode(body).split('\n')
   const marker = visible.findIndex(line => /(?:^|\s)#(?:map|location)\s*$/i.test(line))

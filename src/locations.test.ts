@@ -158,13 +158,13 @@ describe('#map', () => {
       CREATE TABLE post_locations(post_id INTEGER PRIMARY KEY,query TEXT,latitude REAL,longitude REAL,
         display_name TEXT);
       INSERT INTO users VALUES(1,'mapper',NULL);
-      INSERT INTO posts VALUES(1,1,NULL,'#flying Heraklion -> Berlin','2026-08-29',NULL,NULL);
+      INSERT INTO posts VALUES(1,1,NULL,'#flying Heraklion → Berlin','2026-08-29',NULL,NULL);
       INSERT INTO post_hashtags VALUES(1,'flying');
-      INSERT INTO post_locations VALUES(1,'Heraklion -> Berlin',35.2,24.2,'Heraklion Airport → Berlin Brandenburg Airport');
+      INSERT INTO post_locations VALUES(1,'Heraklion → Berlin',35.2,24.2,'Heraklion Airport → Berlin Brandenburg Airport');
       INSERT INTO location_map_previews VALUES('3:3:35.200000:24.200000:flight:Heraklion -> Berlin','location-maps/test.png',600,315);`)
     const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
     expect(apiLocation).toMatchObject({
-      query: 'Heraklion -> Berlin',
+      query: 'Heraklion → Berlin',
       latitude: 35.2,
       longitude: 24.2,
       preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Heraklion Airport → Berlin Brandenburg Airport' },
@@ -175,6 +175,28 @@ describe('#map', () => {
 
 
 describe('#flying', () => {
+  test('uses only the next three words and accepts each separator', async () => {
+    for (const separator of ['to', 'TO', '->', '→']) {
+      const body = `#flying Heraklion ${separator} Berlin and bla bla`
+      const token = flyingText(body)!
+      expect(token.query).toBe(`Heraklion ${separator} Berlin`)
+      expect(body.slice(token.index, token.lastIndex)).toBe(token.query)
+      expect(parseLocationQuery(body)).toBe('Heraklion -> Berlin')
+      const html = linkify(body, {}, [], undefined, postContentFlags(body), '', { flying: 1 }, {}, {
+        signedIn: false, formPrefix: 'flight', location: {
+          query: 'Heraklion -> Berlin', latitude: 35.3, longitude: 25.2, displayName: 'HER → BER',
+          url: 'https://www.openstreetmap.org/',
+          preview: { imageUrl: '/uploads/flight.png', title: 'HER → BER', imageWidth: 600, imageHeight: 315 },
+        },
+      })
+      expect(html).toContain(`Heraklion ${separator === '->' ? '-&gt;' : separator} Berlin</a><a class="remote-link-popover"`)
+      expect(html).toContain('</span> and bla bla')
+    }
+    expect((await resolveAirports('Heraklion to Berlin'))?.map(a => a?.iata)).toEqual(['HER', 'BER'])
+    expect(parseLocationQuery('#flying Heraklion via Berlin')).toBeNull()
+    expect(parseLocationQuery('#flying Heraklion to')).toBeNull()
+  })
+
   test('renders a next-line Unicode itinerary within prose, including trailing marker whitespace', () => {
     const location: LocationView = {
       query: 'Heraklion → Berlin', latitude: 35.3, longitude: 25.2,
@@ -186,7 +208,7 @@ describe('#flying', () => {
       const body = `Excited about these news! I am #flying${trailing}
 Heraklion → Berlin
 on Friday, going to stay for a while to work on textlog among other things. Happy because I was getting a bit depressed lately living in the mountains in Crete.`
-      expect(parseLocationQuery(body)).toBe(location.query)
+      expect(parseLocationQuery(body)).toBe('Heraklion -> Berlin')
       const token = flyingText(body)!
       expect(body.slice(token.index, token.lastIndex)).toBe(location.query)
       const html = linkify(body, {}, [], undefined, postContentFlags(body), '', { flying: 1 }, {}, {
@@ -203,8 +225,8 @@ on Friday, going to stay for a while to work on textlog among other things. Happ
       const token = flyingText(body)!
       expect(body.slice(token.index, token.lastIndex)).toBe(token.query)
     }
-    expect(parseLocationQuery('#flying HER → BER')).toBe('HER → BER')
-    for (const body of ['`#flying HER -> BER`', '```\n#flying HER -> BER\n```', '#flying Berlin', '#flying HER -> BER -> LHR']) {
+    expect(parseLocationQuery('#flying HER → BER')).toBe('HER -> BER')
+    for (const body of ['`#flying HER -> BER`', '```\n#flying HER -> BER\n```', '#flying Berlin']) {
       expect(parseLocationQuery(body)).toBeNull()
     }
   })
@@ -214,6 +236,33 @@ on Friday, going to stay for a while to work on textlog among other things. Happ
     expect((await resolveAirports('LGIR → BER'))?.map(a => a?.iata)).toEqual(['HER', 'BER'])
     expect(await resolveAirports('Nonexistent Airport xyz -> Berlin')).toBeNull()
     expect(await resolveAirports(' -> Berlin')).toBeNull()
+  })
+
+  test('Unicode and ASCII arrows share cached previews and preserve the displayed text', async () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE location_geocodes(query TEXT PRIMARY KEY,latitude REAL,longitude REAL,
+        display_name TEXT,language TEXT);
+      CREATE TABLE location_geocode_misses(query TEXT PRIMARY KEY);
+      CREATE TABLE location_map_previews(cache_key TEXT PRIMARY KEY,image_key TEXT,width INTEGER,height INTEGER);
+      INSERT INTO location_geocodes VALUES('Heraklion -> Berlin',35.2,24.2,'HER → BER','en');
+      INSERT INTO location_map_previews VALUES('3:3:35.200000:24.200000:flight:Heraklion -> Berlin',
+        'location-maps/test.png',600,315);
+      INSERT INTO location_geocode_misses VALUES('Heraklion → Berlin'),('HER → LHR'),('Nowhere');`)
+    const cached = await executeDatabaseDomain(database, 'api.cachedLocation', { query: 'Heraklion → Berlin' })
+    expect(cached).toMatchObject({ query: 'Heraklion → Berlin', imageKey: 'location-maps/test.png' })
+    database.run(`UPDATE location_geocodes SET query='Heraklion → Berlin';
+      UPDATE location_map_previews SET cache_key='3:3:35.200000:24.200000:flight:Heraklion → Berlin';`)
+    expect(await executeDatabaseDomain(database, 'api.cachedLocation', { query: 'Heraklion -> Berlin' }))
+      .toMatchObject({ query: 'Heraklion -> Berlin', imageKey: 'location-maps/test.png' })
+    const origin = { latitude: 35.2, longitude: 24.2, displayName: 'HER → BER' }
+    expect(locationCacheKey({ ...origin, query: 'Heraklion → Berlin' }))
+      .toBe(locationCacheKey({ ...origin, query: 'Heraklion -> Berlin' }))
+    expect(await executeDatabaseDomain(database, 'api.cachedLocation', { query: 'HER → LHR' })).toBeNull()
+    expect(await executeDatabaseDomain(database, 'api.cachedLocation', { query: 'Nowhere' })).toBe('miss')
+    expect(await executeDatabaseDomain(database, 'api.cacheLocation', { query: 'HER → CDG', location: null }))
+      .toBeNull()
+    expect(database.query('SELECT 1 FROM location_geocode_misses WHERE query=?').get('HER → CDG')).toBeNull()
+    database.close()
   })
 
   test('separates routes from the same airport in map caches', () => {
