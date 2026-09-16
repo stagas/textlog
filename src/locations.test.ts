@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { describe, expect, test } from 'bun:test'
 import { apiPost } from './api'
+import { postContentFlags } from './content'
 import { executeDatabaseDomain } from './database-domain'
 import { geocodeLocation, locationDestination, locationMapProvider, mapTilerRasterTileUrl,
   parseLocationQuery, flyingText, resolveAirports, locationCacheKey } from './locations'
@@ -174,6 +175,28 @@ describe('#map', () => {
 
 
 describe('#flying', () => {
+  test('renders a next-line Unicode itinerary within prose, including trailing marker whitespace', () => {
+    const location: LocationView = {
+      query: 'Heraklion → Berlin', latitude: 35.3, longitude: 25.2,
+      displayName: 'Heraklion Airport → Berlin Brandenburg Airport', url: 'https://www.openstreetmap.org/',
+      preview: { imageUrl: '/uploads/flight.png', title: 'Heraklion Airport → Berlin Brandenburg Airport',
+        imageWidth: 600, imageHeight: 315 },
+    }
+    for (const trailing of ['', ' ', '  ', '\t', ' \t ']) {
+      const body = `Excited about these news! I am #flying${trailing}
+Heraklion → Berlin
+on Friday, going to stay for a while to work on textlog among other things. Happy because I was getting a bit depressed lately living in the mountains in Crete.`
+      expect(parseLocationQuery(body)).toBe(location.query)
+      const token = flyingText(body)!
+      expect(body.slice(token.index, token.lastIndex)).toBe(location.query)
+      const html = linkify(body, {}, [], undefined, postContentFlags(body), '', { flying: 1 }, {}, {
+        signedIn: false, formPrefix: 'flight', location,
+      })
+      expect(html).toContain('Heraklion → Berlin</a><a class="remote-link-popover"')
+      expect(html).toContain('on Friday, going to stay for a while')
+    }
+  })
+
   test('parses inline and next-line itineraries and ignores code', () => {
     for (const body of ['Off we go #flying Heraklion -> Berlin', '#flying\n\nHeraklion -> Berlin']) {
       expect(parseLocationQuery(body)).toBe('Heraklion -> Berlin')

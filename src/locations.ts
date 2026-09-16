@@ -17,7 +17,7 @@ export type ResolvedLocation = LocationMetadata & { imageKey: string; imageUrl: 
 
 export function flyingText(body: string) {
   const visible = withoutMarkdownCode(body)
-  const match = /(?:^|\s)#flying(?:[ \t]+([^\n]+)|[ \t]*\n(?:[ \t]*\n)*[ \t]*([^\n]+))/i.exec(visible)
+  const match = /(?:^|\s)#flying(?:[ \t]+([^\s][^\n]*)|[ \t]*\n(?:[ \t]*\n)*[ \t]*([^\n]+))/i.exec(visible)
   const query = (match?.[1] || match?.[2] || '').trim()
   if (!query || query.length > 300 || query.split(/\s*(?:->|→)\s*/).length !== 2) return null
   const index = match!.index + match![0].lastIndexOf(query)
