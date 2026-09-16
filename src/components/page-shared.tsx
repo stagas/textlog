@@ -291,6 +291,13 @@ function PostingHelpTabs({ search }: { search?: PostingSuggestionSearch | null }
           </dt>
         </div>
         <div>
+          <dd><code><b>#flying</b> Heraklion -&gt; Berlin</code></dd>
+          <dt>
+            <span className="posting-help-modifier-heading">Flights</span>
+            <small>Hover over the itinerary to see a map connecting the airports. Use airport names or IATA/ICAO codes, on the same line or the next line.</small>
+          </dt>
+        </div>
+        <div>
           <dd>
             <code>
               Today <b>#todo</b>

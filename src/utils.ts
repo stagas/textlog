@@ -11,7 +11,7 @@ import { pendingFollowHref } from './components/auth-links'
 import { containsAsciiArt, MAX_HASHTAGS_PER_POST, normalizeHashtagSpelling, type PostContentFlags,
   splitSpoilerBody } from './content'
 import { getImageUrl } from './image-storage'
-import { locationDestination } from './locations'
+import { flyingText, locationDestination } from './locations'
 import { texToMathML } from './math'
 import { requestContext } from './request-context'
 import { markSessionUsed, sessionHash } from './sessions'
@@ -895,6 +895,8 @@ export function linkify(body: string, mentionBios: Record<string, string> = {}, 
   let end = 0
   const locationToken = (() => {
     if (!popover?.location) return null
+    const flight = flyingText(body)
+    if (flight && flight.query === popover.location.query) return { ...flight, kind: 'location' as const, raw: flight.query }
     const lines = body.split('\n')
     const marker = lines.findIndex(line => /(?:^|\s)#(?:map|location)\s*$/i.test(line))
     if (marker < 0) return null

@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1111.0",
+    "airport-data-ts": "^4.0.3",
     "ansi_up": "^6.0.6",
     "canvas": "^3.2.3",
     "emojilib": "^4.0.3",

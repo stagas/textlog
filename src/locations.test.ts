@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { apiPost } from './api'
 import { executeDatabaseDomain } from './database-domain'
 import { geocodeLocation, locationDestination, locationMapProvider, mapTilerRasterTileUrl,
-  parseLocationQuery } from './locations'
+  parseLocationQuery, flyingText, resolveAirports, locationCacheKey } from './locations'
 import type { LocationView } from './types'
 import { linkify } from './utils'
 
@@ -144,5 +144,72 @@ describe('#map', () => {
       preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Kallikratis' },
     })
     expect(apiLocation?.preview.siteName).toBeUndefined()
+  })
+
+  test('loads flight maps through the public API using the route cache key', () => {
+    const database = new Database(':memory:')
+    database.run(`CREATE TABLE users(id INTEGER PRIMARY KEY,handle TEXT,deleted_at TEXT);
+      CREATE TABLE posts(id INTEGER PRIMARY KEY,user_id INTEGER,parent_id INTEGER,body TEXT,created_at TEXT,
+        deleted_at TEXT,execution_output TEXT);
+      CREATE TABLE post_hashtags(post_id INTEGER,tag TEXT);
+      CREATE TABLE post_mentions(post_id INTEGER,user_id INTEGER);
+      CREATE TABLE location_map_previews(cache_key TEXT PRIMARY KEY,image_key TEXT,width INTEGER,height INTEGER);
+      CREATE TABLE post_locations(post_id INTEGER PRIMARY KEY,query TEXT,latitude REAL,longitude REAL,
+        display_name TEXT);
+      INSERT INTO users VALUES(1,'mapper',NULL);
+      INSERT INTO posts VALUES(1,1,NULL,'#flying Heraklion -> Berlin','2026-08-29',NULL,NULL);
+      INSERT INTO post_hashtags VALUES(1,'flying');
+      INSERT INTO post_locations VALUES(1,'Heraklion -> Berlin',35.2,24.2,'Heraklion Airport → Berlin Brandenburg Airport');
+      INSERT INTO location_map_previews VALUES('3:3:35.200000:24.200000:flight:Heraklion -> Berlin','location-maps/test.png',600,315);`)
+    const apiLocation = apiPost(database, 1, 'https://textlog.example')?.location
+    expect(apiLocation).toMatchObject({
+      query: 'Heraklion -> Berlin',
+      latitude: 35.2,
+      longitude: 24.2,
+      preview: { imageUrl: '/uploads/location-maps/test.png', title: 'Heraklion Airport → Berlin Brandenburg Airport' },
+    })
+    expect(apiLocation?.preview.siteName).toBeUndefined()
+  })
+})
+
+
+describe('#flying', () => {
+  test('parses inline and next-line itineraries and ignores code', () => {
+    for (const body of ['Off we go #flying Heraklion -> Berlin', '#flying\n\nHeraklion -> Berlin']) {
+      expect(parseLocationQuery(body)).toBe('Heraklion -> Berlin')
+      const token = flyingText(body)!
+      expect(body.slice(token.index, token.lastIndex)).toBe(token.query)
+    }
+    expect(parseLocationQuery('#flying HER → BER')).toBe('HER → BER')
+    for (const body of ['`#flying HER -> BER`', '```\n#flying HER -> BER\n```', '#flying Berlin', '#flying HER -> BER -> LHR']) {
+      expect(parseLocationQuery(body)).toBeNull()
+    }
+  })
+
+  test('resolves names and codes to active commercial airports', async () => {
+    expect((await resolveAirports('Heraklion -> Berlin'))?.map(a => a?.iata)).toEqual(['HER', 'BER'])
+    expect((await resolveAirports('LGIR → BER'))?.map(a => a?.iata)).toEqual(['HER', 'BER'])
+    expect(await resolveAirports('Nonexistent Airport xyz -> Berlin')).toBeNull()
+    expect(await resolveAirports(' -> Berlin')).toBeNull()
+  })
+
+  test('separates routes from the same airport in map caches', () => {
+    const origin = { latitude: 35.3, longitude: 25.2, displayName: 'Heraklion' }
+    expect(locationCacheKey({ ...origin, query: 'HER -> BER' }))
+      .not.toBe(locationCacheKey({ ...origin, query: 'HER -> LHR' }))
+  })
+
+  test('renders the itinerary with the existing hover card', () => {
+    const html = linkify('#flying Heraklion -> Berlin', {}, [], undefined, undefined, '', { flying: 1 }, {}, {
+      signedIn: false, formPrefix: 'flight', location: {
+        query: 'Heraklion -> Berlin', latitude: 35.3, longitude: 25.2,
+        displayName: 'Heraklion Airport → Berlin Brandenburg Airport', url: 'https://www.openstreetmap.org/',
+        preview: { imageUrl: '/uploads/flight.png', title: 'Heraklion Airport → Berlin Brandenburg Airport',
+          imageWidth: 600, imageHeight: 315 },
+      },
+    })
+    expect(html).toContain('href="/tag/flying">#flying</a>')
+    expect(html).toContain('Heraklion -&gt; Berlin</a><a class="remote-link-popover"')
+    expect(html).toContain('Heraklion Airport → Berlin Brandenburg Airport')
   })
 })

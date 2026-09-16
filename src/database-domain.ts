@@ -1,3 +1,4 @@
+import { locationCacheKey } from './locations'
 import { canReadPrivatePost, isPrivateThread, privatePostVisible } from './private'
 import type { Database } from 'bun:sqlite'
 import { createHash, randomBytes, randomInt } from 'node:crypto'
@@ -2827,7 +2828,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       const row = database.query(`SELECT g.query,g.latitude,g.longitude,g.display_name displayName,
         m.image_key imageKey,m.width imageWidth,m.height imageHeight
         FROM location_geocodes g LEFT JOIN location_map_previews m
-          ON m.cache_key=printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',g.latitude,g.longitude)
+          ON m.cache_key=(printf('${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:%.6f:%.6f',g.latitude,g.longitude) || CASE WHEN instr(g.query,'->') > 0 OR instr(g.query,'→') > 0 THEN ':flight:' || g.query ELSE '' END)
           WHERE g.query=?
           ${supportsLanguage ? 'AND g.language=\'en\'' : 'AND 0'}`).get(query) as Omit<
         import('./locations').ResolvedLocation,
@@ -2876,9 +2877,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
         database.query(`INSERT INTO location_map_previews(cache_key,image_key,width,height) VALUES(?,?,?,?)
           ON CONFLICT(cache_key) DO UPDATE SET image_key=excluded.image_key,width=excluded.width,height=excluded.height`)
           .run(
-            `${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${
-              location.longitude.toFixed(6)
-            }`,
+            locationCacheKey(location),
             location.imageKey,
             location.imageWidth,
             location.imageHeight,
@@ -2906,9 +2905,7 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       database.query(`INSERT INTO location_map_previews(cache_key,image_key,width,height) VALUES(?,?,?,?)
         ON CONFLICT(cache_key) DO UPDATE SET image_key=excluded.image_key,width=excluded.width,height=excluded.height`)
         .run(
-          `${LOCATION_ZOOM}:${LOCATION_MAP_STYLE_VERSION}:${location.latitude.toFixed(6)}:${
-            location.longitude.toFixed(6)
-          }`,
+          locationCacheKey(location),
           location.imageKey,
           location.imageWidth,
           location.imageHeight,
