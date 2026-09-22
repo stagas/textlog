@@ -670,7 +670,23 @@ import emojiKeywords from 'emojilib'
     paint()
   }
 
-  document.querySelector(`${textareaSelector}[data-auto-focus]`)?.focus({ preventScroll: true })
+  const autoFocusTextarea = document.querySelector(`${textareaSelector}[data-auto-focus]`)
+  if (autoFocusTextarea) {
+    const focusAfterNavigation = () => {
+      const active = document.activeElement
+      const navigationHasFocus = active === document.body || active === document.documentElement
+        || active === autoFocusTextarea || active?.matches('.post-hit-area, .parent-hit-area, [id^="post-"]')
+      if (autoFocusTextarea.isConnected && navigationHasFocus) autoFocusTextarea.focus({ preventScroll: true })
+    }
+    const settleNavigationFocus = () => {
+      requestAnimationFrame(focusAfterNavigation)
+      setTimeout(focusAfterNavigation, 100)
+      setTimeout(focusAfterNavigation, 300)
+    }
+    requestAnimationFrame(focusAfterNavigation)
+    if (document.readyState === 'complete') settleNavigationFocus()
+    else addEventListener('load', settleNavigationFocus, { once: true })
+  }
 
   let cancelWriteFocus
   document.addEventListener('click', event => {

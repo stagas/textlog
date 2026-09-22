@@ -397,19 +397,36 @@ test('locked notes and descendants omit reply controls and reply forms', () => {
   expect(targetedPage).toContain('role="status">Thread is locked for new replies</div>')
 })
 
-test('post page reply forms only autofocus when reply was explicitly requested', () => {
+test('server-rendered post page reply forms autofocus on desktop', () => {
   const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
     email_verified_at: '2026-08-01 10:00:00' }
   const post = { id: 9, user_id: 2, parent_id: null, body: 'Open note', created_at: '2026-08-23 10:00:00',
     deleted_at: null, handle: 'writer', reply_count: 0 }
-  const passive = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: false }))
-  const requested = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true, autoFocus: true }))
+  const page = renderToStaticMarkup(React.createElement(Reply, { user, post, showForm: true }))
 
-  expect(passive).toContain('class="panel panel-surface panel-medium replybox reply-compose root-reply-compose"')
-  expect(passive).not.toContain('Thread is locked for new replies')
-  expect(passive).not.toContain('data-auto-focus')
-  expect(requested).toContain('data-auto-focus')
-  expect(requested).toContain('data-compose-storage-key="textlog:compose:1:reply:9"')
+  expect(page).toContain('class="panel panel-surface panel-medium replybox reply-compose root-reply-compose"')
+  expect(page).not.toContain('Thread is locked for new replies')
+  expect(page).toContain('data-auto-focus')
+  expect(page).toContain('data-compose-storage-key="textlog:compose:1:reply:9"')
+})
+
+test('a reply composer placed below a tapped threaded post can autofocus', () => {
+  const user = { id: 1, handle: 'reader', email: 'reader@example.com', bio: '',
+    email_verified_at: '2026-08-01 10:00:00' }
+  const post = { id: 9, user_id: 2, parent_id: null, body: 'Root note', created_at: '2026-08-23 10:00:00',
+    deleted_at: null, handle: 'writer', reply_count: 1 }
+  const target = { id: 10, user_id: 3, parent_id: 9, body: 'Tapped reply', created_at: '2026-08-23 11:00:00',
+    deleted_at: null, handle: 'friend', reply_count: 0, parent: post }
+  const page = renderToStaticMarkup(React.createElement(Reply, {
+    user,
+    post,
+    replies: [target],
+    showForm: true,
+    autoFocus: true,
+    replyTo: target,
+  }))
+
+  expect(page).toMatch(/data-reply-post-id="10"[\s\S]*?<textarea[^>]*data-auto-focus/)
 })
 
 test('replying to your own post invites you to continue writing', () => {
@@ -5053,7 +5070,7 @@ test('A quoted post gets its own higher-priority hit area in tappable feeds', ()
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/writer?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
   expect(html).toContain(
-    'class="parent-hit-area" href="/post/1?reply_to=post&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"',
+    'class="parent-hit-area" href="/post/1?reply=1&amp;from=%2Flatest%3Fcursor%3Dabc%23post-2"',
   )
   expect(html).toContain('class="reference-menu-trigger postauthor" '
     + 'href="/u/parent?from=%2Flatest%3Fcursor%3Dabc%23post-2"')
@@ -5120,7 +5137,7 @@ test('Post detail can make only its quoted parent tappable', () => {
     },
   }))
 
-  expect(html).toContain('class="parent-hit-area" href="/post/1?reply_to=post"')
+  expect(html).toContain('class="parent-hit-area" href="/post/1?reply=1"')
   expect(html).not.toContain('class="post-hit-area"')
 })
 

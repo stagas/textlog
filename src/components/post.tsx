@@ -1043,7 +1043,7 @@ export function Post({
           + (hasTappableParent && !parent.unavailable ? ' tappable-parent' : '')}
         >
           {hasTappableParent && !parent.unavailable && (
-            <a className="parent-hit-area" href={parentDetailPath} rel={navigationRel}
+            <a className="parent-hit-area" href={parentReplyPath} rel={navigationRel}
               aria-label={`open quoted post by @${parent.handle}`} />
           )}
           {parent.unavailable

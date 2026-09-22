@@ -367,7 +367,7 @@ export function registerPostsRoutes(app: Hono) {
       const requestedBackTargetId = Number(c.req.query('back'))
       const backTargetId = Number.isInteger(requestedBackTargetId) ? requestedBackTargetId : undefined
       return page(
-        <Reply user={user} post={post} replies={replies} showForm autoFocus={c.req.query('reply') === '1'}
+        <Reply user={user} post={post} replies={replies} showForm
           replyTo={replyTo} backTargetId={backTargetId} returnPath={returnPath} topHref={topHref} flatHref={flatHref}
           treeHref={treeHref} flat={flat} social={social} />,
       )
