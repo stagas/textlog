@@ -86,7 +86,11 @@
     }
     catch {}
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
-    textarea.focus({ preventScroll: true })
+    if (!matchMedia('(max-width: 600px)').matches) {
+      requestAnimationFrame(() => {
+        if (textarea.isConnected) textarea.focus({ preventScroll: true })
+      })
+    }
   }
 
   const revealComposer = wrapper => {

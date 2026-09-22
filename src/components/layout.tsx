@@ -256,7 +256,7 @@ export function Layout({
         {(onFeedPage || onTagPage || onProfilePage) && <script src="/thread-expansion.js?v=4" defer />}
         {onThreadedPage && (
           <>
-            <script src="/feed-reply.js?v=25" defer />
+            <script src="/feed-reply.js?v=27" defer />
             {(onInfiniteFeedPage || onProfilePage) && <script src="/infinite-scroll.js?v=61" defer />}
           </>
         )}
