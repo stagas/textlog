@@ -692,7 +692,7 @@ import emojiKeywords from 'emojilib'
   document.addEventListener('click', event => {
     if (!(event.target instanceof Element)) return
 
-    const writeAction = event.target.closest('.feed-tabs-top, .mobile-write-action a')
+    const writeAction = event.target.closest('.feed-tabs-top, .mobile-write-action a, .footer-write-action')
     if (!writeAction) return
 
     const textarea = document.querySelector('.embedded-write-compose textarea[name="body"]')
@@ -700,7 +700,7 @@ import emojiKeywords from 'emojilib'
 
     event.preventDefault()
     cancelWriteFocus?.()
-    if (writeAction.matches('.mobile-write-action a')) {
+    if (writeAction.matches('.mobile-write-action a, .footer-write-action')) {
       revealEmbeddedComposer?.()
       textarea.focus({ preventScroll: true })
       return
