@@ -1,14 +1,21 @@
 import { Database } from 'bun:sqlite'
 import { afterAll, beforeAll, expect, test } from 'bun:test'
 import { executeDatabaseDomain } from './database-domain'
-import { configureDatabaseService } from './database-service'
-import { invalidateMaterializedFeedMemory, rpcMaterializedFeedPage } from './materialized-feed-service'
+import { withFeedMutationNotifications } from './database-service'
+import { invalidateMaterializedFeedMemory, rpcMaterializedFeedPage as globalMaterializedFeedPage } from './materialized-feed-service'
 import { runMigrations } from './migrations'
 import { createPost } from './posts'
 import type { User } from './types'
 
 const previousMemorySetting = Bun.env.ENABLE_MATERIALIZED_MEMORY_CACHE
 const database = new Database(':memory:', { strict: true })
+const service = withFeedMutationNotifications({
+  call: (operation, input) => executeDatabaseDomain(database, operation, input),
+})
+const rpcMaterializedFeedPage = (...args: Parameters<typeof globalMaterializedFeedPage>) => {
+  args[9] = service
+  return globalMaterializedFeedPage(...args)
+}
 
 beforeAll(() => {
   Bun.env.ENABLE_MATERIALIZED_MEMORY_CACHE = 'true'
@@ -18,7 +25,6 @@ beforeAll(() => {
       (1,'alice','alice@example.test','x'),(2,'bob','bob@example.test','x'),
       (3,'charlie','charlie@example.test','x');
     INSERT INTO posts(id,user_id,body) VALUES(1,1,'first');`)
-  configureDatabaseService({ call: (operation, input) => executeDatabaseDomain(database, operation, input) })
   invalidateMaterializedFeedMemory()
 })
 

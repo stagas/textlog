@@ -1,5 +1,6 @@
 import { hasAnonymousQuizTotals } from './anonymous-quiz'
 import { backgroundDatabaseCall, databaseService, subscribeToFeedMutations } from './database-service'
+import type { DatabaseService } from './database-service'
 import { locationMapProvider } from './locations'
 import { activeRequest, appearanceRequestVariant } from './theme'
 import { isMobileRequest } from './user-agent'
@@ -30,12 +31,6 @@ function deferredCacheWork(work: () => Promise<unknown>) {
     const timer = setTimeout(() => void work().then(() => resolve(), reject), DEFERRED_CACHE_DELAY_MS)
     timer.unref?.()
   })
-}
-
-function persistMaterialization(kind: MaterializedFeedKind, viewerId: number, variant: string, generation: number,
-  html: string)
-{
-  return backgroundDatabaseCall('cache.materializedFeedPut', { kind, viewerId, variant, generation, html })
 }
 
 export function invalidateMaterializedFeedMemory() {
@@ -109,8 +104,10 @@ function appearanceVariant(request: Request) {
 
 export async function rpcMaterializedFeedPage(request: Request, kind: MaterializedFeedKind, viewerId: number,
   render: () => Response | Promise<Response>, rerenderForCache = false, cacheVersion = 0, background = false,
-  renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => boolean | void | Promise<boolean | void>)
+  renderForCache?: () => Response | Promise<Response>, onCacheHit?: () => boolean | void | Promise<boolean | void>,
+  service?: DatabaseService)
 {
+  const activeService = service || databaseService()
   // Feed profiling is used to diagnose materialization itself. Keep the cache active for those explicit development
   // modes; ordinary hot-reload development still bypasses it so direct fixture/database edits remain visible.
   if (hasAnonymousQuizTotals()) return await render()
@@ -122,7 +119,9 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
   }
   if (Bun.env.DEV_RELOAD === 'true' && !profilingMaterialization) return await render()
   const variant = `${MATERIALIZED_HTML_VERSION}|${cacheVersion ? `${cacheVersion}|` : ''}${appearanceVariant(request)}`
-  const call = background ? backgroundDatabaseCall : databaseService().call.bind(databaseService())
+  const call = background && !service
+    ? backgroundDatabaseCall
+    : activeService.call.bind(activeService)
   const key = `${kind}\0${viewerId}\0${variant}`
   let memory = memoryCacheEnabled() ? memoryMaterializations.get(key) : undefined
   if (memory) {
@@ -139,7 +138,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
     memoryMaterializations.delete(key)
     memoryMaterializations.set(key, memory)
     const hydratedMemoryBody = viewerId >= 0
-      ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+      ? await activeService.call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
       : memory.body
     const personalizedActionStale = (kind === 'for-you' || kind === 'to-me')
       && personalizedReadActionOutOfSync(kind, hydratedMemoryBody)
@@ -157,7 +156,7 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
         // the cached dots were already consumed elsewhere and this request merely repaired stale markup.
         if (readActionStale && changed === false) {
           responseBody = viewerId >= 0
-            ? await databaseService().call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
+            ? await activeService.call('cache.hydrateMaterializedFeed', { html: memory.body, viewerId })
             : memory.body
         }
       }
@@ -208,7 +207,13 @@ export async function rpcMaterializedFeedPage(request: Request, kind: Materializ
         memoryBody = cachedHtml
         // The rendered first page is ready. Keep it in memory immediately and persist it only after yielding to new
         // foreground requests; the generation check in materializedFeedPut rejects an obsolete delayed write.
-        const persistence = () => persistMaterialization(kind, viewerId, variant, cached.generation, cachedHtml)
+        const persistence = () => call('cache.materializedFeedPut', {
+          kind,
+          viewerId,
+          variant,
+          generation: cached.generation,
+          html: cachedHtml,
+        })
         if (Bun.env.NODE_ENV === 'test') await persistence()
         else void deferredCacheWork(persistence).catch(error => console.error(`Could not persist ${kind} feed`, error))
       }
