@@ -70,8 +70,8 @@ function notifyFeedMutation(operation: DatabaseDomainOperation, input: unknown, 
   for (const listener of feedMutationListeners) listener(operation)
 }
 
-export function configureDatabaseService(service: DatabaseService) {
-  configuredService = {
+export function withFeedMutationNotifications(service: DatabaseService): DatabaseService {
+  return {
     async call(operation, input) {
       const result = await service.call(operation, input)
       notifyFeedMutation(operation, input, result)
@@ -87,6 +87,10 @@ export function configureDatabaseService(service: DatabaseService) {
       }
       : {}),
   }
+}
+
+export function configureDatabaseService(service: DatabaseService) {
+  configuredService = withFeedMutationNotifications(service)
 }
 
 export function databaseService(): DatabaseService {
