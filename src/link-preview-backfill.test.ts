@@ -36,7 +36,8 @@ describe('link preview backfill', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previousUrl
+      if (previousUrl === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previousUrl
     }
   })
 
@@ -64,7 +65,8 @@ describe('link preview backfill', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previousUrl
+      if (previousUrl === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previousUrl
     }
   })
 
@@ -114,7 +116,8 @@ describe('link preview backfill', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previousUrl
+      if (previousUrl === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previousUrl
     }
   })
 })
@@ -177,7 +180,8 @@ describe('R2 link preview backfill', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previousUrl
+      if (previousUrl === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previousUrl
     }
   })
 })

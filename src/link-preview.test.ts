@@ -103,7 +103,8 @@ describe('link previews', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previous
+      if (previous === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previous
     }
   })
 
@@ -118,7 +119,8 @@ describe('link previews', () => {
       }])
     }
     finally {
-      Bun.env.APP_URL = previous
+      if (previous === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previous
     }
   })
 
@@ -143,7 +145,8 @@ describe('link previews', () => {
     }
     finally {
       database.close()
-      Bun.env.APP_URL = previous
+      if (previous === undefined) delete Bun.env.APP_URL
+      else Bun.env.APP_URL = previous
     }
   })
 
