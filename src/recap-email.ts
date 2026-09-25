@@ -228,9 +228,19 @@ function popularNotes(notes: RecapNote[], origin: string) {
   </td></tr>`
 }
 
-export function recapEmail(database: Database, requestOrigin: string, unsubscribeToken: string) {
+function recapOrigin(requestOrigin: string, appUrl: string | undefined) {
+  try {
+    return appUrl?.trim() ? new URL(appUrl).origin : new URL(requestOrigin).origin
+  }
+  catch {
+    return new URL(requestOrigin).origin
+  }
+}
+
+export function recapEmail(database: Database, requestOrigin: string, unsubscribeToken: string,
+  appUrl: string | undefined = Bun.env.APP_URL) {
   const name = appName()
-  const origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : new URL(requestOrigin).origin
+  const origin = recapOrigin(requestOrigin, appUrl)
   const logoUrl = new URL('/email-logo.png?v=1', origin).href
   const hotUrl = new URL('/hot', origin).href
   const unsubscribeUrl = new URL(
@@ -298,9 +308,10 @@ export function recapEmailForUser(database: Database, requestOrigin: string, use
   return recapEmail(database, requestOrigin, issueRecapUnsubscribeToken(database, userId))
 }
 
-export function recapEmailV2(database: Database, requestOrigin: string, unsubscribeToken: string) {
+export function recapEmailV2(database: Database, requestOrigin: string, unsubscribeToken: string,
+  appUrl: string | undefined = Bun.env.APP_URL) {
   const name = appName()
-  const origin = Bun.env.APP_URL ? new URL(Bun.env.APP_URL).origin : new URL(requestOrigin).origin
+  const origin = recapOrigin(requestOrigin, appUrl)
   const logoUrl = new URL('/email-logo.png?v=1', origin).href
   const recapUrl = new URL('/blog/recap-v2', origin).href
   const unsubscribeUrl = new URL(

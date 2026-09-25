@@ -79,3 +79,16 @@ test('v2 recap email renders the complete recap and popular conversations', () =
   expect(html).toContain('/blog/recap-v2')
   expect(html).toContain('/account/recap-emails/unsubscribe?token=recipient-token')
 })
+
+test('recap emails fall back to the request origin when APP_URL is malformed', () => {
+  const database = new Database(':memory:')
+  database.run('CREATE TABLE users (id INTEGER PRIMARY KEY, handle TEXT NOT NULL)')
+  database.run(`CREATE TABLE posts (
+    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, body TEXT NOT NULL, deleted_at TEXT
+  )`)
+
+  const html = recapEmail(database, 'https://preview.textlog.test/recap-email', 'token', 'not a URL')
+
+  expect(html).toContain('href="https://preview.textlog.test/hot"')
+  expect(html).toContain('src="https://preview.textlog.test/email-logo.png?v=1"')
+})
