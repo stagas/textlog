@@ -158,7 +158,7 @@ test('progressive pagination enhancement is served as immutable JavaScript', asy
 })
 
 test('feed pagination uses the partial feed navigation enhancement and scrolls smoothly to the top', async () => {
-  const response = await request('/infinite-scroll.js?v=61')
+  const response = await request('/infinite-scroll.js?v=62')
   expect(response.status).toBe(200)
   expect(response.headers.get('content-type')).toContain('text/javascript')
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
@@ -170,6 +170,10 @@ test('feed pagination uses the partial feed navigation enhancement and scrolls s
   expect(script).toContain('closest(".feed-tabs, .pagination")')
   expect(script).toContain('scrollTo({top:0,behavior:"smooth"})')
   expect(script).toContain('X-Textlog-Feed-Navigation')
+  expect(script).toContain('addEventListener("pageshow"')
+  expect(script).toMatch(
+    /addEventListener\("pageshow",\((\w+)\)=>\{if\(!\1\.persisted\)return;\w+=null,\w+=0,\w+\(\)\}\)/,
+  )
 })
 
 test('inline feed and post-page replies are served as immutable JavaScript', async () => {

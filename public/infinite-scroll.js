@@ -418,6 +418,14 @@
     heldLiveCount = 0
     void navigateFeed(location.href, false, null, false, !!event.state?.preserveScroll)
   })
+  addEventListener('pageshow', event => {
+    if (!event.persisted) return
+    // The initial unread count is held long enough for the matching dots to be shown once. A page restored from the
+    // back/forward cache has already had that visit, so stop the hold and replace its stale badge with server state.
+    heldLiveTab = null
+    heldLiveCount = 0
+    void reconcileLiveCounts()
+  })
   if (document.querySelector('[data-feed-view] .pagination')) {
     history.replaceState({ ...history.state, feed: true, preserveScroll: true }, '', location.href)
   }
