@@ -291,16 +291,21 @@ function shortenedUrlLabel(url: string) {
 
 function linkLabel(url: string, appUrl: string | undefined) {
   const normalizedAppUrl = appUrl?.replace(/\/$/, '')
+  let parsedAppUrl: URL | undefined
   if (normalizedAppUrl) {
+    try {
+      parsedAppUrl = new URL(normalizedAppUrl)
+    }
+    catch {
+      return shortenedUrlLabel(url)
+    }
     const parsed = new URL(url)
     const post = parsed.pathname.match(/^\/post\/([1-9]\d*)\/?$/)
-    if (parsed.origin === new URL(normalizedAppUrl).origin && post && !parsed.username && !parsed.password) {
-      return `&${post[1]}`
-    }
+    if (parsed.origin === parsedAppUrl.origin && post && !parsed.username && !parsed.password) return `&${post[1]}`
   }
   if (!normalizedAppUrl || !url.startsWith(normalizedAppUrl)) return shortenedUrlLabel(url)
   const relative = url.slice(normalizedAppUrl.length)
-  if (!relative || relative === '/') return new URL(normalizedAppUrl).host
+  if (!relative || relative === '/') return parsedAppUrl!.host
   return relative.startsWith('/') ? relative : `/${relative}`
 }
 

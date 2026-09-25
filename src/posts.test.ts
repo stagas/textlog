@@ -292,6 +292,12 @@ describe('post persistence', () => {
         '<a href="https://textlog.test/post/1" class="raw-link" title="https://textlog.test/post/1" rel="nofollow ugc">&amp;1</a>',
       )
   })
+  test('falls back to an external label while APP_URL is malformed', () => {
+    expect(linkify('https://example.com/path', {}, [], 'not a URL'))
+      .toBe(
+        '<a href="https://example.com/path" class="raw-link" title="https://example.com/path" target="_blank" rel="nofollow ugc noopener noreferrer">example.com<span class="raw-link-rest">/path</span></a>',
+      )
+  })
   test('escapes Markdown link labels and destinations', () => {
     expect(linkify('[<test>](https://example.com/a\'b)'))
       .toBe(
