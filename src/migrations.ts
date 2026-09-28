@@ -5237,6 +5237,44 @@ export const migrations: Migration[] = [
     database.run(`DROP TABLE IF EXISTS appearance_experiment_conversions;
       DROP TABLE IF EXISTS appearance_experiment_assignments;`)
   } },
+  {
+    version: 231,
+    name: 'consume_hidden_dropped_author_feed_activity',
+    up(database) {
+      if (!database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+      ).get() || !database.query(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='banned_usernames'",
+      ).get()) return
+      database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+        SELECT entry.viewer_id,entry.event_key
+        FROM personalized_feed_entries entry
+        JOIN users viewer ON viewer.id=entry.viewer_id
+        JOIN banned_usernames dropped ON dropped.dropped_user_id=entry.actor_id
+        WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL
+          AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com');
+        INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+        SELECT entry.viewer_id,'post:' || CAST(entry.source_post_id AS INTEGER)
+        FROM personalized_feed_entries entry
+        JOIN users viewer ON viewer.id=entry.viewer_id
+        JOIN banned_usernames dropped ON dropped.dropped_user_id=entry.actor_id
+        WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL
+          AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com');
+        UPDATE feed_state SET unread_count=(SELECT count(*) FROM personalized_feed_entries entry
+          WHERE entry.viewer_id=feed_state.viewer_id AND entry.feed=feed_state.feed AND entry.eligible=1
+            AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+              WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)
+            AND (entry.feed!='for-you' OR entry.event_kind!='user_follow' OR
+              coalesce((SELECT hide_people_follow_activity FROM users WHERE id=entry.viewer_id),0)=0)
+            AND (entry.feed!='for-you' OR entry.event_kind!='tag_follow' OR
+              coalesce((SELECT hide_hashtag_follow_activity FROM users WHERE id=entry.viewer_id),0)=0))
+          WHERE feed='for-you' AND viewer_id IN (SELECT DISTINCT entry.viewer_id
+            FROM personalized_feed_entries entry JOIN users viewer ON viewer.id=entry.viewer_id
+            JOIN banned_usernames dropped ON dropped.dropped_user_id=entry.actor_id
+            WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL
+              AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com'));`)
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version

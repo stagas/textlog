@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import { randomBytes } from 'node:crypto'
 import { recordAdminAction } from './admin'
+import { refreshPersonalizedFeedState } from './feed-state'
 import { initializeLatestReads } from './latest-state'
 
 export type ResolvedHandle = { id: number; handle: string; alias: boolean }
@@ -14,6 +15,31 @@ export class HandleChangeLimitError extends Error {
 
 function bannedHandle(database: Database, handle: string) {
   return Boolean(database.query('SELECT 1 FROM banned_usernames WHERE username=? COLLATE NOCASE').get(handle))
+}
+
+function markDroppedAuthorFeedEntriesRead(database: Database, userId: number) {
+  if (!database.query(
+    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'",
+  ).get()) return
+  const rows = database.query(`SELECT entry.viewer_id,entry.event_key,entry.source_post_id
+    FROM personalized_feed_entries entry JOIN users viewer ON viewer.id=entry.viewer_id
+    WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL AND entry.actor_id=?
+      AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com')`).all(userId) as Array<{
+    viewer_id: number
+    event_key: string
+    source_post_id: number
+  }>
+  if (!rows.length) return
+  const insertRead = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
+  const insertActivity = database.query(`INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+    VALUES(?,'post:' || CAST(? AS INTEGER))`)
+  const viewers = new Set<number>()
+  for (const row of rows) {
+    insertRead.run(row.viewer_id, row.event_key)
+    insertActivity.run(row.viewer_id, row.source_post_id)
+    viewers.add(row.viewer_id)
+  }
+  for (const viewerId of viewers) refreshPersonalizedFeedState(database, viewerId, 'for-you')
 }
 
 export function resolveHandle(database: Database, requestedHandle: string): ResolvedHandle | null {
@@ -169,6 +195,9 @@ export function dropUsername(database: Database, userId: number, actorId: number
     if (bannedHandle(database, account.handle)) return { status: 'already_banned' as const }
     database.query(`INSERT INTO banned_usernames(username,dropped_user_id,dropped_by,note)
       VALUES(?,?,?,?)`).run(account.handle.toLowerCase(), userId, actorId, note.trim().slice(0, 500))
+    // Dropped authors are intentionally hidden from ordinary feeds. Consume their old post activity now so an
+    // unread badge cannot point at entries that the viewer will never be able to see or open.
+    markDroppedAuthorFeedEntriesRead(database, userId)
     database.query('DELETE FROM handle_history WHERE handle=? COLLATE NOCASE').run(account.handle)
     let temporaryHandle = ''
     for (let attempt = 0; attempt < 10; attempt++) {

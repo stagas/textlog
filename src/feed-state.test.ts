@@ -387,6 +387,46 @@ test('choosing a replacement for a dropped username does not duplicate signup ac
   expect(signupRows[0]).toMatchObject(original as object)
 })
 
+test('dropping an author clears hidden My Feed activity for ordinary viewers', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'viewer','viewer@example.com','!'),(2,'author','author@example.com','!'),
+      (3,'moderator','moderator@example.com','!');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-01-01');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(10,2,'hidden after a username drop','2026-01-02');`)
+  const viewer = database.query('SELECT * FROM users WHERE id=1').get() as User
+
+  expect(loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false).forYouCount).toBe(1)
+  dropUsername(database, 2, 3, 'rename required')
+
+  const feed = loadPersonalizedFeed(database, viewer, 1, 20, false, '/my-feed', false)
+  expect(feed.timeline).toEqual([])
+  expect(feed.forYouCount).toBe(0)
+  expect(personalizedFeedState(database, 1, 'for-you')?.unread_count).toBe(0)
+  expect(database.query(`SELECT event_key FROM for_you_reads WHERE user_id=1`).all())
+    .toEqual([{ event_key: 'post:00000000000000000010' }])
+})
+
+test('the dropped-author repair consumes existing hidden My Feed activity', () => {
+  const database = new Database(':memory:', { strict: true })
+  runMigrations(database)
+  database.run(`INSERT INTO users(id,handle,email,password) VALUES
+      (1,'viewer','viewer@example.com','!'),(2,'author','author@example.com','!'),
+      (3,'moderator','moderator@example.com','!');
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-01-01');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(10,2,'hidden after a username drop','2026-01-02');`)
+  dropUsername(database, 2, 3, 'rename required')
+  database.run(`DELETE FROM for_you_reads WHERE user_id=1;
+    UPDATE feed_state SET unread_count=1 WHERE viewer_id=1 AND feed='for-you';`)
+
+  migrations.find(migration => migration.version === 231)!.up(database)
+
+  expect(personalizedFeedState(database, 1, 'for-you')?.unread_count).toBe(0)
+  expect(database.query(`SELECT event_key FROM for_you_reads WHERE user_id=1`).all())
+    .toEqual([{ event_key: 'post:00000000000000000010' }])
+})
+
 test('re-materializing historical read entries does not resurrect unread counters', () => {
   const database = new Database(':memory:', { strict: true })
   runMigrations(database)
