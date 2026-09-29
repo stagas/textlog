@@ -5,7 +5,8 @@ import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHas
   pascalCaseHashtagDisplayName, pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
-import { unreadForYouCount, unreadToMeCount } from './for-you-state'
+import { refreshPersonalizedFeedState } from './feed-state'
+import { unreadForYouCount } from './for-you-state'
 import { migrateLegacySessionTokens } from './sessions'
 import { stableUserAgent } from './user-agent'
 
@@ -5286,8 +5287,17 @@ export const migrations: Migration[] = [
       const update = database.query('UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed=?')
       for (const { viewer_id } of viewers) {
         update.run(unreadForYouCount(viewer_id, database), viewer_id, 'for-you')
-        update.run(unreadToMeCount(viewer_id, database), viewer_id, 'to-me')
       }
+    },
+  },
+  {
+    version: 233,
+    name: 'restore_materialized_to_me_badges',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) return
+      const viewers = database.query(`SELECT DISTINCT viewer_id FROM feed_state WHERE feed='to-me'`)
+        .all() as Array<{ viewer_id: number }>
+      for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'to-me')
     },
   },
 ]

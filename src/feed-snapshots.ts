@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite'
 import { isAdminEmail } from './admin'
 import { cacheDb } from './cache-db'
 import { refreshPersonalizedFeedState } from './feed-state'
-import { unreadForYouCount, unreadToMeCount } from './for-you-state'
+import { unreadForYouCount } from './for-you-state'
 import { PAGE_SIZE } from './pagination'
 
 const SNAPSHOT_MAX_AGE = '-1 day'
@@ -43,13 +43,10 @@ export function personalizedFeedGeneration(database: Database, viewerId: number)
           const viewer = database.query('SELECT email FROM users WHERE id=?').get(viewerId) as { email: string } | null
           if (viewer && isAdminEmail(viewer.email)) {
             refreshPersonalizedFeedState(database, viewerId, 'for-you')
-            refreshPersonalizedFeedState(database, viewerId, 'to-me')
           }
           else {
             database.query(`UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed='for-you'`)
               .run(unreadForYouCount(viewerId, database), viewerId)
-            database.query(`UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed='to-me'`)
-              .run(unreadToMeCount(viewerId, database), viewerId)
           }
         }
       }
