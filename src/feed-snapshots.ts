@@ -1,5 +1,8 @@
 import type { Database } from 'bun:sqlite'
+import { isAdminEmail } from './admin'
 import { cacheDb } from './cache-db'
+import { refreshPersonalizedFeedState } from './feed-state'
+import { unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { PAGE_SIZE } from './pagination'
 
 const SNAPSHOT_MAX_AGE = '-1 day'
@@ -32,6 +35,23 @@ export function personalizedFeedGeneration(database: Database, viewerId: number)
       if (pending) {
         database.query(`UPDATE personalized_feed_generations
         SET generation=generation+1 WHERE viewer_id=?`).run(viewerId)
+        // Relationship changes are applied lazily to the materialized timeline. Reconcile the badge from the
+        // current visibility rules before consuming the invalidation, otherwise entries that are no longer
+        // eligible to render can remain counted indefinitely.
+        if (database.query(`SELECT 1 FROM sqlite_master
+          WHERE type='table' AND name='feed_state'`).get()) {
+          const viewer = database.query('SELECT email FROM users WHERE id=?').get(viewerId) as { email: string } | null
+          if (viewer && isAdminEmail(viewer.email)) {
+            refreshPersonalizedFeedState(database, viewerId, 'for-you')
+            refreshPersonalizedFeedState(database, viewerId, 'to-me')
+          }
+          else {
+            database.query(`UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed='for-you'`)
+              .run(unreadForYouCount(viewerId, database), viewerId)
+            database.query(`UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed='to-me'`)
+              .run(unreadToMeCount(viewerId, database), viewerId)
+          }
+        }
       }
     })()
   }

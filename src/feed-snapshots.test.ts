@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite'
 import { expect, test } from 'bun:test'
-import { feedSnapshotPage } from './feed-snapshots'
+import { feedSnapshotPage, personalizedFeedGeneration } from './feed-snapshots'
+import { runMigrations } from './migrations'
 
 function database() {
   const db = new Database(':memory:', { strict: true })
@@ -88,6 +89,24 @@ test('personalized snapshots consume a pending relationship invalidation before 
   db.run('INSERT INTO pending_relationship_feed_invalidations(viewer_id) VALUES(7)')
   expect(feedSnapshotPage(db, 'for-you:v4', 7, 1, build, 20, db).items).toEqual([{ id: 2 }])
   expect(db.query('SELECT count(*) count FROM pending_relationship_feed_invalidations').get()).toEqual({ count: 0 })
+})
+
+test('consuming a relationship invalidation reconciles unread feed badges', () => {
+  const db = new Database(':memory:', { strict: true })
+  runMigrations(db)
+  db.run(`INSERT INTO users(id,handle,email,password,hide_people_follow_activity) VALUES
+      (1,'viewer','viewer@example.com','!',0),(2,'author','author@example.com','!',0);
+    INSERT INTO follows(follower_id,following_id,created_at) VALUES(1,2,'2026-01-01');
+    INSERT INTO posts(id,user_id,body,created_at) VALUES(10,2,'hello','2026-01-02');`)
+  expect(db.query(`SELECT unread_count FROM feed_state WHERE viewer_id=1 AND feed='for-you'`).get())
+    .toEqual({ unread_count: 1 })
+
+  db.run('DELETE FROM follows WHERE follower_id=1 AND following_id=2')
+  expect(db.query('SELECT 1 FROM pending_relationship_feed_invalidations WHERE viewer_id=1').get()).not.toBeNull()
+  personalizedFeedGeneration(db, 1)
+
+  expect(db.query(`SELECT unread_count FROM feed_state WHERE viewer_id=1 AND feed='for-you'`).get())
+    .toEqual({ unread_count: 0 })
 })
 
 test('personalized snapshots fall back to the global generation before their migration is applied', () => {

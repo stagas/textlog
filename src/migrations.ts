@@ -5,6 +5,7 @@ import { extractAuthoredHashtags, extractHashtags, extractMentions, normalizeHas
   pascalCaseHashtagDisplayName, pluralHashtag, postContentFlags, singularHashtag } from './content'
 import { hotRankingVersion, rebuildHotPosts, refreshHotFeedProjection } from './hot'
 import { parsePoll, syncPoll } from './polls'
+import { unreadForYouCount, unreadToMeCount } from './for-you-state'
 import { migrateLegacySessionTokens } from './sessions'
 import { stableUserAgent } from './user-agent'
 
@@ -5273,6 +5274,20 @@ export const migrations: Migration[] = [
             JOIN banned_usernames dropped ON dropped.dropped_user_id=entry.actor_id
             WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL
               AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com'));`)
+    },
+  },
+  {
+    version: 232,
+    name: 'reconcile_relationship_invalidated_feed_badges',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").get()) return
+      const viewers = database.query('SELECT DISTINCT viewer_id FROM feed_state').all() as Array<{ viewer_id: number }>
+      const update = database.query('UPDATE feed_state SET unread_count=? WHERE viewer_id=? AND feed=?')
+      for (const { viewer_id } of viewers) {
+        update.run(unreadForYouCount(viewer_id, database), viewer_id, 'for-you')
+        update.run(unreadToMeCount(viewer_id, database), viewer_id, 'to-me')
+      }
     },
   },
 ]
