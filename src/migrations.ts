@@ -5300,6 +5300,88 @@ export const migrations: Migration[] = [
       for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'to-me')
     },
   },
+  {
+    version: 234,
+    name: 'consume_relationship_invisible_my_feed_entries',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()
+        || !database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='post_ancestors'").get()) return
+      // Do not project every account's complete feed during startup. These are materialized post entries that can
+      // only have been delivered through a relationship which is no longer present; direct activity remains intact.
+      const invisible = `FROM personalized_feed_entries entry
+        JOIN feed_state state ON state.viewer_id=entry.viewer_id AND state.feed='for-you' AND state.unread_count>0
+        JOIN users viewer ON viewer.id=entry.viewer_id
+        JOIN posts post ON post.id=entry.source_post_id
+        LEFT JOIN posts parent ON parent.id=post.parent_id
+        WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL AND entry.eligible=1
+          AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com')
+          AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+            WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)
+          AND post.user_id!=entry.viewer_id AND (parent.user_id IS NULL OR parent.user_id!=entry.viewer_id)
+          AND NOT EXISTS(SELECT 1 FROM post_mentions mention
+            WHERE mention.post_id=post.id AND mention.user_id=entry.viewer_id)
+          AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry
+            WHERE ancestry.post_id=post.id AND ancestry.ancestor_user_id=entry.viewer_id)
+          AND NOT EXISTS(SELECT 1 FROM follows followed
+            WHERE followed.follower_id=entry.viewer_id AND followed.following_id=post.user_id
+              AND post.created_at>=followed.created_at)
+          AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN follows followed
+            ON followed.following_id=ancestry.ancestor_user_id
+            WHERE ancestry.post_id=post.id AND followed.follower_id=entry.viewer_id
+              AND post.created_at>=followed.created_at)
+          AND NOT EXISTS(SELECT 1 FROM post_hashtags tag JOIN hashtag_follows followed ON followed.tag=tag.tag
+            WHERE tag.post_id=post.id AND followed.user_id=entry.viewer_id AND post.created_at>=followed.created_at)
+          AND NOT EXISTS(SELECT 1 FROM post_ancestors ancestry JOIN post_hashtags tag ON tag.post_id=ancestry.ancestor_id
+            JOIN hashtag_follows followed ON followed.tag=tag.tag
+            WHERE ancestry.post_id=post.id AND followed.user_id=entry.viewer_id
+              AND post.created_at>=followed.created_at)`
+      const viewers = database.query(`SELECT DISTINCT entry.viewer_id ${invisible}`)
+        .all() as Array<{ viewer_id: number }>
+      database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+        SELECT entry.viewer_id,entry.event_key ${invisible};
+        INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+        SELECT entry.viewer_id,'post:' || CAST(entry.source_post_id AS INTEGER) ${invisible};`)
+      for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'for-you')
+    },
+  },
+  {
+    version: 235,
+    name: 'consume_unaddressed_private_thread_feed_entries',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='feed_state'").get()) return
+      // A #private reply can leave historical My Feed entries for followers of its public parent. Restrict the
+      // repair to unread private-thread posts, and only when the viewer is neither a participant nor mentioned.
+      const hidden = `FROM personalized_feed_entries entry
+        JOIN feed_state state ON state.viewer_id=entry.viewer_id AND state.feed='for-you' AND state.unread_count>0
+        JOIN users viewer ON viewer.id=entry.viewer_id
+        JOIN posts post ON post.id=entry.source_post_id
+        WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL AND entry.eligible=1
+          AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com')
+          AND NOT EXISTS(SELECT 1 FROM for_you_reads seen
+            WHERE seen.user_id=entry.viewer_id AND seen.event_key=entry.event_key)
+          AND EXISTS(WITH RECURSIVE ancestors(id,parent_id) AS (
+            SELECT post.id,post.parent_id UNION ALL SELECT parent.id,parent.parent_id FROM posts parent
+              JOIN ancestors child ON child.parent_id=parent.id
+          ) SELECT 1 FROM ancestors JOIN post_hashtags tag ON tag.post_id=ancestors.id WHERE tag.tag='private')
+          AND NOT EXISTS(WITH RECURSIVE ancestors(id,user_id,parent_id,is_private) AS (
+            SELECT post.id,post.user_id,post.parent_id,EXISTS(SELECT 1 FROM post_hashtags tag
+              WHERE tag.post_id=post.id AND tag.tag='private')
+            UNION ALL SELECT parent.id,parent.user_id,parent.parent_id,EXISTS(SELECT 1 FROM post_hashtags tag
+              WHERE tag.post_id=parent.id AND tag.tag='private') FROM posts parent
+              JOIN ancestors child ON child.parent_id=parent.id WHERE child.is_private=0
+          ) SELECT 1 FROM ancestors
+            LEFT JOIN posts private_parent ON private_parent.id=ancestors.parent_id AND ancestors.is_private=1
+            LEFT JOIN post_mentions mention ON mention.post_id=ancestors.id AND mention.user_id=entry.viewer_id
+            WHERE ancestors.user_id=entry.viewer_id OR private_parent.user_id=entry.viewer_id
+              OR mention.user_id IS NOT NULL)`
+      const viewers = database.query(`SELECT DISTINCT entry.viewer_id ${hidden}`).all() as Array<{ viewer_id: number }>
+      database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+        SELECT entry.viewer_id,entry.event_key ${hidden};
+        INSERT OR IGNORE INTO activity_reads(user_id,event_key)
+        SELECT entry.viewer_id,'post:' || CAST(entry.source_post_id AS INTEGER) ${hidden};`)
+      for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'for-you')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
