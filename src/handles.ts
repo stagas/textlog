@@ -23,11 +23,13 @@ function markDroppedAuthorFeedEntriesRead(database: Database, userId: number) {
   ).get()) return
   const rows = database.query(`SELECT entry.viewer_id,entry.event_key,entry.source_post_id
     FROM personalized_feed_entries entry JOIN users viewer ON viewer.id=entry.viewer_id
-    WHERE entry.feed='for-you' AND entry.source_post_id IS NOT NULL AND entry.actor_id=?
-      AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com')`).all(userId) as Array<{
+    WHERE entry.feed='for-you' AND entry.actor_id=? AND (
+      (entry.source_post_id IS NOT NULL AND lower(viewer.email) NOT IN ('gstagas@gmail.com','lamprou@live.com'))
+      OR (entry.event_kind='signup' AND lower(viewer.email) IN ('gstagas@gmail.com','lamprou@live.com'))
+    )`).all(userId) as Array<{
     viewer_id: number
     event_key: string
-    source_post_id: number
+    source_post_id: number | null
   }>
   if (!rows.length) return
   const insertRead = database.query('INSERT OR IGNORE INTO for_you_reads(user_id,event_key) VALUES(?,?)')
@@ -36,7 +38,7 @@ function markDroppedAuthorFeedEntriesRead(database: Database, userId: number) {
   const viewers = new Set<number>()
   for (const row of rows) {
     insertRead.run(row.viewer_id, row.event_key)
-    insertActivity.run(row.viewer_id, row.source_post_id)
+    if (row.source_post_id !== null) insertActivity.run(row.viewer_id, row.source_post_id)
     viewers.add(row.viewer_id)
   }
   for (const viewerId of viewers) refreshPersonalizedFeedState(database, viewerId, 'for-you')

@@ -5382,6 +5382,23 @@ export const migrations: Migration[] = [
       for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'for-you')
     },
   },
+  {
+    version: 236,
+    name: 'consume_hidden_signup_feed_activity',
+    up(database) {
+      if (!database.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='personalized_feed_entries'").get()) {
+        return
+      }
+      const hidden = `FROM personalized_feed_entries entry JOIN users actor ON actor.id=entry.actor_id
+        WHERE entry.feed='for-you' AND entry.event_kind='signup'
+          AND (actor.handle_chosen_at IS NULL OR actor.deleted_at IS NOT NULL OR actor.suspended_at IS NOT NULL
+            OR EXISTS(SELECT 1 FROM banned_usernames dropped WHERE dropped.dropped_user_id=actor.id))`
+      const viewers = database.query(`SELECT DISTINCT entry.viewer_id ${hidden}`).all() as Array<{ viewer_id: number }>
+      database.run(`INSERT OR IGNORE INTO for_you_reads(user_id,event_key)
+        SELECT entry.viewer_id,entry.event_key ${hidden}`)
+      for (const { viewer_id } of viewers) refreshPersonalizedFeedState(database, viewer_id, 'for-you')
+    },
+  },
 ]
 
 export const latestMigrationVersion = migrations.at(-1)!.version
