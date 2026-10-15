@@ -15,7 +15,7 @@ import { autotagStatus, autotagText } from '../openrouter'
 import { normalizePostBody, POST_MAX, postBodyValidationMessage, validPostBody } from '../post-body'
 import { postRateLimitMessage } from '../post-rate-limit'
 import { finalizePublishedPost, persistPostEnrichment } from '../post-publication'
-import { canPublishPosts } from '../posting-policy'
+import { canPublishPosts, linkPostingValidationMessage } from '../posting-policy'
 import { sendPushForFollow, sendPushForTagFollow, sendPushForUserFollow } from '../push'
 import { scheduleRelationshipFeedInvalidation } from '../relationship-feed-invalidation'
 import { sessionHash } from '../sessions'
@@ -263,6 +263,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
     })
     if (result.status === 'not_found') return fail('not_found', 'Post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
+    if (result.status === 'links_not_allowed') return fail('links_not_allowed', linkPostingValidationMessage, 400)
     if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }
@@ -376,6 +377,7 @@ export function registerApiWriteRoutes(app: Hono, service: DatabaseService,
       executionOutput: await executePostCode(draft.body) })
     if (result.status === 'not_found') return fail('not_found', 'Draft or parent post not found', 404)
     if (result.status === 'locked') return fail('thread_locked', 'This thread is locked', 409)
+    if (result.status === 'links_not_allowed') return fail('links_not_allowed', linkPostingValidationMessage, 400)
     if (result.status === 'rate_limited') {
       return fail('post_rate_limited', postRateLimitMessage(result.retryAfter), 429, result.retryAfter)
     }

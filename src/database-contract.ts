@@ -395,7 +395,7 @@ export type DatabaseDomainOperations = {
     input: { userId: number; id: string; body: string; parentId: number | null; origin: string;
       translation?: string | null; moderationCategory?: string | null; moderationScore?: number | null;
       executionOutput?: string | null }
-    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'links_not_allowed' } | { status: 'rate_limited'; retryAfter: number } | {
       status: 'ready'
       id: number
       duplicate: boolean
@@ -406,7 +406,7 @@ export type DatabaseDomainOperations = {
     input: { userId: number; body: string; parentId: number | null; origin: string; translation?: string | null;
       moderationCategory?: string | null; moderationScore?: number | null; executionOutput?: string | null;
       pendingKey?: string | null }
-    output: { status: 'not_found' } | { status: 'locked' } | { status: 'rate_limited'; retryAfter: number } | {
+    output: { status: 'not_found' } | { status: 'locked' } | { status: 'links_not_allowed' } | { status: 'rate_limited'; retryAfter: number } | {
       status: 'ready'
       id: number
       duplicate: boolean

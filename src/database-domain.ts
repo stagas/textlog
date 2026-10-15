@@ -18,6 +18,7 @@ import { exportUserData } from './data-export'
 import { createBootDatabaseBackup } from './database-backup'
 import type { DatabaseDomainInput, DatabaseDomainOperation, DatabaseDomainOutput } from './database-contract'
 import { confirmEmailToken } from './email-verification'
+import { canPostLinks } from './posting-policy'
 import { preserveSuggestedPeopleOrder, suggestedPeople, suggestedPeopleCount, trendingTagCount,
   trendingTags } from './explore'
 import { issueFeedKey, userForFeedKey } from './feed-keys'
@@ -2641,6 +2642,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
       if (draft.parent_id !== null && isThreadLocked(database, draft.parent_id)) {
         return { status: 'locked' } as DatabaseDomainOutput<K>
       }
+      if (!canPostLinks(database, request.userId, draft.body)) {
+        return { status: 'links_not_allowed' } as DatabaseDomainOutput<K>
+      }
       const created = database.transaction(() => {
         const value = createPost(database, request.userId, draft.body, draft.parent_id, false,
           request.translation ?? null, request.moderationCategory ?? null, request.moderationScore ?? null,
@@ -2666,6 +2670,9 @@ export async function executeDatabaseDomain<K extends DatabaseDomainOperation>(d
     case 'api.createPost': {
       const { userId, body, parentId, origin, translation, moderationCategory, moderationScore, executionOutput,
         pendingKey } = input as DatabaseDomainInput<'api.createPost'>
+      if (!canPostLinks(database, userId, body)) {
+        return { status: 'links_not_allowed' } as DatabaseDomainOutput<K>
+      }
       if (parentId !== null) {
         if (!canReadPrivatePost(database, parentId, userId)) return { status: 'not_found' } as DatabaseDomainOutput<K>
         const parent = database.query('SELECT user_id FROM posts WHERE id=? AND deleted_at IS NULL')

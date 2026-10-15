@@ -14,7 +14,7 @@ import { conversationTopPath, FeedThreads, Post, postAnchorId, postedPostPath,
   postedReplyPath } from '../components/post'
 import { databaseService } from '../database-service'
 import { moderatedContentDescription, moderateText, moderationMessage } from '../moderation'
-import { canPublishPosts } from '../posting-policy'
+import { canPublishPosts, linkPostingValidationMessage } from '../posting-policy'
 import { Layout } from '../components/layout'
 import { form, htmlFragment, page, redirect, safeNext } from './shared'
 
@@ -186,6 +186,12 @@ export function registerPostsRoutes(app: Hono) {
         return response
       }
       if (result.status === 'locked') return c.text('This thread is locked', 409)
+      if (result.status === 'links_not_allowed') {
+        const response = page(<Compose user={user} body={body} error={linkPostingValidationMessage}
+          returnPath={pending.returnPath} />, 400)
+        response.headers.append('set-cookie', clearPendingPostCookie())
+        return response
+      }
       if (result.status === 'not_found') return c.text('Not found', 404)
       await finalizePublishedPost(databaseService(), result, body)
       const replyPageId = pending.replyPageId || pending.parentId
@@ -546,6 +552,10 @@ export function registerPostsRoutes(app: Hono) {
         executionOutput: await executePostCode(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
+      if (result.status === 'links_not_allowed') {
+        return page(<Compose user={user} body={body} error={linkPostingValidationMessage} returnPath={returnPath}
+          showBack={showBack} />, 400)
+      }
       if (result.status === 'rate_limited') {
         return page(
           <Compose user={user} body={body} error={postRateLimitMessage(result.retryAfter)} returnPath={returnPath}
@@ -909,6 +919,9 @@ export function registerPostsRoutes(app: Hono) {
         executionOutput: await executePostCode(body),
       })
       if (result.status === 'locked') return c.text('This thread is locked', 409)
+      if (result.status === 'links_not_allowed') {
+        return renderReplyState({ error: linkPostingValidationMessage, body, returnPath }, 400)
+      }
       if (result.status === 'rate_limited') {
         return renderReplyState({ error: postRateLimitMessage(result.retryAfter), body, returnPath }, 429)
       }

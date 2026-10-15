@@ -2394,6 +2394,8 @@ test('consequential account, content, reporting, and admin flows work over HTTP'
   const bobPost = database.query('SELECT id FROM posts WHERE user_id=? AND body=?').get(bob.id, bobPostBody) as {
     id: number
   }
+  database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
+    (?,NULL,'Bob second note',0),(?,NULL,'Bob third note',0)`).run(bob.id, bob.id)
   expect(await (await request('/all')).text()).toContain(bobPostBody)
   expect(await (await request('/u/bob')).text()).toContain(bobPostBody)
   const forYouWithBobPost = await (await request('/my-feed', { cookie: aliceCookie })).text()

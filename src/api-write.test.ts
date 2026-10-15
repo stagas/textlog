@@ -166,6 +166,8 @@ describe('API writes', () => {
 
   test('creates a post and returns it in the read shape', async () => {
     const { app, database } = fixture()
+    database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
+      (1,NULL,'first note',0),(1,NULL,'second note',0),(1,NULL,'third note',0)`).run()
     const response = await post(app, 'alice-token', { body: 'hello #api from an app' })
 
     expect(response.status).toBe(201)
@@ -177,6 +179,19 @@ describe('API writes', () => {
       user_id: 1,
       event_key: `post:${String(data.id).padStart(20, '0')}`,
     })
+  })
+
+  test('requires three link-free notes before allowing links', async () => {
+    const { app, database } = fixture()
+
+    const blocked = await post(app, 'alice-token', { body: 'Read https://example.com' })
+    expect(blocked.status).toBe(400)
+    expect(await blocked.json()).toMatchObject({ error: { code: 'links_not_allowed' } })
+
+    database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
+      (1,NULL,'first note',0),(1,NULL,'second note',0),(1,NULL,'third note',0)`).run()
+
+    expect((await post(app, 'alice-token', { body: 'Read https://example.com' })).status).toBe(201)
   })
 
   test('replies, and refuses to reply to a post that is gone', async () => {
@@ -502,7 +517,9 @@ describe('API writes', () => {
   })
 
   test('votes in polls without revealing live results before voting', async () => {
-    const { app } = fixture()
+    const { app, database } = fixture()
+    database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
+      (2,NULL,'first note',0),(2,NULL,'second note',0),(2,NULL,'third note',0)`).run()
     const created = await post(app, 'bob-token', { body: 'Choose one #poll\nred\nblue' })
     const pollPost = (await created.json() as any).data
     expect(pollPost.poll.total_votes).toBeNull()
