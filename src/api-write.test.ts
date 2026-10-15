@@ -166,8 +166,6 @@ describe('API writes', () => {
 
   test('creates a post and returns it in the read shape', async () => {
     const { app, database } = fixture()
-    database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
-      (1,NULL,'first note',0),(1,NULL,'second note',0),(1,NULL,'third note',0)`).run()
     const response = await post(app, 'alice-token', { body: 'hello #api from an app' })
 
     expect(response.status).toBe(201)
@@ -517,9 +515,7 @@ describe('API writes', () => {
   })
 
   test('votes in polls without revealing live results before voting', async () => {
-    const { app, database } = fixture()
-    database.query(`INSERT INTO posts(user_id,parent_id,body,has_links) VALUES
-      (2,NULL,'first note',0),(2,NULL,'second note',0),(2,NULL,'third note',0)`).run()
+    const { app } = fixture()
     const created = await post(app, 'bob-token', { body: 'Choose one #poll\nred\nblue' })
     const pollPost = (await created.json() as any).data
     expect(pollPost.poll.total_votes).toBeNull()
