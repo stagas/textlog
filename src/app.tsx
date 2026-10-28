@@ -302,7 +302,9 @@ const refreshHotProjection = () => {
 }
 refreshHotProjection()
 await initialHotProjection
-const hotProjectionTimer = setInterval(refreshHotProjection, 30_000)
+// Projection work scores and rewrites the hot-feed index. Coalesce ordinary post activity for several minutes instead
+// of rebuilding on the next 30-second poll, which let a large production history repeatedly monopolize a worker.
+const hotProjectionTimer = setInterval(refreshHotProjection, 5 * 60_000)
 hotProjectionTimer.unref()
 const ipRequestTimer = setInterval(
   () => void flushIpRequests().catch(error => logError('IP request buffer flush failed', error)),
