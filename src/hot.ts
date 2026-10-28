@@ -120,7 +120,8 @@ export function refreshHotFeedProjection(database: Database, now = new Date()) {
       generation: number
     }).generation
     : 0
-  const ranked = getHotPosts(database, 1_000_000, null, now, -1, false, 2, false)
+  const ranked = getHotPosts(database, 1_000_000, null, now, -1, false, 2, false,
+    hotProjectionActivityWindowDays)
   const roots = ranked.length
     ? database.query(`SELECT pc.post_id,pc.conversation_id FROM post_conversations pc
     WHERE pc.post_id IN (${ranked.map(() => '?').join(',')})`).all(...ranked.map(post => post.id)) as Array<{
@@ -363,6 +364,7 @@ export function getHotPosts(
   publicOnly = false,
   minimumDiscussionReplies = 0,
   bypassBlocks = false,
+  projectionActivityWindowDays?: number,
 ) {
   const timestamp = cursor?.asOf || (asOf instanceof Date ? asOf.toISOString() : asOf)
   const filters = ['p.deleted_at IS NULL', 'p.parent_id IS NULL', excludesWhisperPosts(), 'ranked.hot_score > 0']
@@ -423,7 +425,8 @@ export function getHotPosts(
       FROM post_hot h JOIN posts p ON p.id=h.post_id CROSS JOIN ranking_time
       LEFT JOIN poll_counts ON poll_counts.post_id=h.post_id
       WHERE p.parent_id IS NULL AND ${excludesWhisperPosts()}
-        AND h.latest_activity_at>=datetime((SELECT as_of FROM ranking_time),'-${hotProjectionActivityWindowDays} days')
+        ${projectionActivityWindowDays === undefined ? ''
+          : `AND h.latest_activity_at>=datetime((SELECT as_of FROM ranking_time),'-${projectionActivityWindowDays} days')`}
     ), recent_leader AS (
       SELECT scored.post_id FROM scored JOIN posts p ON p.id=scored.post_id
       WHERE scored.hot_score>0 AND p.deleted_at IS NULL AND ${excludesWhisperPosts()}
