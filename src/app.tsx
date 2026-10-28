@@ -63,6 +63,48 @@ import { DailyVisitorAllowlist, shouldRecordVisitor, VISITOR_FLUSH_BATCH_SIZE, v
 
 const devReloadEnabled = Bun.env.DEV_RELOAD === 'true'
 const publicArchivePath = Bun.env.PUBLIC_ARCHIVE_PATH || 'public/dump.zip'
+type MaintenanceOperation = 'archive' | 'backup'
+type MaintenanceRequest = {
+  id: number
+  operation: MaintenanceOperation
+  path?: string
+  directory?: string
+  now: string
+  resolve: (result: unknown) => void
+  reject: (error: Error) => void
+}
+const maintenanceWorker = new Worker(new URL('./production-maintenance-worker.ts', import.meta.url))
+let nextMaintenanceRequestId = 1
+let activeMaintenanceRequest: MaintenanceRequest | undefined
+const queuedMaintenanceRequests: MaintenanceRequest[] = []
+function dispatchMaintenanceRequest() {
+  if (activeMaintenanceRequest || !queuedMaintenanceRequests.length) return
+  activeMaintenanceRequest = queuedMaintenanceRequests.shift()!
+  const { id, operation, path, directory, now } = activeMaintenanceRequest
+  maintenanceWorker.postMessage({ id, operation, path, directory, now })
+}
+function rejectMaintenanceRequests(error: Error) {
+  activeMaintenanceRequest?.reject(error)
+  activeMaintenanceRequest = undefined
+  for (const request of queuedMaintenanceRequests.splice(0)) request.reject(error)
+}
+maintenanceWorker.onmessage = event => {
+  const response = event.data as { id: number; result?: unknown; error?: string }
+  const request = activeMaintenanceRequest
+  if (!request || response.id !== request.id) return
+  activeMaintenanceRequest = undefined
+  if (response.error) request.reject(new Error(response.error))
+  else request.resolve(response.result)
+  dispatchMaintenanceRequest()
+}
+maintenanceWorker.onerror = event => rejectMaintenanceRequests(new Error(event.message || 'Maintenance worker failed'))
+function runMaintenance(operation: MaintenanceOperation, options: { path?: string; directory?: string }, now = new Date()) {
+  return new Promise<unknown>((resolve, reject) => {
+    queuedMaintenanceRequests.push({ id: nextMaintenanceRequestId++, operation, ...options, now: now.toISOString(),
+      resolve, reject })
+    dispatchMaintenanceRequest()
+  })
+}
 const bootId = crypto.randomUUID()
 configureDevReload(devReloadEnabled ? bootId : undefined)
 const app = new Hono()
@@ -304,10 +346,7 @@ if (Bun.env.NODE_ENV === 'production') {
     if (backupRunning) return
     backupRunning = true
     try {
-      await databaseService().call('maintenance.automatedBackup', {
-        directory: backupDirectory,
-        now: new Date().toISOString(),
-      })
+      await runMaintenance('backup', { directory: backupDirectory })
     }
     catch (error) {
       logError('automated backup failed', error)
@@ -328,10 +367,7 @@ if (Bun.env.NODE_ENV === 'production') {
     if (archiveRunning) return
     archiveRunning = true
     try {
-      const result = await databaseService().call('maintenance.publicArchive', {
-        path: publicArchivePath,
-        now: new Date().toISOString(),
-      })
+      const result = await runMaintenance('archive', { path: publicArchivePath })
       if (result && typeof result === 'object' && 'path' in result) console.log(`public archive    ${result.path}`)
     }
     catch (error) {
@@ -600,7 +636,7 @@ app.get('/health', async c => {
   }
 })
 app.get('/dump.zip', async c => {
-  await databaseService().call('maintenance.publicArchive', { path: publicArchivePath, now: new Date().toISOString() })
+  await runMaintenance('archive', { path: publicArchivePath })
   const archive = Bun.file(publicArchivePath)
   if (!await archive.exists()) return c.text('Archive is not available yet', 404)
   return new Response(archive, {
