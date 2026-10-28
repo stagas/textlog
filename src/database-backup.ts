@@ -85,6 +85,9 @@ export function bootBackupPath(directory = defaultBackupDirectory) {
 
 export function createBootDatabaseBackup(database: Database, directory = defaultBackupDirectory) {
   mkdirSync(directory, { recursive: true, mode: 0o700 })
+  // Reclaim backups outside retention before asking SQLite to create another full database image.
+  // This is particularly important at boot, when a full disk must not make the HTTP service unavailable.
+  pruneBackups(directory)
   const finalPath = bootBackupPath(directory)
   const temporaryPath = `${finalPath}.${process.pid}.tmp`
   const escapedPath = temporaryPath.replaceAll('\'', '\'\'')

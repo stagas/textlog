@@ -341,8 +341,14 @@ visitorTimer.unref()
 cleanupTimer.unref()
 if (Bun.env.NODE_ENV === 'production') {
   const backupDirectory = Bun.env.DATABASE_BACKUP_DIR || 'storage/backups'
-  const bootBackup = await databaseService().call('maintenance.bootBackup', { directory: backupDirectory })
-  console.log(`database boot backup  ${bootBackup}`)
+  try {
+    const bootBackup = await databaseService().call('maintenance.bootBackup', { directory: backupDirectory })
+    console.log(`database boot backup  ${bootBackup}`)
+  }
+  catch (error) {
+    // A snapshot is valuable, but it must not prevent the service from starting when storage is exhausted.
+    logError('database boot backup failed', error)
+  }
   let backupRunning = false
   const runBackup = async () => {
     if (backupRunning) return
