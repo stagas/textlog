@@ -1,5 +1,5 @@
 import { Database } from 'bun:sqlite'
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, unlinkSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 
 export const defaultDatabasePath = Bun.env.DATABASE_PATH || 'storage/textlog.sqlite'
@@ -83,11 +83,33 @@ export function bootBackupPath(directory = defaultBackupDirectory) {
   return resolve(directory, 'textlog-boot.sqlite')
 }
 
+function processIsRunning(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  }
+  catch (error) {
+    // EPERM means another user owns a live process; do not remove its temporary backup.
+    return (error as NodeJS.ErrnoException).code === 'EPERM'
+  }
+}
+
+function removeAbandonedBootBackupTemporaries(directory: string) {
+  for (const entry of readdirSync(directory)) {
+    const match = entry.match(/^textlog-boot\.sqlite\.(\d+)\.tmp(?:-journal)?$/)
+    if (!match) continue
+    const pid = Number(match[1])
+    if (!Number.isSafeInteger(pid) || pid === process.pid || processIsRunning(pid)) continue
+    unlinkSync(join(directory, entry))
+  }
+}
+
 export function createBootDatabaseBackup(database: Database, directory = defaultBackupDirectory) {
   mkdirSync(directory, { recursive: true, mode: 0o700 })
   // Reclaim backups outside retention before asking SQLite to create another full database image.
   // This is particularly important at boot, when a full disk must not make the HTTP service unavailable.
   pruneBackups(directory)
+  removeAbandonedBootBackupTemporaries(directory)
   const finalPath = bootBackupPath(directory)
   const temporaryPath = `${finalPath}.${process.pid}.tmp`
   const escapedPath = temporaryPath.replaceAll('\'', '\'\'')

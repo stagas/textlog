@@ -339,16 +339,10 @@ const visitorTimer = setInterval(
 const cleanupTimer = setInterval(runCleanup, MAINTENANCE_INTERVAL_MS)
 visitorTimer.unref()
 cleanupTimer.unref()
-if (Bun.env.NODE_ENV === 'production') {
+// Full SQLite snapshots and archive compression are operational jobs. Running either while this process boots can
+// exceed a service supervisor's startup deadline, so production runs them from a separate scheduler by default.
+if (Bun.env.NODE_ENV === 'production' && Bun.env.ENABLE_IN_PROCESS_MAINTENANCE === 'true') {
   const backupDirectory = Bun.env.DATABASE_BACKUP_DIR || 'storage/backups'
-  try {
-    const bootBackup = await databaseService().call('maintenance.bootBackup', { directory: backupDirectory })
-    console.log(`database boot backup  ${bootBackup}`)
-  }
-  catch (error) {
-    // A snapshot is valuable, but it must not prevent the service from starting when storage is exhausted.
-    logError('database boot backup failed', error)
-  }
   let backupRunning = false
   const runBackup = async () => {
     if (backupRunning) return
