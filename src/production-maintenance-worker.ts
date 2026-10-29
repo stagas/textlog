@@ -25,8 +25,8 @@ self.onmessage = async event => {
     const result = request.operation === 'archive'
       ? publicArchiveIsCurrent(request.path!, now) && archivePrivacyIsCurrent(database, request.path!)
         ? null
-        : await createPublicArchive(database, request.path!, now)
-      : await runAutomatedBackup(database, { directory: request.directory!, alertWebhookUrl: null }, now)
+        : null //await createPublicArchive(database, request.path!, now)
+      : null //await runAutomatedBackup(database, { directory: request.directory!, alertWebhookUrl: null }, now)
     self.postMessage({ id: request.id, result })
   }
   catch (error) {
