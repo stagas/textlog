@@ -329,8 +329,8 @@ async function serialWarmFeedTab(visitor: RecentFeedVisitor, kind: Parameters<ty
 function warmOtherFeedTabsAfterMiss(request: Request, user: NonNullable<ReturnType<typeof currentUser>> | null,
   current: Parameters<typeof warmRecentFeedTab>[1], response: Response)
 {
-  if (!user || response.headers.get('x-feed-cache') !== 'miss' || Bun.env.DEV_RELOAD === 'true'
-    || Bun.env.DISABLE_FEED_WARMING === 'true') return
+  if (!user || response.headers.get('x-feed-cache') !== 'miss' || Bun.env.ENABLE_FEED_WARMING !== 'true'
+    || Bun.env.DEV_RELOAD === 'true') return
   const generation = (missWarmGenerations.get(user.id) || 0) + 1
   missWarmGenerations.set(user.id, generation)
   const visitor = recentFeedVisitor(request, user)

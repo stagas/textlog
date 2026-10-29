@@ -252,7 +252,9 @@ startPostPushWorker()
 await loadRecentFeedVisitors()
 let publicationWarmGeneration = 0
 function scheduleRecentFeedTabWarm() {
-  if (Bun.env.DEV_RELOAD === 'true' || Bun.env.DISABLE_FEED_WARMING === 'true') return
+  // Warming renders several complete feeds. It is optional cache work and must never contend with live requests on
+  // the single database worker; operators can opt in after provisioning separate capacity.
+  if (Bun.env.ENABLE_FEED_WARMING !== 'true' || Bun.env.DEV_RELOAD === 'true') return
   const generation = ++publicationWarmGeneration
   void warmRecentFeedTabs(async () => {
     await feedWarmIdle.waitUntilIdle()
