@@ -3792,19 +3792,10 @@ main:has(> .write-compose:not(.embedded-write-compose)) {
   border: 0;
   border-radius: 0;
   resize: none;
-  font-size: var(--post-body-font-size, var(--font-size-13));
-  line-height: var(--post-body-line-height, 1.65);
-  letter-spacing: var(--post-body-letter-spacing, normal);
 }
 
 :is(.write-compose, .reply-compose) textarea.form-control:focus-visible {
   outline: 0;
-}
-
-@media (max-width: 600px) {
-  body.iphone-agent :is(.write-compose, .reply-compose) textarea.form-control {
-    font-size: var(--font-size-16);
-  }
 }
 
 :is(.write-compose, .reply-compose) textarea.form-control::placeholder {
@@ -5428,21 +5419,31 @@ form.report-panel {
 }
 
 :is(.write-compose, .reply-compose) textarea.form-control {
+  appearance: none;
   min-height: calc(3lh + var(--space-4) + var(--compose-controls-inset));
   max-height: calc(var(--compose-max-lines) * 1lh + var(--space-4) + var(--compose-controls-inset));
-  padding: var(--space-4) var(--gutter) var(--compose-controls-inset);
 }
 
 .compose-highlight-wrap {
   position: relative;
 }
 
-:is(.write-compose, .reply-compose) :is(.compose-highlight, textarea.compose-highlight-textarea) {
+/* The highlight and the native editor must use the same text layout. */
+:is(.write-compose, .reply-compose) :is(.compose-highlight, textarea.form-control) {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
+  padding: var(--space-4) var(--gutter) var(--compose-controls-inset);
+  font: inherit;
+  font-size: var(--post-body-font-size, var(--font-size-13));
+  line-height: var(--post-body-line-height, 1.65);
+  letter-spacing: var(--post-body-letter-spacing, normal);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  scrollbar-gutter: stable;
 }
 
 :is(.write-compose, .reply-compose) .compose-highlight {
@@ -5450,12 +5451,7 @@ form.report-panel {
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  padding: var(--space-4) var(--gutter) var(--compose-controls-inset);
   color: var(--ink);
-  font: inherit;
-  font-size: var(--post-body-font-size, var(--font-size-13));
-  line-height: var(--post-body-line-height, 1.65);
-  letter-spacing: var(--post-body-letter-spacing, normal);
   pointer-events: none;
 }
 
@@ -5467,7 +5463,7 @@ form.report-panel {
 }
 
 @media (max-width: 600px) {
-  body.iphone-agent :is(.write-compose, .reply-compose) .compose-highlight {
+  body.iphone-agent :is(.write-compose, .reply-compose) :is(.compose-highlight, textarea.form-control) {
     font-size: var(--font-size-16);
   }
 }
@@ -5477,37 +5473,24 @@ form.report-panel {
 }
 
 .compose-highlight .compose-format-bold {
-  font-weight: 700;
-}
-
-.compose-highlight .compose-format-underline {
-  text-decoration: underline;
+  text-shadow: 0.35px 0 currentColor;
 }
 
 .compose-highlight .compose-format-italic {
-  font-style: italic;
+  text-decoration: underline dotted;
+}
+
+.compose-highlight .compose-format-underline {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
 }
 
 .compose-highlight .compose-format-strike {
-  text-decoration: line-through;
+  text-decoration-line: line-through;
 }
 
-.compose-emoji-slot {
-  position: relative;
-  display: inline-block;
-  vertical-align: baseline;
-}
-
-.compose-emoji-slot::before {
-  content: "M";
-  visibility: hidden;
-}
-
-.compose-emoji-slot > .emoji {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  line-height: 1;
-  transform: translate(-50%, -50%) scale(.9);
+.compose-highlight .compose-format-strike:is(.compose-format-underline, .compose-format-italic) {
+  text-decoration-line: underline line-through;
 }
 
 :is(.write-compose, .reply-compose) .composefoot {
@@ -9127,11 +9110,11 @@ body.mobile-agent .ascii-art {
   line-height: 1 !important;
 }
 
-body.density-compact :where(p, li, textarea):not(.ascii-art) {
+body.density-compact :where(p, li, textarea, .compose-highlight):not(.ascii-art) {
   line-height: 1.4;
 }
 
-body.density-relaxed :where(p, li, textarea):not(.ascii-art) {
+body.density-relaxed :where(p, li, textarea, .compose-highlight):not(.ascii-art) {
   line-height: 1.7;
 }
 .profile-identity-fields {

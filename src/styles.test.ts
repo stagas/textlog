@@ -322,7 +322,7 @@ describe('in-memory stylesheet', () => {
         + '  position-anchor: --thread-reference-popover;',
     )
     expect(css).toContain('@media (max-width: 600px) {\n  body.iphone-agent '
-      + ':is(.write-compose, .reply-compose) textarea.form-control {\n'
+      + ':is(.write-compose, .reply-compose) :is(.compose-highlight, textarea.form-control) {\n'
       + '    font-size: var(--font-size-16);')
     expect(css).toContain(
       '.thread-branch-content {\n  min-width: 0;\n  min-height: 0;\n  overflow: hidden;\n'
@@ -533,7 +533,8 @@ describe('in-memory stylesheet', () => {
     expect(css).toContain('--space-7: 36px;')
     expect(css).toContain('body.density-relaxed {')
     expect(css).toContain('--space-7: 60px;')
-    expect(css).toContain('body.density-compact :where(p, li, textarea):not(.ascii-art)')
+    expect(css).toContain('body.density-compact :where(p, li, textarea, .compose-highlight):not(.ascii-art)')
+    expect(css).toContain('body.density-relaxed :where(p, li, textarea, .compose-highlight):not(.ascii-art)')
   })
 
   test('tightens ASCII art line spacing for mobile user agents only', async () => {

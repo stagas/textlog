@@ -32,26 +32,6 @@ import emojiKeywords from 'emojilib'
     { className: 'compose-format-underline', pattern: /(?<!_)_[^\n_](?:[^\n]*?[^\n_])?_(?!_)/gu },
     { className: 'compose-format-italic', pattern: /(?<!\S)\/[^\/\s](?:[^\/\n]*?[^\/\s])?\/(?!\/)/gu },
   ]
-  const emojiPattern = /(?:\p{Regional_Indicator}{2}|[#*0-9]\uFE0F?\u20E3|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})?)*)/gu
-  const emojiMeasureCanvas = document.createElement('canvas')
-  const emojiMeasureContext = emojiMeasureCanvas.getContext('2d')
-  const emojiWidthCache = new Map()
-
-  const emojiAdvance = (textarea, emoji) => {
-    if (!emojiMeasureContext) return '1ch'
-    const styles = getComputedStyle(textarea)
-    const font = `${styles.fontStyle} ${styles.fontVariant} ${styles.fontWeight} ${styles.fontStretch} ${styles.fontSize} ${styles.fontFamily}`
-    const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0
-    const cacheKey = `${font}\n${letterSpacing}\n${emoji}`
-    let width = emojiWidthCache.get(cacheKey)
-    if (width === undefined) {
-      emojiMeasureContext.font = font
-      width = emojiMeasureContext.measureText(emoji).width + letterSpacing
-      emojiWidthCache.set(cacheKey, width)
-    }
-    return `${width}px`
-  }
-
   const highlightRanges = (value, availablePosts) => {
     const classes = Array.from({ length: value.length }, () => new Set())
     formattingPatterns.forEach(({ className, pattern }) => {
@@ -72,9 +52,6 @@ import emojiKeywords from 'emojilib'
         classes[index].add('compose-post-reference')
       }
     }
-    for (const match of value.matchAll(emojiPattern)) {
-      for (let index = match.index; index < match.index + match[0].length; index++) classes[index].add('compose-emoji')
-    }
     return classes
   }
 
@@ -83,7 +60,7 @@ import emojiKeywords from 'emojilib'
     if (!(mirror instanceof HTMLElement)) {
       const wrapper = document.createElement('div')
       wrapper.className = 'compose-highlight-wrap'
-      mirror = document.createElement('pre')
+      mirror = document.createElement('div')
       mirror.className = 'compose-highlight'
       mirror.setAttribute('aria-hidden', 'true')
       textarea.before(wrapper)
@@ -101,26 +78,14 @@ import emojiKeywords from 'emojilib'
       let end = start + 1
       while (end < value.length && classNames[end] === className) end++
       const text = value.slice(start, end)
-      if (classes[start].has('compose-emoji')) {
-        const surroundingClasses = [...classes[start]].filter(name => name !== 'compose-emoji').join(' ')
-        for (const match of text.matchAll(emojiPattern)) {
-          const slot = document.createElement('span')
-          slot.className = `compose-emoji-slot${surroundingClasses ? ` ${surroundingClasses}` : ''}`
-          slot.style.width = emojiAdvance(textarea, match[0])
-          const glyph = document.createElement('span')
-          glyph.className = 'emoji'
-          glyph.textContent = match[0]
-          slot.append(glyph)
-          fragment.append(slot)
-        }
+      if (className) {
+        const span = document.createElement('span')
+        span.className = className
+        span.textContent = text
+        fragment.append(span)
       }
       else {
-        const node = className ? document.createElement('span') : document.createTextNode(text)
-        if (node instanceof HTMLElement) {
-          node.className = className
-          node.textContent = text
-        }
-        fragment.append(node)
+        fragment.append(text)
       }
       start = end
     }
